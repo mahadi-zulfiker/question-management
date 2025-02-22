@@ -20,7 +20,9 @@ const Navbar = () => {
             <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 relative">
                 <div className="flex justify-between items-center py-4">
                     <div className="flex items-center">
-                        <h1 className="text-2xl font-bold text-gradient-to-r from-[#1b0a37] to-[#24104f]">QA</h1>
+                        <a href="/">
+                            <h1 className="text-2xl font-bold text-gradient-to-r from-[#1b0a37] to-[#24104f]">QA</h1>
+                        </a>
                     </div>
 
                     <div className="hidden md:flex items-center bg-gray-100 rounded-md px-3 py-2">
