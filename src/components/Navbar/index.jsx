@@ -63,10 +63,10 @@ const Navbar = () => {
 
                     {/* Login & Sign Up Buttons */}
                     <div className="hidden md:flex space-x-4">
-                        <a href="/login" className="px-4 py-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white">
+                        <a href="/signIn" className="px-4 py-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white">
                             Login
                         </a>
-                        <a href="/signup" className="px-4 py-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]">
+                        <a href="/signUp" className="px-4 py-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]">
                             Sign Up
                         </a>
                     </div>
