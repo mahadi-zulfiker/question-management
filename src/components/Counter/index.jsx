@@ -6,7 +6,7 @@ const stats = [
   {
     icon: <Users className="text-indigo-600 w-12 h-12" />,
     count: 5000,
-    label: "সন্তুষ্ট শিক্ষার্থী",
+    label: "সন্তুষ্ট শিক্ষার্থী.",
   },
   {
     icon: <BookOpen className="text-blue-600 w-12 h-12" />,

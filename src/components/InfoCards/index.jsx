@@ -1,63 +1,66 @@
 "use client";
 import Image from "next/image";
-import img from "../../../public/course.jpg"
+import img from "../../../public/course.jpg";
+import img1 from "../../../public/subject1.jpg";
+import img2 from "../../../public/subject2.jpg";
+import img3 from "../../../public/subject3.jpg";
 
 const InfoCards = () => {
-  const courses = [
+  const subjects = [
     {
-      title: "ওয়েব ডেভেলপমেন্ট বুটক্যাম্প",
-      description: "এই বুটক্যাম্পে HTML, CSS, JavaScript এবং React",
-      image: "https://i.ibb.co.com/b5zHS4P2/4528493-3809.jpg",
-      instructor: "সারাহ জনসন",
-      duration: "১২ সপ্তাহ",
+      title: "বাংলা বিষয়ের প্রস্তুতি",
+      description: "বাংলা ব্যাকরণ, সাহিত্য এবং রচনামূলক প্রশ্ন সমাধান করুন।",
+      image: img,
+      instructor: "মোঃ হাসান আলী",
+      duration: "১০ সপ্তাহ",
     },
     {
-      title: "ডাটা সায়েন্স প্রাথমিক কোর্স",
-      description: "পাইথন, ডাটা অ্যানালাইসিস এবং মেশিন লার্নিং শিখুন।",
-      image: "https://i.ibb.co.com/b5zHS4P2/4528493-3809.jpg",
-      instructor: "মার্ক উইলিয়ামস",
+      title: "ইংরেজি বিষয়ের প্রস্তুতি",
+      description: "গ্রামার, রিডিং কম্প্রিহেনশন ও রাইটিং প্র্যাকটিস করুন।",
+      image: img1,
+      instructor: "সারাহ রহমান",
       duration: "৮ সপ্তাহ",
     },
     {
-      title: "ইউআই/ইউএক্স ডিজাইন মাস্টারি",
-      description: "ফিগমা ও অ্যাডোবি এক্সডি ব্যবহার",
-      image: "https://i.ibb.co.com/b5zHS4P2/4528493-3809.jpg",
-      instructor: "এমিলি রবার্টস",
-      duration: "৬ সপ্তাহ",
+      title: "গণিত বিষয়ের প্রস্তুতি",
+      description: "MCQ এবং CQ প্রশ্নের মাধ্যমে গণিত চর্চা করুন।",
+      image: img2,
+      instructor: "রাকিবুল ইসলাম",
+      duration: "১২ সপ্তাহ",
     },
     {
-      title: "সাইবার সিকিউরিটি বেসিকস",
-      description: "সিস্টেম ও নেটওয়ার্ক সুরক্ষার মূলনীতি শিখুন।",
-      image: "https://i.ibb.co.com/b5zHS4P2/4528493-3809.jpg",
-      instructor: "ড্যানিয়েল লি",
-      duration: "১০ সপ্তাহ",
+      title: "বিজ্ঞান বিষয়ের প্রস্তুতি",
+      description: "পদার্থবিজ্ঞান, রসায়ন ও জীববিজ্ঞানের প্রশ্ন সমাধান করুন।",
+      image: img3,
+      instructor: "তানিয়া সুলতানা",
+      duration: "৯ সপ্তাহ",
     },
   ];
 
   return (
     <div className="container mx-auto px-6 py-20">
-      <h2 className="text-3xl font-bold text-gray-800 text-center mb-6">আমাদের কোর্সগুলো দেখুন</h2>
+      <h2 className="text-3xl font-bold text-gray-800 text-center mb-6">আমাদের বিষয়ভিত্তিক কোর্স দেখুন</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {courses.map((course, index) => (
+        {subjects.map((subject, index) => (
           <div key={index} className="max-w-sm rounded-lg overflow-hidden shadow-lg bg-white">
             <Image 
               className="w-full"
-              src={img}
-              alt={course.title}
+              src={subject.image}
+              alt={subject.title}
               width={400}
               height={200}
               priority
             />
             <div className="px-6 py-4">
-              <h3 className="font-bold text-lg text-gray-900">{course.title}</h3>
-              <p className="text-gray-700 text-sm mt-2">{course.description}</p>
+              <h3 className="font-bold text-lg text-gray-900">{subject.title}</h3>
+              <p className="text-gray-700 text-sm mt-2">{subject.description}</p>
             </div>
             <div className="px-6 pb-4">
               <span className="inline-block bg-blue-200 text-blue-700 rounded-full px-3 py-1 text-xs font-semibold mr-2">
-                {course.instructor}
+                {subject.instructor}
               </span>
               <span className="inline-block bg-gray-200 text-gray-700 rounded-full px-3 py-1 text-xs font-semibold">
-                {course.duration}
+                {subject.duration}
               </span>
             </div>
             <div className="px-6 pb-4">

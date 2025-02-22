@@ -20,7 +20,9 @@ const Navbar = () => {
             <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 relative">
                 <div className="flex justify-between items-center py-4">
                     <div className="flex items-center">
-                        <h1 className="text-2xl font-bold text-gradient-to-r from-[#1b0a37] to-[#24104f]">QA</h1>
+                        <a href="/">
+                            <h1 className="text-2xl font-bold text-gradient-to-r from-[#1b0a37] to-[#24104f]">QA</h1>
+                        </a>
                     </div>
 
                     <div className="hidden md:flex items-center bg-gray-100 rounded-md px-3 py-2">
@@ -63,10 +65,10 @@ const Navbar = () => {
 
                     {/* Login & Sign Up Buttons */}
                     <div className="hidden md:flex space-x-4">
-                        <a href="/login" className="px-4 py-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white">
+                        <a href="/signIn" className="px-4 py-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white">
                             Login
                         </a>
-                        <a href="/signup" className="px-4 py-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]">
+                        <a href="/signUp" className="px-4 py-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]">
                             Sign Up
                         </a>
                     </div>
