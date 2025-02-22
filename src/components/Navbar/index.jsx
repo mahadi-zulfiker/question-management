@@ -21,13 +21,8 @@ const Navbar = () => {
     };
 
     const toggleMenu = () => setIsOpen(!isOpen);
-
-    const toggleDropdown = (index) => {
-        setDropdownOpen(dropdownOpen === index ? null : index);
-    };
-
+    const toggleDropdown = (index) => setDropdownOpen(dropdownOpen === index ? null : index);
     const getDashboardLink = () => dashboardRoutes[userType] || "/dashboard";
-
     const handleDashboardRedirect = () => router.push(getDashboardLink());
 
     return (
@@ -110,7 +105,7 @@ const Navbar = () => {
                 </div>
 
                 {isOpen && (
-                    <div className="md:hidden bg-white shadow-md rounded-md">
+                    <div className="md:hidden bg-white shadow-md rounded-md p-4">
                         <div className="flex items-center bg-gray-100 rounded-md px-3 py-2 my-2">
                             <Search className="h-5 w-5 text-gray-500" />
                             <input
@@ -143,6 +138,27 @@ const Navbar = () => {
                                 )}
                             </div>
                         ))}
+                        <div className="mt-4">
+                            {session ? (
+                                <>
+                                    <button onClick={handleDashboardRedirect} className="block w-full text-center px-4 py-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]">
+                                        Dashboard
+                                    </button>
+                                    <button onClick={() => signOut()} className="block w-full text-center px-4 py-2 mt-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white">
+                                        Logout
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <Link href="/signIn" className="block w-full text-center px-4 py-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white">
+                                        Login
+                                    </Link>
+                                    <Link href="/signUp" className="block w-full text-center px-4 py-2 mt-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]">
+                                        Sign Up
+                                    </Link>
+                                </>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
