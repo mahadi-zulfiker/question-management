@@ -1,28 +1,43 @@
 "use client";
 import React, { useState } from "react";
 import { Menu, X, ChevronDown, Search } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const Navbar = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [dropdownOpen, setDropdownOpen] = useState(null);
     const [searchTerm, setSearchTerm] = useState("");
+    const { data: session, status } = useSession();
+    const router = useRouter();
 
-    const toggleMenu = () => {
-        setIsOpen(!isOpen);
+    const userType = session?.user?.userType?.toLowerCase();
+
+    const dashboardRoutes = {
+        admin: "/dashboard/admin",
+        student: "/dashboard/student",
+        teacher: "/dashboard/teacher",
     };
+
+    const toggleMenu = () => setIsOpen(!isOpen);
 
     const toggleDropdown = (index) => {
         setDropdownOpen(dropdownOpen === index ? null : index);
     };
+
+    const getDashboardLink = () => dashboardRoutes[userType] || "/dashboard";
+
+    const handleDashboardRedirect = () => router.push(getDashboardLink());
 
     return (
         <nav className="bg-white shadow-md relative z-50">
             <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 relative">
                 <div className="flex justify-between items-center py-4">
                     <div className="flex items-center">
-                        <a href="/">
+                        <Link href="/">
                             <h1 className="text-2xl font-bold text-gradient-to-r from-[#1b0a37] to-[#24104f]">QA</h1>
-                        </a>
+                        </Link>
                     </div>
 
                     <div className="hidden md:flex items-center bg-gray-100 rounded-md px-3 py-2">
@@ -49,13 +64,11 @@ const Navbar = () => {
                                 {item.sublinks && dropdownOpen === index && (
                                     <div className="absolute left-0 mt-2 w-56 bg-white shadow-lg rounded-md py-2 z-50">
                                         {item.sublinks.map((sublink, subIndex) => (
-                                            <a
-                                                key={subIndex}
-                                                href={sublink.link}
-                                                className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
-                                            >
-                                                {sublink.name}
-                                            </a>
+                                            <Link key={subIndex} href={sublink.link}>
+                                                <span className="block px-4 py-2 text-gray-700 hover:bg-gray-100 cursor-pointer">
+                                                    {sublink.name}
+                                                </span>
+                                            </Link>
                                         ))}
                                     </div>
                                 )}
@@ -63,38 +76,51 @@ const Navbar = () => {
                         ))}
                     </div>
 
-                    {/* Login & Sign Up Buttons */}
                     <div className="hidden md:flex space-x-4">
-                        <a href="/signIn" className="px-4 py-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white">
-                            Login
-                        </a>
-                        <a href="/signUp" className="px-4 py-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]">
-                            Sign Up
-                        </a>
+                        {session ? (
+                            <>
+                                <button
+                                    onClick={handleDashboardRedirect}
+                                    className="px-4 py-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]"
+                                >
+                                    Dashboard
+                                </button>
+                                <button
+                                    onClick={() => signOut()}
+                                    className="px-4 py-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white"
+                                >
+                                    Logout
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <Link href="/signIn" className="px-4 py-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white">
+                                    Login
+                                </Link>
+                                <Link href="/signUp" className="px-4 py-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]">
+                                    Sign Up
+                                </Link>
+                            </>
+                        )}
                     </div>
 
                     <div className="md:hidden">
-                        <button onClick={toggleMenu}>
-                            {isOpen ? <X className="h-6 w-6 text-gray-700" /> : <Menu className="h-6 w-6 text-gray-700" />}
-                        </button>
+                        <button onClick={toggleMenu}>{isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}</button>
                     </div>
                 </div>
 
                 {isOpen && (
-                    <div className="md:hidden flex items-center bg-gray-100 rounded-md px-3 py-2 my-2">
-                        <Search className="h-5 w-5 text-gray-500" />
-                        <input
-                            type="text"
-                            placeholder="কোর্স, বিষয়ের নাম লিখুন..."
-                            className="bg-transparent outline-none ml-2 text-sm w-full"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-                )}
-
-                {isOpen && (
-                    <div className="md:hidden z-50 relative bg-white shadow-md rounded-md">
+                    <div className="md:hidden bg-white shadow-md rounded-md">
+                        <div className="flex items-center bg-gray-100 rounded-md px-3 py-2 my-2">
+                            <Search className="h-5 w-5 text-gray-500" />
+                            <input
+                                type="text"
+                                placeholder="কোর্স, বিষয়ের নাম লিখুন..."
+                                className="bg-transparent outline-none ml-2 text-sm w-full"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
                         {menuItems.map((item, index) => (
                             <div key={index}>
                                 <button
@@ -105,30 +131,18 @@ const Navbar = () => {
                                     {item.sublinks && <ChevronDown className="h-4 w-4" />}
                                 </button>
                                 {item.sublinks && dropdownOpen === index && (
-                                    <div className="bg-gray-50 shadow-md rounded-md py-2 z-50">
+                                    <div className="bg-gray-50 rounded-md py-2">
                                         {item.sublinks.map((sublink, subIndex) => (
-                                            <a
-                                                key={subIndex}
-                                                href={sublink.link}
-                                                className="block px-8 py-2 text-gray-700 hover:bg-gray-200"
-                                            >
-                                                {sublink.name}
-                                            </a>
+                                            <Link key={subIndex} href={sublink.link}>
+                                                <span className="block px-8 py-2 text-gray-700 hover:bg-gray-200 cursor-pointer">
+                                                    {sublink.name}
+                                                </span>
+                                            </Link>
                                         ))}
                                     </div>
                                 )}
                             </div>
                         ))}
-
-                        {/* Mobile Login & Sign Up Buttons */}
-                        <div className="flex flex-col mt-4 p-4 border-t">
-                            <a href="/login" className="w-full text-center px-4 py-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white">
-                                Login
-                            </a>
-                            <a href="/signup" className="w-full text-center px-4 py-2 mt-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]">
-                                Sign Up
-                            </a>
-                        </div>
                     </div>
                 )}
             </div>
@@ -189,4 +203,5 @@ const menuItems = [
 ];
 
 export default Navbar;
+
 
