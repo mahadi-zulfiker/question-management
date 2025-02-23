@@ -28,7 +28,7 @@ const Header = () => {
               {status === "loading"
                 ? "Loading..."
                 : user
-                ? `${user.email} - ${user.userType || "No Job Listed"}`
+                ? `${user.email} - ${user.userType || "No Type Listed"}`
                 : "Guest"}
             </div>
           </div>
