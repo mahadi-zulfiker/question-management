@@ -15,6 +15,8 @@ const SignUp = () => {
   const [userType, setUserType] = useState("Student");
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [institutionName, setInstitutionName] = useState("");
+  const [subscriptionType, setSubscriptionType] = useState("monthly");
 
   const {
     register,
@@ -37,6 +39,8 @@ const SignUp = () => {
         email: data.email,
         password: data.password,
         userType,
+        institutionName: userType === "Teacher" ? institutionName : undefined,
+        subscriptionType: userType === "Student" ? subscriptionType : undefined,
       });
 
       if (response.status === 201) {
@@ -69,7 +73,7 @@ const SignUp = () => {
           <div className="w-full md:w-1/2 p-8">
             <h2 className="text-3xl font-bold text-gray-900 text-center">Create an Account</h2>
             <p className="text-sm text-gray-600 text-center mt-2">
-              Join as a {userType.toLowerCase()} and start learning today!
+              Join as a {userType.toLowerCase()} and start today!
             </p>
 
             <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-5">
@@ -122,13 +126,42 @@ const SignUp = () => {
                 </div>
               </div>
 
+              {userType === "Student" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Subscription Type</label>
+                  <select
+                    value={subscriptionType}
+                    onChange={(e) => setSubscriptionType(e.target.value)}
+                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="monthly">Monthly - 200৳</option>
+                    <option value="yearly">Yearly - 2000৳ (400৳ discount)</option>
+                  </select>
+                </div>
+              )}
+
+              {userType === "Teacher" && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Institution Name</label>
+                  <input
+                    type="text"
+                    value={institutionName}
+                    onChange={(e) => setInstitutionName(e.target.value)}
+                    className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter your institution name"
+                  />
+                  <p className="text-sm text-gray-600 mt-2">Teachers can buy questions for 0.25৳ each, upload their own notes/questions, and generate PDFs with custom headers.</p>
+                </div>
+
+              )}
+
               <button type="submit" className="w-full py-2 text-white bg-blue-600 rounded-md shadow-md hover:bg-blue-700" disabled={isLoading}>
                 {isLoading ? "Signing Up..." : "Sign Up"}
               </button>
             </form>
 
             <p className="mt-4 text-sm text-center text-gray-700">
-              Already have an account? 
+              Already have an account?
               <Link href="/signIn" className="text-blue-500 hover:text-blue-700 flex items-center justify-center gap-1">
                 Sign In <AiOutlineArrowRight />
               </Link>
