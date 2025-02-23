@@ -1,4 +1,4 @@
-import NextAuth from "next-auth/next";
+import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { connectMongoDB } from "@/lib/mongodb";
 import bcrypt from "bcrypt";
@@ -13,32 +13,32 @@ const handler = NextAuth({
             },
             async authorize(credentials) {
                 try {
-                    console.log("🔍 Received credentials:", credentials);
+                    const { email, password } = credentials;
 
-                    const db = await connectMongoDB(); // ✅ Fix database connection
-                    console.log("✅ Connected to MongoDB");
+                    if (!email || !password) {
+                        throw new Error("Email and password are required");
+                    }
 
-                    // Find user
-                    const user = await db.collection("users").findOne({ email: credentials.email });
-                    console.log("👤 User found:", user);
+                    const db = await connectMongoDB();
+                    const user = await db.collection("users").findOne({ email });
 
                     if (!user) {
-                        console.log("❌ Invalid email");
                         throw new Error("Invalid email or password");
                     }
 
-                    // Compare passwords
-                    const isValid = await bcrypt.compare(credentials.password, user.password);
-                    console.log("🔐 Password match:", isValid);
-
+                    const isValid = await bcrypt.compare(password, user.password);
                     if (!isValid) {
-                        console.log("❌ Invalid password");
                         throw new Error("Invalid email or password");
                     }
 
-                    return { id: user._id.toString(), email: user.email, userType: user.userType };
+                    return {
+                        id: user._id.toString(),
+                        email: user.email,
+                        userType: user.userType,
+                        subscriptionType: user.subscriptionType,
+                        institutionName: user.institutionName || "N/A",
+                    };
                 } catch (error) {
-                    console.error("❌ Authorization Error:", error);
                     throw new Error("Authentication failed");
                 }
             },
@@ -46,18 +46,20 @@ const handler = NextAuth({
     ],
     callbacks: {
         async session({ session, token }) {
-            console.log("📌 Session Callback - Token:", token);
             if (token) {
                 session.user.id = token.id;
                 session.user.userType = token.userType;
+                session.user.subscriptionType = token.subscriptionType;
+                session.user.institutionName = token.institutionName;
             }
             return session;
         },
         async jwt({ token, user }) {
-            console.log("🛠 JWT Callback - User:", user);
             if (user) {
                 token.id = user.id;
                 token.userType = user.userType;
+                token.subscriptionType = user.subscriptionType;
+                token.institutionName = user.institutionName;
             }
             return token;
         },
@@ -70,7 +72,7 @@ const handler = NextAuth({
         maxAge: 30 * 24 * 60 * 60, // 30 days
     },
     secret: process.env.NEXTAUTH_SECRET,
-    debug: true, // ✅ Enable debugging
+    debug: process.env.NODE_ENV === "development",
 });
 
 export { handler as GET, handler as POST };

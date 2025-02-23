@@ -1,27 +1,32 @@
 import React from "react";
 import CountUp from "react-countup";
-import { Users, BookOpen, GraduationCap, Star } from "lucide-react";
+import { Users, BookOpen, GraduationCap, Star, HelpCircle } from "lucide-react";
 
 const stats = [
   {
-    icon: <Users className="text-indigo-600 w-12 h-12" />,
-    count: 5000,
-    label: "সন্তুষ্ট শিক্ষার্থী.",
+    icon: <Users className="text-indigo-600 w-12 h-12" />, 
+    count: 5000, 
+    label: "সন্তুষ্ট শিক্ষার্থী",
   },
   {
-    icon: <BookOpen className="text-blue-600 w-12 h-12" />,
-    count: 150,
-    label: "মোট কোর্স",
+    icon: <GraduationCap className="text-green-600 w-12 h-12" />, 
+    count: 200, 
+    label: "মোট শিক্ষক",
   },
   {
-    icon: <GraduationCap className="text-green-600 w-12 h-12" />,
-    count: 1200,
+    icon: <BookOpen className="text-blue-600 w-12 h-12" />, 
+    count: 1200, 
     label: "সক্রিয় শিক্ষার্থী",
   },
   {
-    icon: <Star className="text-yellow-500 w-12 h-12" />,
-    count: 98,
+    icon: <Star className="text-yellow-500 w-12 h-12" />, 
+    count: 98, 
     label: "পজিটিভ রেটিং (%)",
+  },
+  {
+    icon: <HelpCircle className="text-red-500 w-12 h-12" />, 
+    count: 3000, 
+    label: "মোট প্রশ্ন",
   },
 ];
 
@@ -34,7 +39,7 @@ function Counter() {
           আমরা শিক্ষার্থীদের সাফল্যের জন্য কাজ করছি।
         </p>
 
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-10">
+        <div className="mt-12 grid grid-cols-2 md:grid-cols-5 gap-10">
           {stats.map((stat, index) => (
             <div
               key={index}
