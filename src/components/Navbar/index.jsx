@@ -151,7 +151,7 @@ const Navbar = () => {
 
 const menuItems = [
     { name: "ক্লাস ৪-১২", link: "/classes" },
-    { name: "স্কিলস", link: "/skills" },
+    { name: "মডেল টেস্ট", link: "/modelTests" },
     { name: "ভর্তি পরীক্ষা", link: "/admission" },
     { name: "প্রশ্নব্যাংক", link: "/questionBank" },
     { name: "ইংলিশ সেন্টার", link: "/english-center" },
