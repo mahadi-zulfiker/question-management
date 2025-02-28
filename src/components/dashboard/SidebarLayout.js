@@ -1,6 +1,8 @@
 'use client';
-import { MdPerson } from "react-icons/md";
-import { BiHomeAlt } from "react-icons/bi";
+import { MdPerson, MdOutlineAdminPanelSettings } from "react-icons/md";
+import { BiHomeAlt, BiBookAdd } from "react-icons/bi";
+import { FaUserGraduate, FaChalkboardTeacher, FaPlusCircle } from "react-icons/fa";
+import { AiOutlineProfile } from "react-icons/ai";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 
@@ -15,7 +17,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
   const commonMenuItems = [
     {
       href: "/",
-      icon: <BiHomeAlt className="text-2xl mr-2" />,
+      icon: <BiHomeAlt className="text-2xl mr-2" />, 
       label: "Back to Home",
     },
   ];
@@ -25,8 +27,8 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
       return [
         ...commonMenuItems,
         {
-          href: "/dashboard/student/profile",
-          icon: <MdPerson className="text-2xl mr-2" />,
+          href: "/dashboard/student",
+          icon: <FaUserGraduate className="text-2xl mr-2" />, 
           label: "Student Profile",
         },
       ];
@@ -34,9 +36,24 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
       return [
         ...commonMenuItems,
         {
-          href: "/dashboard/teacher/profile",
-          icon: <MdPerson className="text-2xl mr-2" />,
+          href: "/dashboard/teacher",
+          icon: <FaChalkboardTeacher className="text-2xl mr-2" />, 
           label: "Teacher Profile",
+        },
+        {
+          href: "/dashboard/teacher/createMCQTeacher",
+          icon: <BiBookAdd className="text-2xl mr-2" />, 
+          label: "Create MCQ",
+        },
+        {
+          href: "/dashboard/teacher/createCQTeacher",
+          icon: <FaPlusCircle className="text-2xl mr-2" />, 
+          label: "Create CQ",
+        },
+        {
+          href: "/dashboard/teacher/createSQTeacher",
+          icon: <AiOutlineProfile className="text-2xl mr-2" />, 
+          label: "Create SQ",
         },
       ];
     } else if (pathname.startsWith("/dashboard/admin")) {
@@ -44,8 +61,23 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         ...commonMenuItems,
         {
           href: "/dashboard/admin/adminProfileManagement",
-          icon: <MdPerson className="text-2xl mr-2" />,
+          icon: <MdOutlineAdminPanelSettings className="text-2xl mr-2" />, 
           label: "Profile Management",
+        },
+        {
+          href: "/dashboard/admin/createMCQAdmin",
+          icon: <BiBookAdd className="text-2xl mr-2" />, 
+          label: "Create MCQ",
+        },
+        {
+          href: "/dashboard/admin/createCQAdmin",
+          icon: <FaPlusCircle className="text-2xl mr-2" />, 
+          label: "Create CQ",
+        },
+        {
+          href: "/dashboard/admin/createSQAdmin",
+          icon: <AiOutlineProfile className="text-2xl mr-2" />, 
+          label: "Create SQ",
         },
       ];
     } else {
