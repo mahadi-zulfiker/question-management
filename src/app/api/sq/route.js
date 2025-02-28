@@ -1,0 +1,21 @@
+import { NextResponse } from "next/server";
+import { connectMongoDB } from "@/lib/mongodb";
+
+export async function POST(req) {
+    try {
+        const db = await connectMongoDB();
+        const { type, question, answer } = await req.json();
+
+        if (!type || !question || !answer) {
+            return NextResponse.json({ error: "সব ক্ষেত্র পূরণ করুন" }, { status: 400 });
+        }
+
+        const collection = db.collection("SQ");
+        await collection.insertOne({ type, question, answer, createdAt: new Date() });
+
+        return NextResponse.json({ message: "✅ সংক্ষিপ্ত প্রশ্ন সফলভাবে সংরক্ষিত হয়েছে" }, { status: 201 });
+    } catch (error) {
+        console.error("❌ Database Error:", error);
+        return NextResponse.json({ error: "সার্ভার সমস্যা হয়েছে" }, { status: 500 });
+    }
+}
