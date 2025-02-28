@@ -25,7 +25,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
       return [
         ...commonMenuItems,
         {
-          href: "/dashboard/student/profile",
+          href: "/dashboard/student",
           icon: <MdPerson className="text-2xl mr-2" />,
           label: "Student Profile",
         },
@@ -34,9 +34,24 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
       return [
         ...commonMenuItems,
         {
-          href: "/dashboard/teacher/profile",
+          href: "/dashboard/teacher",
           icon: <MdPerson className="text-2xl mr-2" />,
           label: "Teacher Profile",
+        },
+        {
+          href: "/dashboard/teacher/createMCQTeacher",
+          icon: <MdPerson className="text-2xl mr-2" />,
+          label: "Create MCQ",
+        },
+        {
+          href: "/dashboard/teacher/createCQTeacher",
+          icon: <MdPerson className="text-2xl mr-2" />,
+          label: "Create CQ",
+        },
+        {
+          href: "/dashboard/teacher/createSQTeacher",
+          icon: <MdPerson className="text-2xl mr-2" />,
+          label: "Create SQ",
         },
       ];
     } else if (pathname.startsWith("/dashboard/admin")) {
