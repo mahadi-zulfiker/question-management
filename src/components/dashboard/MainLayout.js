@@ -8,6 +8,7 @@ import AdminProfileManagement from "./Admin/AdminProfileManagement";
 import Student from "./Student";
 import Teacher from "./Teacher";
 import CreateMCQAdmin from "./Admin/CreateMCQAdmin";
+import CreateCQAdmin from "./Admin/CreateCQAdmin";
 
 
 const MainLayout = () => {
@@ -49,6 +50,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin" && <Admin />}
             {pathname === "/dashboard/admin/adminProfileManagement" && <AdminProfileManagement />}
             {pathname === "/dashboard/admin/createMCQAdmin" && <CreateMCQAdmin />}
+            {pathname === "/dashboard/admin/createCQAdmin" && <CreateCQAdmin />}
 
           </div>
 
