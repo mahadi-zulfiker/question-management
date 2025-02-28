@@ -47,6 +47,11 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
           icon: <MdPerson className="text-2xl mr-2" />,
           label: "Profile Management",
         },
+        {
+          href: "/dashboard/admin/createMCQAdmin",
+          icon: <MdPerson className="text-2xl mr-2" />,
+          label: "Create MCQ",
+        },
       ];
     } else {
       return commonMenuItems;
