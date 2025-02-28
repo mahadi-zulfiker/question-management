@@ -154,7 +154,7 @@ const menuItems = [
     { name: "মডেল টেস্ট", link: "/modelTests" },
     { name: "ভর্তি পরীক্ষা", link: "/admission" },
     { name: "প্রশ্নব্যাংক", link: "/questionBank" },
-    { name: "ইংলিশ সেন্টার", link: "/english-center" },
+    { name: "পরীক্ষা তৈরি", link: "/createExam" },
 ];
 
 export default Navbar;
