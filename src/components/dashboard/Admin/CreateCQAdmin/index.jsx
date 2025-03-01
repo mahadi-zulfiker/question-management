@@ -9,6 +9,12 @@ export default function CreateCQAdmin() {
     const [passage, setPassage] = useState("");
     const [questions, setQuestions] = useState(["", "", "", ""]);
     const [answers, setAnswers] = useState(["", "", "", ""]);
+    const [classLevel, setClassLevel] = useState("");
+    const [division, setDivision] = useState("");
+    const [subjectName, setSubjectName] = useState("");
+    const [subjectPart, setSubjectPart] = useState("");
+    const [chapterName, setChapterName] = useState("");
+
     const marks = [1, 2, 3, 4]; // Assigned marks
 
     const handleQuestionChange = (index, value) => {
@@ -25,8 +31,8 @@ export default function CreateCQAdmin() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const cqData = { passage, questions, answers, marks };
-        
+        const cqData = { passage, questions, answers, marks, classLevel, division, subjectName, subjectPart, chapterName };
+
         const response = await fetch("/api/cq", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -38,6 +44,11 @@ export default function CreateCQAdmin() {
             setPassage("");
             setQuestions(["", "", "", ""]);
             setAnswers(["", "", "", ""]);
+            setClassLevel("");
+            setDivision("");
+            setSubjectName("");
+            setSubjectPart("");
+            setChapterName("");
         } else {
             toast.error("❌ কিছু সমস্যা হয়েছে! আবার চেষ্টা করুন।", { position: "top-right" });
         }
@@ -52,6 +63,55 @@ export default function CreateCQAdmin() {
         >
             <h2 className="text-2xl font-bold mb-4 text-center text-blue-600">📝 সৃজনশীল প্রশ্ন তৈরি করুন</h2>
             <form onSubmit={handleSubmit}>
+                <select 
+                    className="w-full p-2 border rounded mb-3" 
+                    value={classLevel} 
+                    onChange={(e) => setClassLevel(e.target.value)} 
+                    required
+                >
+                    <option value="">ক্লাস নির্বাচন করুন</option>
+                    {[...Array(9)].map((_, i) => (
+                        <option key={i + 4} value={i + 4}>ক্লাস {i + 4}</option>
+                    ))}
+                </select>
+                {classLevel >= 9 && (
+                    <select 
+                        className="w-full p-2 border rounded mb-3" 
+                        value={division} 
+                        onChange={(e) => setDivision(e.target.value)} 
+                        required
+                    >
+                        <option value="">ডিভিশন নির্বাচন করুন</option>
+                        {classLevel <= 10 ? (
+                            <option value="SSC">SSC</option>
+                        ) : (
+                            <option value="HSC">HSC</option>
+                        )}
+                    </select>
+                )}
+                <input 
+                    type="text" 
+                    placeholder="বিষয়ের নাম" 
+                    className="w-full p-2 border rounded mb-3" 
+                    value={subjectName} 
+                    onChange={(e) => setSubjectName(e.target.value)} 
+                    required 
+                />
+                <input 
+                    type="text" 
+                    placeholder="বিষয়ের অংশ (যদি থাকে)" 
+                    className="w-full p-2 border rounded mb-3" 
+                    value={subjectPart} 
+                    onChange={(e) => setSubjectPart(e.target.value)} 
+                />
+                <input 
+                    type="text" 
+                    placeholder="অধ্যায়ের নাম" 
+                    className="w-full p-2 border rounded mb-3" 
+                    value={chapterName} 
+                    onChange={(e) => setChapterName(e.target.value)} 
+                    required 
+                />
                 <textarea 
                     placeholder="🔹 অনুচ্ছেদ লিখুন" 
                     className="w-full p-3 border rounded mb-4 h-24 focus:border-blue-500 focus:outline-none" 
@@ -62,7 +122,7 @@ export default function CreateCQAdmin() {
                 {questions.map((question, i) => (
                     <div key={i} className="mb-4 bg-gray-100 p-3 rounded-lg shadow-md">
                         <label className="block text-gray-700 font-medium mb-1">
-                            {`প্রশ্ন ${i + 1} (নম্বর: ${marks[i]})`}
+                            প্রশ্ন {i + 1} (নম্বর: {marks[i]})
                         </label>
                         <input 
                             type="text" 
