@@ -155,6 +155,7 @@ const menuItems = [
     { name: "ভর্তি পরীক্ষা", link: "/admission" },
     { name: "প্রশ্নব্যাংক", link: "/questionBank" },
     { name: "পরীক্ষা তৈরি", link: "/createExam" },
+    { name: "পরীক্ষা দিন", link: "/takeExam" },
 ];
 
 export default Navbar;

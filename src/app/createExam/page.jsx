@@ -9,6 +9,7 @@ import "react-toastify/dist/ReactToastify.css";
 export default function CreateExam() {
     const [examTitle, setExamTitle] = useState("");
     const [examType, setExamType] = useState("");
+    const [duration, setDuration] = useState("");
     const [questions, setQuestions] = useState([]);
     const [selectedQuestions, setSelectedQuestions] = useState([]);
     const [loading, setLoading] = useState(false);
@@ -44,18 +45,18 @@ export default function CreateExam() {
     const handleSelect = (question) => {
         setSelectedQuestions((prev) =>
             prev.some(q => q._id === question._id)
-                ? prev.filter(q => q._id !== question._id) // Remove if already selected
-                : [...prev, question] // Add if not selected
+                ? prev.filter(q => q._id !== question._id)
+                : [...prev, question]
         );
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!examTitle || !examType || selectedQuestions.length === 0) {
-            return toast.error("❌ পরীক্ষার শিরোনাম, ধরন এবং অন্তত একটি প্রশ্ন নির্বাচন করুন!");
+        if (!examTitle || !examType || !duration || selectedQuestions.length === 0) {
+            return toast.error("❌ পরীক্ষার শিরোনাম, ধরন, সময়সীমা এবং অন্তত একটি প্রশ্ন নির্বাচন করুন!");
         }
 
-        const examData = { title: examTitle, type: examType, questions: selectedQuestions };
+        const examData = { title: examTitle, type: examType, duration, questions: selectedQuestions };
 
         const response = await fetch("/api/exam", {
             method: "POST",
@@ -67,6 +68,7 @@ export default function CreateExam() {
             toast.success("✅ পরীক্ষা সফলভাবে তৈরি হয়েছে!");
             setExamTitle("");
             setExamType("");
+            setDuration("");
             setQuestions([]);
             setSelectedQuestions([]);
         } else {
@@ -99,6 +101,15 @@ export default function CreateExam() {
                         <option value="CQ">CQ</option>
                         <option value="SQ">SQ</option>
                     </select>
+
+                    <input
+                        type="number"
+                        placeholder="⏳ সময়সীমা (মিনিটে)"
+                        className="w-full p-2 border rounded mb-4"
+                        value={duration}
+                        onChange={(e) => setDuration(e.target.value)}
+                        required
+                    />
 
                     {examType && (
                         <div>
