@@ -32,10 +32,10 @@ const Banner = () => {
             <li>শিক্ষার্থীদের জন্য কাস্টমাইজড লার্নিং অভিজ্ঞতা</li>
           </ul>
           <div className="mt-8 flex justify-center md:justify-start space-x-6">
-            <a href="/explore" className="px-6 py-3 rounded-lg font-semibold bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg hover:opacity-90 hover:shadow-blue-400 transition">
+            <a href="/" className="px-6 py-3 rounded-lg font-semibold bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg hover:opacity-90 hover:shadow-blue-400 transition">
               এক্সপ্লোর করুন
             </a>
-            <a href="/ask" className="px-6 py-3 rounded-lg font-semibold bg-white text-gray-900 shadow-lg hover:bg-gray-200 hover:shadow-lg transition">
+            <a href="/createExam" className="px-6 py-3 rounded-lg font-semibold bg-white text-gray-900 shadow-lg hover:bg-gray-200 hover:shadow-lg transition">
               প্রশ্ন করুন
             </a>
           </div>

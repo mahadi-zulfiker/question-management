@@ -1,3 +1,4 @@
+// TakeExam.js
 "use client";
 
 import { useEffect, useState } from "react";
@@ -18,24 +19,23 @@ export default function TakeExam() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        async function fetchExam() {
+        const fetchExam = async () => {
             try {
                 const response = await fetch(`/api/takeExam?examId=${examId}`);
                 const data = await response.json();
-                console.log("Fetched Exam Data:", data);
-
                 if (response.ok && data.exam) {
                     setExam(data.exam);
-                    setTimeLeft(Number(data.exam.duration) * 60); // Convert duration to number
+                    setTimeLeft(Number(data.exam.duration) * 60);
                 } else {
-                    toast.error("❌ পরীক্ষা লোড করতে সমস্যা হয়েছে!");
+                    throw new Error("Failed to fetch exam");
                 }
             } catch (error) {
-                console.error("❌ Fetch error:", error);
+                toast.error("❌ পরীক্ষা লোড করতে সমস্যা হয়েছে!");
             } finally {
                 setLoading(false);
             }
-        }
+        };
+
         if (examId) fetchExam();
     }, [examId]);
 
@@ -80,20 +80,20 @@ export default function TakeExam() {
     return (
         <div>
             <Navbar />
-            <div className="max-w-3xl mx-auto my-16 py-16 p-6 bg-white rounded-lg shadow-lg border border-gray-200">
+            <div className="max-w-3xl mx-auto my-16 p-6 bg-white rounded-lg shadow-lg border border-gray-200">
                 {loading ? (
                     <p>🔄 পরীক্ষা লোড হচ্ছে...</p>
                 ) : exam ? (
                     <div>
                         <h3 className="text-xl font-bold mb-2">{exam.title}</h3>
                         <p className="text-red-500 font-bold">⏳ সময় বাকি: {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</p>
-                        {exam.questions.map((q) => (
-                            <div key={q._id} className="mb-4 border p-2 rounded">
-                                <p className="font-bold">{q.question}</p>
-                                <ul>
-                                    {q.options.map((opt, index) => (
-                                        <li key={index}>
-                                            <label>
+                        {exam?.questions && Array.isArray(exam.questions) ? (
+                            exam.questions.map((q) => (
+                                <div key={q._id} className="mb-4 border p-2 rounded">
+                                    <p className="font-bold">{q.question}</p>
+                                    {q.options && q.options.length > 0 ? (
+                                        q.options.map((opt, index) => (
+                                            <label key={index} className="block">
                                                 <input
                                                     type="radio"
                                                     name={q._id}
@@ -103,23 +103,22 @@ export default function TakeExam() {
                                                 />
                                                 {opt}
                                             </label>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        ))}
-                        <button
-                            onClick={handleSubmit}
-                            className="w-full bg-blue-500 text-white py-2 mt-4 rounded hover:bg-blue-600 transition font-bold"
-                        >
-                            ✅ পরীক্ষা জমা দিন
-                        </button>
+                                        ))
+                                    ) : (
+                                        <p className="text-gray-500">🔹 এই প্রশ্নের কোনো অপশন নেই</p>
+                                    )}
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-center text-red-500">❌ কোনো প্রশ্ন পাওয়া যায়নি।</p>
+                        )}
+                        <button onClick={handleSubmit} className="bg-blue-500 text-white py-2 mt-4 rounded">✅ পরীক্ষা জমা দিন</button>
                     </div>
                 ) : (
-                    <p className="text-red-500 font-bold">❌ পরীক্ষা খুঁজে পাওয়া যায়নি!</p>
+                    <p>❌ পরীক্ষা খুঁজে পাওয়া যায়নি!</p>
                 )}
-                <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
             </div>
+            <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
             <Footer />
         </div>
     );
