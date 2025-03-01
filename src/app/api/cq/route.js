@@ -4,17 +4,31 @@ import { connectMongoDB } from "@/lib/mongodb";
 export async function POST(req) {
     try {
         const db = await connectMongoDB();
-        const { passage, questions, answers } = await req.json();
+        const { passage, questions, answers, classLevel, division, subjectName, subjectPart, chapterName } = await req.json();
 
-        if (!passage || questions.length !== 4 || answers.length !== 4) {
-            return NextResponse.json({ error: "❌ অনুচ্ছেদ, ৪টি প্রশ্ন এবং ৪টি উত্তর অবশ্যই দিতে হবে!" }, { status: 400 });
+        // Validate required fields
+        if (!passage || questions.length !== 4 || answers.length !== 4 || !classLevel || !subjectName || !chapterName) {
+            return NextResponse.json({ error: "❌ সমস্ত প্রয়োজনীয় তথ্য প্রদান করুন!" }, { status: 400 });
         }
 
         // Assigning marks dynamically
         const marks = [1, 2, 3, 4];
 
         const cqCollection = db.collection("cqs");
-        const newCQ = { passage, questions, answers, marks, createdAt: new Date() };
+
+        const newCQ = {
+            passage,
+            questions,
+            answers,
+            marks,
+            classLevel,
+            division: division || null, // Handle optional field
+            subjectName,
+            subjectPart: subjectPart || null, // Handle optional field
+            chapterName,
+            createdAt: new Date(),
+        };
+
         const result = await cqCollection.insertOne(newCQ);
 
         return NextResponse.json({ message: "✅ CQ সফলভাবে যোগ করা হয়েছে!", cq: result.insertedId }, { status: 201 });
