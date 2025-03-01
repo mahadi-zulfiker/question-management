@@ -4,10 +4,10 @@ import { connectMongoDB } from "@/lib/mongodb";
 export async function POST(req) {
     try {
         const db = await connectMongoDB();
-        const { title, type, questions } = await req.json();
+        const { title, type, duration, questions } = await req.json();
 
-        if (!title || !type || !Array.isArray(questions) || questions.length === 0) {
-            return NextResponse.json({ error: "পরীক্ষার শিরোনাম, ধরন এবং প্রশ্ন নির্বাচন করুন" }, { status: 400 });
+        if (!title || !type || !duration || !Array.isArray(questions) || questions.length === 0) {
+            return NextResponse.json({ error: "পরীক্ষার শিরোনাম, ধরন, সময়সীমা এবং প্রশ্ন নির্বাচন করুন" }, { status: 400 });
         }
 
         const collection = db.collection("Exams");
@@ -15,6 +15,7 @@ export async function POST(req) {
         const examData = {
             title,
             type,
+            duration,
             questions,
             createdAt: new Date(),
         };
