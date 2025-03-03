@@ -4,37 +4,45 @@ import { ObjectId } from "mongodb";
 
 export async function POST(req) {
     try {
-        const { packageId, paymentMethod } = await req.json();
+        const { packageId, paymentMethod, email } = await req.json();
         const db = await connectMongoDB();
         const packagesCollection = db.collection("packages");
-        const transactionsCollection = db.collection("transactions"); // New collection for storing transactions
+        const transactionsCollection = db.collection("transactions");
 
         if (!ObjectId.isValid(packageId)) {
             return NextResponse.json({ message: "Invalid package ID format" }, { status: 400 });
         }
 
+        // Check if user already purchased the package
+        const existingPurchase = await transactionsCollection.findOne({
+            packageId: new ObjectId(packageId),
+            email,
+            status: "Success",
+        });
+
+        if (existingPurchase) {
+            return NextResponse.json({ message: "Package already purchased" }, { status: 400 });
+        }
+
+        // Fetch package details
         const packageData = await packagesCollection.findOne({ _id: new ObjectId(packageId) });
 
         if (!packageData) {
-            return NextResponse.json({ message: "Invalid package" }, { status: 400 });
+            return NextResponse.json({ message: "Package not found" }, { status: 404 });
         }
 
-        // Create a transaction entry
+        // Save transaction with package details
         const transaction = {
             packageId: new ObjectId(packageId),
+            email,
             packageName: packageData.name,
-            paymentMethod,
             amount: packageData.cost,
+            paymentMethod,
             status: "Success",
             createdAt: new Date(),
         };
 
-        // Insert into transactions collection
-        const result = await transactionsCollection.insertOne(transaction);
-
-        if (!result.acknowledged) {
-            return NextResponse.json({ message: "Failed to save transaction" }, { status: 500 });
-        }
+        await transactionsCollection.insertOne(transaction);
 
         return NextResponse.json({ message: "Payment Successful", transaction }, { status: 200 });
     } catch (error) {
