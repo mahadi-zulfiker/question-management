@@ -8,20 +8,33 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaCheckCircle, FaMoneyBillWave } from "react-icons/fa";
 import { BsWallet2 } from "react-icons/bs";
+import { useSession } from "next-auth/react";
 
 export default function CheckoutPage() {
     const { id } = useParams();
     const router = useRouter();
+    const { data: session } = useSession();
     const [packageData, setPackageData] = useState(null);
     const [paymentMethod, setPaymentMethod] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [alreadyPurchased, setAlreadyPurchased] = useState(false);
 
     useEffect(() => {
         async function fetchPackageDetails() {
-            if (!id) return;
+            if (!id || !session?.user?.email) return;
             try {
                 const response = await axios.get(`/api/package/${id}`);
                 setPackageData(response.data);
+
+                // Check if user already purchased the package
+                const purchaseCheck = await axios.post("/api/check-purchase", {
+                    packageId: id,
+                    email: session.user.email,
+                });
+
+                if (purchaseCheck.data.alreadyPurchased) {
+                    setAlreadyPurchased(true);
+                }
             } catch (error) {
                 console.error("Error fetching package:", error);
                 toast.error("প্যাকেজ লোড করতে ব্যর্থ হয়েছে।");
@@ -30,17 +43,22 @@ export default function CheckoutPage() {
             }
         }
         fetchPackageDetails();
-    }, [id]);
+    }, [id, session]);
 
     async function handlePayment() {
         if (!paymentMethod) {
             toast.error("অনুগ্রহ করে পেমেন্টের মাধ্যম নির্বাচন করুন।");
             return;
         }
+        if (alreadyPurchased) {
+            toast.error("আপনার এই প্যাকেজ ইতিমধ্যে সক্রিয় রয়েছে।");
+            return;
+        }
         try {
             await axios.post("/api/checkout", {
                 packageId: id,
                 paymentMethod,
+                email: session.user.email,
             });
             toast.success("পেমেন্ট সফল হয়েছে! রিডাইরেক্ট করা হচ্ছে...");
             setTimeout(() => router.push("/packages"), 2000);
@@ -69,15 +87,15 @@ export default function CheckoutPage() {
                         </div>
                     </div>
                 </div>
-                
+
                 <div className="flex-1 p-6 bg-gray-50 rounded-lg shadow-md">
                     <h3 className="text-2xl font-semibold mb-4">পেমেন্টের মাধ্যম নির্বাচন করুন</h3>
                     <div className="flex flex-col gap-4">
                         <button
-                            className={`flex items-center gap-3 px-5 py-4 rounded-lg transition-all text-lg font-semibold w-full ${paymentMethod === "Daricomma Wallet" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800"}`}
-                            onClick={() => setPaymentMethod("Question management")}
+                            className={`flex items-center gap-3 px-5 py-4 rounded-lg transition-all text-lg font-semibold w-full ${paymentMethod === "Question Management" ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-800"}`}
+                            onClick={() => setPaymentMethod("Question Management")}
                         >
-                            <BsWallet2 className="text-2xl" /> Question management
+                            <BsWallet2 className="text-2xl" /> Question Management
                         </button>
                         <button
                             className={`flex items-center gap-3 px-5 py-4 rounded-lg transition-all text-lg font-semibold w-full ${paymentMethod === "বিকাশ" ? "bg-red-500 text-white" : "bg-gray-200 text-gray-800"}`}
@@ -87,11 +105,11 @@ export default function CheckoutPage() {
                         </button>
                     </div>
                     <button
-                        className={`w-full py-4 rounded-lg text-xl font-bold transition-all mt-6 ${paymentMethod ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-400 text-gray-700 cursor-not-allowed"}`}
+                        className={`w-full py-4 rounded-lg text-xl font-bold transition-all mt-6 ${paymentMethod && !alreadyPurchased ? "bg-blue-600 hover:bg-blue-700 text-white" : "bg-gray-400 text-gray-700 cursor-not-allowed"}`}
                         onClick={handlePayment}
-                        disabled={!paymentMethod}
+                        disabled={!paymentMethod || alreadyPurchased}
                     >
-                        পেমেন্ট সম্পন্ন করি
+                        {alreadyPurchased ? "ইতিমধ্যে কেনা হয়েছে" : "পেমেন্ট সম্পন্ন করি"}
                     </button>
                 </div>
             </div>
