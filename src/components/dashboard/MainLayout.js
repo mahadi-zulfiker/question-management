@@ -13,6 +13,7 @@ import CreateSQAdmin from "./Admin/CreateSQAdmin";
 import CreateMCQTeacher from "./Teacher/CreateMCQTeacher";
 import CreateCQTeacher from "./Teacher/CreateCQTeacher";
 import CreateSQTeacher from "./Teacher/CreateSQTeacher";
+import CreatePackage from "./Admin/CreatePackage";
 
 
 const MainLayout = () => {
@@ -59,6 +60,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/createMCQAdmin" && <CreateMCQAdmin />}
             {pathname === "/dashboard/admin/createCQAdmin" && <CreateCQAdmin />}
             {pathname === "/dashboard/admin/createSQAdmin" && <CreateSQAdmin />}
+            {pathname === "/dashboard/admin/createPackage" && <CreatePackage />}
 
           </div>
 
