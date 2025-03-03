@@ -79,6 +79,11 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
           icon: <AiOutlineProfile className="text-2xl mr-2" />, 
           label: "Create SQ",
         },
+        {
+          href: "/dashboard/admin/createPackage",
+          icon: <AiOutlineProfile className="text-2xl mr-2" />, 
+          label: "Create Package",
+        },
       ];
     } else {
       return commonMenuItems;

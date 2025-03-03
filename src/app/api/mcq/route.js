@@ -9,7 +9,6 @@ export async function POST(req) {
 
         const { question, options, correctAnswer, classLevel, division, subjectName, subjectPart, chapterName } = body;
 
-        // Validate input
         if (!question || !Array.isArray(options) || options.length < 2 || correctAnswer === null || !classLevel || !subjectName || !chapterName) {
             return NextResponse.json({ error: "Invalid Data", details: body }, { status: 400 });
         }

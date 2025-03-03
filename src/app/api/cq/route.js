@@ -22,9 +22,9 @@ export async function POST(req) {
             answers,
             marks,
             classLevel,
-            division: division || null, // Handle optional field
+            division: division || null,
             subjectName,
-            subjectPart: subjectPart || null, // Handle optional field
+            subjectPart: subjectPart || null,
             chapterName,
             createdAt: new Date(),
         };
