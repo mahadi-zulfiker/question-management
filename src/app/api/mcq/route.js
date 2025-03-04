@@ -5,16 +5,15 @@ export async function POST(req) {
     try {
         const db = await connectMongoDB();
         const body = await req.json();
-        console.log("Received Data:", body);
 
-        const { question, options, correctAnswer, classLevel, division, subjectName, subjectPart, chapterName } = body;
+        const { question, options, correctAnswer, classLevel, division, subjectName, subjectPart, chapterName, teacherEmail } = body;
 
         if (!question || !Array.isArray(options) || options.length < 2 || correctAnswer === null || !classLevel || !subjectName || !chapterName) {
             return NextResponse.json({ error: "Invalid Data", details: body }, { status: 400 });
         }
 
         const mcqCollection = db.collection("mcqs");
-        const newMCQ = { question, options, correctAnswer, classLevel, division, subjectName, subjectPart, chapterName };
+        const newMCQ = { question, options, correctAnswer, classLevel, division, subjectName, subjectPart, chapterName, teacherEmail: teacherEmail || "admin", createdAt: new Date() };
         const result = await mcqCollection.insertOne(newMCQ);
 
         return NextResponse.json({
@@ -27,11 +26,19 @@ export async function POST(req) {
     }
 }
 
-export async function GET() {
+export async function GET(req) {
     try {
         const db = await connectMongoDB();
         const mcqCollection = db.collection("mcqs");
-        const mcqs = await mcqCollection.find().toArray();
+        const url = new URL(req.url);
+        const teacherEmail = url.searchParams.get("teacherEmail");
+        
+        let filter = {};
+        if (teacherEmail) {
+            filter = { teacherEmail };
+        }
+
+        const mcqs = await mcqCollection.find(filter).toArray();
         return NextResponse.json(mcqs);
     } catch (error) {
         console.error("❌ Fetching MCQs Failed:", error);
