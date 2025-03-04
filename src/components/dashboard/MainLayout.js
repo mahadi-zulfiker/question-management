@@ -14,6 +14,17 @@ import CreateMCQTeacher from "./Teacher/CreateMCQTeacher";
 import CreateCQTeacher from "./Teacher/CreateCQTeacher";
 import CreateSQTeacher from "./Teacher/CreateSQTeacher";
 import CreatePackage from "./Admin/CreatePackage";
+import CreateCertificate from "./Teacher/CreateCertificate";
+import CreateStudentCircle from "./Teacher/CreateStudentCircle";
+import ViewCertificate from "./Teacher/ViewCertificate";
+import ViewCircle from "./Teacher/ViewCircle";
+import ViewQuestions from "./Teacher/ViewQuestions";
+import PaymentHistory from "./Teacher/PaymentHistory";
+import ViewExams from "./Student/ViewExams";
+import Certificates from "./Student/Certificates";
+import MarksHistory from "./Student/MarksHistory";
+import AttendedExams from "./Student/AttendedExams";
+import PaymentHistoryStudent from "./Student/PaymentHistoryStudent";
 
 
 const MainLayout = () => {
@@ -48,12 +59,23 @@ const MainLayout = () => {
           {/* Content based on route */}
           <div className="mt-8">
 
-            {pathname === "/dashboard/student" && <Student/>}
+            {pathname === "/dashboard/student" && <Student />}
+            {pathname === "/dashboard/student/viewExams" && <ViewExams />}
+            {pathname === "/dashboard/student/certificates" && <Certificates />}
+            {pathname === "/dashboard/student/marksHistory" && <MarksHistory />}
+            {pathname === "/dashboard/student/attendedExams" && <AttendedExams />}
+            {pathname === "/dashboard/student/paymentHistoryStudent" && <PaymentHistoryStudent />}
 
             {pathname === "/dashboard/teacher" && <Teacher />}
-            {pathname === "/dashboard/teacher/createMCQTeacher" && <CreateMCQTeacher/>}
+            {pathname === "/dashboard/teacher/createMCQTeacher" && <CreateMCQTeacher />}
             {pathname === "/dashboard/teacher/createCQTeacher" && <CreateCQTeacher />}
-            {pathname === "/dashboard/teacher/createSQTeacher" && <CreateSQTeacher/>}
+            {pathname === "/dashboard/teacher/createSQTeacher" && <CreateSQTeacher />}
+            {pathname === "/dashboard/teacher/createCertificate" && <CreateCertificate />}
+            {pathname === "/dashboard/teacher/createStudentCircle" && <CreateStudentCircle />}
+            {pathname === "/dashboard/teacher/viewCertificate" && <ViewCertificate />}
+            {pathname === "/dashboard/teacher/viewCircle" && <ViewCircle />}
+            {pathname === "/dashboard/teacher/ViewQuestions" && <ViewQuestions />}
+            {pathname === "/dashboard/teacher/paymentHistory" && <PaymentHistory />}
 
             {pathname === "/dashboard/admin" && <Admin />}
             {pathname === "/dashboard/admin/adminProfileManagement" && <AdminProfileManagement />}

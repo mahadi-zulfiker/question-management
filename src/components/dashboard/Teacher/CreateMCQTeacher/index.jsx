@@ -4,8 +4,10 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useSession } from "next-auth/react";
 
 export default function CreateMCQTeacher() {
+    const { data: session } = useSession();
     const [question, setQuestion] = useState("");
     const [numOptions, setNumOptions] = useState(4);
     const [options, setOptions] = useState(["", "", "", ""]);
@@ -32,12 +34,24 @@ export default function CreateMCQTeacher() {
             toast.error("দয়া করে সঠিক উত্তর নির্বাচন করুন!", { position: "top-right" });
             return;
         }
-        const mcqData = { classLevel, division, subjectName, subjectPart, chapterName, question, options, correctAnswer };
+        const mcqData = {
+            classLevel,
+            division,
+            subjectName,
+            subjectPart,
+            chapterName,
+            question,
+            options,
+            correctAnswer,
+            teacherEmail: session?.user?.email || "admin"  // ✅ Change createdBy → teacherEmail
+        };
+
         const response = await fetch("/api/mcq", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(mcqData),
         });
+
         if (response.ok) {
             toast.success("✅ এমসিকিউ সফলভাবে যোগ করা হয়েছে!", { position: "top-right" });
             setClassLevel("");
@@ -53,10 +67,11 @@ export default function CreateMCQTeacher() {
         }
     };
 
+
     return (
-        <motion.div 
-            initial={{ opacity: 0, y: -20 }} 
-            animate={{ opacity: 1, y: 0 }} 
+        <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="max-w-xl mx-auto p-6 bg-white rounded-lg shadow-lg border border-gray-200 mt-6"
         >

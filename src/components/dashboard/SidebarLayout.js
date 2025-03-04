@@ -1,8 +1,12 @@
 'use client';
-import { MdPerson, MdOutlineAdminPanelSettings } from "react-icons/md";
-import { BiHomeAlt, BiBookAdd } from "react-icons/bi";
-import { FaUserGraduate, FaChalkboardTeacher, FaPlusCircle } from "react-icons/fa";
-import { AiOutlineProfile } from "react-icons/ai";
+import { MdAdminPanelSettings } from "react-icons/md";
+import { BiHomeSmile, BiBookBookmark } from "react-icons/bi";
+import { FaUserGraduate, FaChalkboardTeacher, FaPlus, FaRegIdBadge } from "react-icons/fa";
+import { HiOutlineClipboardList, HiOutlineReceiptRefund } from "react-icons/hi";
+import { GiNotebook } from "react-icons/gi";
+import { TbCertificate } from "react-icons/tb";
+import { AiOutlineFileAdd } from "react-icons/ai";
+import { RiTeamLine, RiQuestionnaireLine } from "react-icons/ri";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 
@@ -17,7 +21,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
   const commonMenuItems = [
     {
       href: "/",
-      icon: <BiHomeAlt className="text-2xl mr-2" />, 
+      icon: <BiHomeSmile className="text-2xl mr-2" />, 
       label: "Back to Home",
     },
   ];
@@ -26,64 +30,35 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
     if (pathname.startsWith("/dashboard/student")) {
       return [
         ...commonMenuItems,
-        {
-          href: "/dashboard/student",
-          icon: <FaUserGraduate className="text-2xl mr-2" />, 
-          label: "Student Profile",
-        },
+        { href: "/dashboard/student", icon: <FaUserGraduate className="text-2xl mr-2" />, label: "Student Profile" },
+        { href: "/dashboard/student/viewExams", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "View Exams" },
+        { href: "/dashboard/student/certificates", icon: <TbCertificate className="text-2xl mr-2" />, label: "Certificates" },
+        { href: "/dashboard/student/marksHistory", icon: <GiNotebook className="text-2xl mr-2" />, label: "Marks History" },
+        { href: "/dashboard/student/attendedExams", icon: <RiQuestionnaireLine className="text-2xl mr-2" />, label: "Attended Exams" },
+        { href: "/dashboard/student/paymentHistoryStudent", icon: <HiOutlineReceiptRefund className="text-2xl mr-2" />, label: "Payment History" },
       ];
     } else if (pathname.startsWith("/dashboard/teacher")) {
       return [
         ...commonMenuItems,
-        {
-          href: "/dashboard/teacher",
-          icon: <FaChalkboardTeacher className="text-2xl mr-2" />, 
-          label: "Teacher Profile",
-        },
-        {
-          href: "/dashboard/teacher/createMCQTeacher",
-          icon: <BiBookAdd className="text-2xl mr-2" />, 
-          label: "Create MCQ",
-        },
-        {
-          href: "/dashboard/teacher/createCQTeacher",
-          icon: <FaPlusCircle className="text-2xl mr-2" />, 
-          label: "Create CQ",
-        },
-        {
-          href: "/dashboard/teacher/createSQTeacher",
-          icon: <AiOutlineProfile className="text-2xl mr-2" />, 
-          label: "Create SQ",
-        },
+        { href: "/dashboard/teacher", icon: <FaChalkboardTeacher className="text-2xl mr-2" />, label: "Teacher Profile" },
+        { href: "/dashboard/teacher/createMCQTeacher", icon: <BiBookBookmark className="text-2xl mr-2" />, label: "Create MCQ" },
+        { href: "/dashboard/teacher/createCQTeacher", icon: <FaPlus className="text-2xl mr-2" />, label: "Create CQ" },
+        { href: "/dashboard/teacher/createSQTeacher", icon: <AiOutlineFileAdd className="text-2xl mr-2" />, label: "Create SQ" },
+        { href: "/dashboard/teacher/createCertificate", icon: <TbCertificate className="text-2xl mr-2" />, label: "Create Certificate" },
+        { href: "/dashboard/teacher/createStudentCircle", icon: <RiTeamLine className="text-2xl mr-2" />, label: "Create Student Circle" },
+        { href: "/dashboard/teacher/viewCertificate", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "View Certificate" },
+        { href: "/dashboard/teacher/viewCircle", icon: <RiTeamLine className="text-2xl mr-2" />, label: "View Circle" },
+        { href: "/dashboard/teacher/viewQuestions", icon: <RiQuestionnaireLine className="text-2xl mr-2" />, label: "View Questions" },
+        { href: "/dashboard/teacher/paymentHistory", icon: <HiOutlineReceiptRefund className="text-2xl mr-2" />, label: "Payment History" },
       ];
     } else if (pathname.startsWith("/dashboard/admin")) {
       return [
         ...commonMenuItems,
-        {
-          href: "/dashboard/admin/adminProfileManagement",
-          icon: <MdOutlineAdminPanelSettings className="text-2xl mr-2" />, 
-          label: "Profile Management",
-        },
-        {
-          href: "/dashboard/admin/createMCQAdmin",
-          icon: <BiBookAdd className="text-2xl mr-2" />, 
-          label: "Create MCQ",
-        },
-        {
-          href: "/dashboard/admin/createCQAdmin",
-          icon: <FaPlusCircle className="text-2xl mr-2" />, 
-          label: "Create CQ",
-        },
-        {
-          href: "/dashboard/admin/createSQAdmin",
-          icon: <AiOutlineProfile className="text-2xl mr-2" />, 
-          label: "Create SQ",
-        },
-        {
-          href: "/dashboard/admin/createPackage",
-          icon: <AiOutlineProfile className="text-2xl mr-2" />, 
-          label: "Create Package",
-        },
+        { href: "/dashboard/admin/adminProfileManagement", icon: <MdAdminPanelSettings className="text-2xl mr-2" />, label: "Profile Management" },
+        { href: "/dashboard/admin/createMCQAdmin", icon: <BiBookBookmark className="text-2xl mr-2" />, label: "Create MCQ" },
+        { href: "/dashboard/admin/createCQAdmin", icon: <FaPlus className="text-2xl mr-2" />, label: "Create CQ" },
+        { href: "/dashboard/admin/createSQAdmin", icon: <AiOutlineFileAdd className="text-2xl mr-2" />, label: "Create SQ" },
+        { href: "/dashboard/admin/createPackage", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "Create Package" },
       ];
     } else {
       return commonMenuItems;

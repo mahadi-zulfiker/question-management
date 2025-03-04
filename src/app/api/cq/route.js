@@ -4,10 +4,10 @@ import { connectMongoDB } from "@/lib/mongodb";
 export async function POST(req) {
     try {
         const db = await connectMongoDB();
-        const { passage, questions, answers, classLevel, division, subjectName, subjectPart, chapterName } = await req.json();
+        const { passage, questions, answers, classLevel, division, subjectName, subjectPart, chapterName, teacherEmail } = await req.json();
 
         // Validate required fields
-        if (!passage || questions.length !== 4 || answers.length !== 4 || !classLevel || !subjectName || !chapterName) {
+        if (!teacherEmail || !passage || questions.length !== 4 || answers.length !== 4 || !classLevel || !subjectName || !chapterName) {
             return NextResponse.json({ error: "❌ সমস্ত প্রয়োজনীয় তথ্য প্রদান করুন!" }, { status: 400 });
         }
 
@@ -26,6 +26,7 @@ export async function POST(req) {
             subjectName,
             subjectPart: subjectPart || null,
             chapterName,
+            teacherEmail,
             createdAt: new Date(),
         };
 

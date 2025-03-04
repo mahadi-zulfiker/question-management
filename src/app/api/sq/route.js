@@ -4,15 +4,16 @@ import { connectMongoDB } from "@/lib/mongodb";
 export async function POST(req) {
     try {
         const db = await connectMongoDB();
-        const { type, question, answer, classLevel, division, subjectName, subjectPart, chapterName } = await req.json();
+        const { type, question, answer, classLevel, division, subjectName, subjectPart, chapterName, teacherEmail } = await req.json();
 
         // Validate required fields
         if (!type || !question || !answer || !classLevel || !subjectName || !chapterName) {
-            return NextResponse.json({ error: "সব ক্ষেত্র পূরণ করুন" }, { status: 400 });
+            return NextResponse.json({ error: "❌ সমস্ত প্রয়োজনীয় তথ্য প্রদান করুন!" }, { status: 400 });
         }
 
         const collection = db.collection("SQ");
-        await collection.insertOne({
+
+        const newSQ = {
             type,
             question,
             answer,
@@ -21,12 +22,28 @@ export async function POST(req) {
             subjectName,
             subjectPart: subjectPart || null,
             chapterName,
-            createdAt: new Date()
-        });
+            teacherEmail: teacherEmail || null, // ✅ Save email if teacher, otherwise null for admin
+            createdAt: new Date(),
+        };
 
-        return NextResponse.json({ message: "✅ সংক্ষিপ্ত প্রশ্ন সফলভাবে সংরক্ষিত হয়েছে" }, { status: 201 });
+        const result = await collection.insertOne(newSQ);
+
+        return NextResponse.json({ message: "✅ সংক্ষিপ্ত প্রশ্ন সফলভাবে যোগ করা হয়েছে!", sq: result.insertedId }, { status: 201 });
     } catch (error) {
-        console.error("❌ Database Error:", error);
-        return NextResponse.json({ error: "সার্ভার সমস্যা হয়েছে" }, { status: 500 });
+        console.error("SQ Insertion Error:", error);
+        return NextResponse.json({ error: "❌ সার্ভারে সমস্যা হয়েছে!" }, { status: 500 });
+    }
+}
+
+export async function GET() {
+    try {
+        const db = await connectMongoDB();
+        const collection = db.collection("SQ");
+        const sqs = await collection.find().toArray();
+
+        return NextResponse.json(sqs);
+    } catch (error) {
+        console.error("SQ Fetch Error:", error);
+        return NextResponse.json({ error: "❌ সার্ভারে সমস্যা হয়েছে!" }, { status: 500 });
     }
 }

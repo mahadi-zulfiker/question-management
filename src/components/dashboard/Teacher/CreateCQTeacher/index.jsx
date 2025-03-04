@@ -1,11 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function CreateCQTeacher() {
+    const { data: session } = useSession();
+    const teacherEmail = session?.user?.email || null; // Get email from session
+
     const [passage, setPassage] = useState("");
     const [questions, setQuestions] = useState(["", "", "", ""]);
     const [answers, setAnswers] = useState(["", "", "", ""]);
@@ -15,7 +19,7 @@ export default function CreateCQTeacher() {
     const [subjectPart, setSubjectPart] = useState("");
     const [chapterName, setChapterName] = useState("");
 
-    const marks = [1, 2, 3, 4]; // Assigned marks
+    const marks = [1, 2, 3, 4];
 
     const handleQuestionChange = (index, value) => {
         const newQuestions = [...questions];
@@ -31,7 +35,19 @@ export default function CreateCQTeacher() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const cqData = { passage, questions, answers, marks, classLevel, division, subjectName, subjectPart, chapterName };
+
+        const cqData = { 
+            passage, 
+            questions, 
+            answers, 
+            marks, 
+            classLevel, 
+            division, 
+            subjectName, 
+            subjectPart, 
+            chapterName,
+            teacherEmail // Attach teacher's email from session
+        };
 
         const response = await fetch("/api/cq", {
             method: "POST",
@@ -63,6 +79,7 @@ export default function CreateCQTeacher() {
         >
             <h2 className="text-2xl font-bold mb-4 text-center text-blue-600">📝 সৃজনশীল প্রশ্ন তৈরি করুন</h2>
             <form onSubmit={handleSubmit}>
+                {/* Class Level Selection */}
                 <select 
                     className="w-full p-2 border rounded mb-3" 
                     value={classLevel} 
@@ -74,6 +91,7 @@ export default function CreateCQTeacher() {
                         <option key={i + 4} value={i + 4}>ক্লাস {i + 4}</option>
                     ))}
                 </select>
+
                 {classLevel >= 9 && (
                     <select 
                         className="w-full p-2 border rounded mb-3" 
@@ -89,6 +107,8 @@ export default function CreateCQTeacher() {
                         )}
                     </select>
                 )}
+
+                {/* Subject, Chapter, and Passage Inputs */}
                 <input 
                     type="text" 
                     placeholder="বিষয়ের নাম" 
@@ -119,6 +139,8 @@ export default function CreateCQTeacher() {
                     onChange={(e) => setPassage(e.target.value)}
                     required
                 />
+
+                {/* Questions & Answers */}
                 {questions.map((question, i) => (
                     <div key={i} className="mb-4 bg-gray-100 p-3 rounded-lg shadow-md">
                         <label className="block text-gray-700 font-medium mb-1">
@@ -142,10 +164,12 @@ export default function CreateCQTeacher() {
                         />
                     </div>
                 ))}
+
                 <motion.button 
                     type="submit" 
                     className="w-full bg-blue-500 text-white py-2 mt-3 rounded hover:bg-blue-600 transition font-bold"
                     whileTap={{ scale: 0.95 }}
+                    disabled={!teacherEmail} // Disable submit if no email
                 >
                     ✅ সাবমিট করুন
                 </motion.button>
