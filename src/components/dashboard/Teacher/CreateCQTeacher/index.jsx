@@ -15,7 +15,7 @@ export default function CreateCQTeacher() {
     const [subjectPart, setSubjectPart] = useState("");
     const [chapterName, setChapterName] = useState("");
 
-    const marks = [1, 2, 3, 4]; // Assigned marks
+    const marks = [1, 2, 3, 4];
 
     const handleQuestionChange = (index, value) => {
         const newQuestions = [...questions];
