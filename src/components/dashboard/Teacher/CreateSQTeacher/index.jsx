@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react"; // ✅ Import useSession
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 export default function CreateSQTeacher() {
+    const { data: session } = useSession(); // ✅ Get session data
     const [type, setType] = useState("জ্ঞানেরমূলক");
     const [question, setQuestion] = useState("");
     const [answer, setAnswer] = useState("");
@@ -20,7 +22,17 @@ export default function CreateSQTeacher() {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        const sqData = { type, question, answer, classLevel, division, subjectName, subjectPart, chapterName };
+        const sqData = {
+            type,
+            question,
+            answer,
+            classLevel,
+            division,
+            subjectName,
+            subjectPart,
+            chapterName,
+            teacherEmail: session?.user?.email || null, // ✅ Add teacher's email if logged in
+        };
 
         const response = await fetch("/api/sq", {
             method: "POST",
