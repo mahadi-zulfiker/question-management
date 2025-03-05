@@ -74,7 +74,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/teacher/createStudentCircle" && <CreateStudentCircle />}
             {pathname === "/dashboard/teacher/viewCertificate" && <ViewCertificate />}
             {pathname === "/dashboard/teacher/viewCircle" && <ViewCircle />}
-            {pathname === "/dashboard/teacher/ViewQuestions" && <ViewQuestions />}
+            {pathname === "/dashboard/teacher/viewQuestions" && <ViewQuestions />}
             {pathname === "/dashboard/teacher/paymentHistory" && <PaymentHistory />}
 
             {pathname === "/dashboard/admin" && <Admin />}
