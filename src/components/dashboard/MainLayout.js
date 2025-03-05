@@ -25,6 +25,8 @@ import Certificates from "./Student/Certificates";
 import MarksHistory from "./Student/MarksHistory";
 import AttendedExams from "./Student/AttendedExams";
 import PaymentHistoryStudent from "./Student/PaymentHistoryStudent";
+import StudentProfile from "./Student/StudentProfile";
+import TeacherProfile from "./Teacher/TeacherProfile";
 
 
 const MainLayout = () => {
@@ -60,6 +62,7 @@ const MainLayout = () => {
           <div className="mt-8">
 
             {pathname === "/dashboard/student" && <Student />}
+            {pathname === "/dashboard/student/studentProfile" && <StudentProfile />}
             {pathname === "/dashboard/student/viewExams" && <ViewExams />}
             {pathname === "/dashboard/student/certificates" && <Certificates />}
             {pathname === "/dashboard/student/marksHistory" && <MarksHistory />}
@@ -67,6 +70,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/student/paymentHistoryStudent" && <PaymentHistoryStudent />}
 
             {pathname === "/dashboard/teacher" && <Teacher />}
+            {pathname === "/dashboard/teacher/teacherProfile" && <TeacherProfile />}
             {pathname === "/dashboard/teacher/createMCQTeacher" && <CreateMCQTeacher />}
             {pathname === "/dashboard/teacher/createCQTeacher" && <CreateCQTeacher />}
             {pathname === "/dashboard/teacher/createSQTeacher" && <CreateSQTeacher />}
