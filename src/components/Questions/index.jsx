@@ -2,16 +2,16 @@ import React from 'react';
 
 function Questions() {
   return (
-    <div className="bg-white shadow-lg rounded-lg p-6 mb-8 max-w-6xl mx-auto">
+    <div className="bg-white shadow-lg rounded-lg p-6 mb-8 max-w-6xl mx-auto my-16">
       {/* Header Section */}
       <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-red-500 mb-2">
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">
           প্রশ্নের উত্তর জানতে চান?
         </h1>
         <p className="text-gray-600 mb-4">
           পারিপার্শ্বিক ও কার্যক্ষেত্রের আগ্রহী সম্পর্কে তথ্য। আপনি কি নির্দিষ্ট বা মোটা আকারে তথ্যি করতে চান? আপনি উত্তরের সঙ্গে ৩০ দিন রিটার্ন পলিসি বা হার টার্গেট করে কাজ করতে পারেন।
         </p>
-        <button className="bg-green-500 text-white px-6 py-2 rounded-full hover:bg-green-600 transition duration-300">
+        <button className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition duration-300">
           প্রশ্নের উত্তর জানুন
         </button>
       </div>
@@ -19,9 +19,9 @@ function Questions() {
       {/* Feature Cards Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1 */}
-        <div className="bg-white border border-green-200 rounded-lg p-4 shadow-md hover:shadow-lg transition duration-300">
+        <div className="bg-white border border-blue-200 rounded-lg p-4 shadow-md hover:shadow-lg transition duration-300">
           <div className="flex justify-center mb-4">
-            <span className="text-3xl text-green-500">
+            <span className="text-3xl text-blue-500">
               <svg
                 className="w-8 h-8"
                 fill="currentColor"
@@ -45,9 +45,9 @@ function Questions() {
         </div>
 
         {/* Card 2 */}
-        <div className="bg-white border border-green-200 rounded-lg p-4 shadow-md hover:shadow-lg transition duration-300">
+        <div className="bg-white border border-blue-200 rounded-lg p-4 shadow-md hover:shadow-lg transition duration-300">
           <div className="flex justify-center mb-4">
-            <span className="text-3xl text-green-500">
+            <span className="text-3xl text-blue-500">
               <svg
                 className="w-8 h-8"
                 fill="currentColor"
@@ -71,9 +71,9 @@ function Questions() {
         </div>
 
         {/* Card 3 */}
-        <div className="bg-white border border-green-200 rounded-lg p-4 shadow-md hover:shadow-lg transition duration-300">
+        <div className="bg-white border border-blue-200 rounded-lg p-4 shadow-md hover:shadow-lg transition duration-300">
           <div className="flex justify-center mb-4">
-            <span className="text-3xl text-green-500">
+            <span className="text-3xl text-blue-500">
               <svg
                 className="w-8 h-8"
                 fill="currentColor"

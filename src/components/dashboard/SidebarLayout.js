@@ -30,7 +30,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
     if (pathname.startsWith("/dashboard/student")) {
       return [
         ...commonMenuItems,
-        { href: "/dashboard/student", icon: <FaUserGraduate className="text-2xl mr-2" />, label: "Student Profile" },
+        { href: "/dashboard/student/studentProfile", icon: <FaUserGraduate className="text-2xl mr-2" />, label: "Student Profile" },
         { href: "/dashboard/student/viewExams", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "View Exams" },
         { href: "/dashboard/student/certificates", icon: <TbCertificate className="text-2xl mr-2" />, label: "Certificates" },
         { href: "/dashboard/student/marksHistory", icon: <GiNotebook className="text-2xl mr-2" />, label: "Marks History" },
@@ -40,7 +40,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
     } else if (pathname.startsWith("/dashboard/teacher")) {
       return [
         ...commonMenuItems,
-        { href: "/dashboard/teacher", icon: <FaChalkboardTeacher className="text-2xl mr-2" />, label: "Teacher Profile" },
+        { href: "/dashboard/teacher/teacherProfile", icon: <FaChalkboardTeacher className="text-2xl mr-2" />, label: "Teacher Profile" },
         { href: "/dashboard/teacher/createMCQTeacher", icon: <BiBookBookmark className="text-2xl mr-2" />, label: "Create MCQ" },
         { href: "/dashboard/teacher/createCQTeacher", icon: <FaPlus className="text-2xl mr-2" />, label: "Create CQ" },
         { href: "/dashboard/teacher/createSQTeacher", icon: <AiOutlineFileAdd className="text-2xl mr-2" />, label: "Create SQ" },
