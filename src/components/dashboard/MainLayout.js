@@ -30,6 +30,7 @@ import TeacherProfile from "./Teacher/TeacherProfile";
 import CreateClass from "./Admin/CreateClass";
 import PaymentHistoryAll from "./Admin/PaymentHistoryAll";
 import ViewQuestionsAdmin from "./Admin/ViewQuestionsAdmin";
+import TeacherQuestions from "./Admin/TeacherQuestions";
 
 
 const MainLayout = () => {
@@ -93,6 +94,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/createClass" && <CreateClass />}
             {pathname === "/dashboard/admin/paymentHistoryAll" && <PaymentHistoryAll />}
             {pathname === "/dashboard/admin/viewQuestionsAdmin" && <ViewQuestionsAdmin />}
+            {pathname === "/dashboard/admin/teacherQuestions" && <TeacherQuestions />}
 
           </div>
 

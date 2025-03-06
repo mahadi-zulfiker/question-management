@@ -61,6 +61,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         { href: "/dashboard/admin/createPackage", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "Create Package" },
         { href: "/dashboard/admin/createClass", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "Create Class" },
         { href: "/dashboard/admin/viewQuestionsAdmin", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "View Questions" },
+        { href: "/dashboard/admin/teacherQuestions", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "Teacher Questions" },
         { href: "/dashboard/admin/paymentHistoryAll", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "Payment History" },
       ];
     } else {
