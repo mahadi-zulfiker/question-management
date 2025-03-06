@@ -59,6 +59,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         { href: "/dashboard/admin/createCQAdmin", icon: <FaPlus className="text-2xl mr-2" />, label: "Create CQ" },
         { href: "/dashboard/admin/createSQAdmin", icon: <AiOutlineFileAdd className="text-2xl mr-2" />, label: "Create SQ" },
         { href: "/dashboard/admin/createPackage", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "Create Package" },
+        { href: "/dashboard/admin/createClass", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "Create Class" },
       ];
     } else {
       return commonMenuItems;

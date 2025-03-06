@@ -27,6 +27,7 @@ import AttendedExams from "./Student/AttendedExams";
 import PaymentHistoryStudent from "./Student/PaymentHistoryStudent";
 import StudentProfile from "./Student/StudentProfile";
 import TeacherProfile from "./Teacher/TeacherProfile";
+import CreateClass from "./Admin/CreateClass";
 
 
 const MainLayout = () => {
@@ -87,6 +88,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/createCQAdmin" && <CreateCQAdmin />}
             {pathname === "/dashboard/admin/createSQAdmin" && <CreateSQAdmin />}
             {pathname === "/dashboard/admin/createPackage" && <CreatePackage />}
+            {pathname === "/dashboard/admin/createClass" && <CreateClass />}
 
           </div>
 
