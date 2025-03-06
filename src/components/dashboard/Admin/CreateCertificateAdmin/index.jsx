@@ -6,7 +6,7 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { motion } from "framer-motion";
 
-export default function CreateCertificate() {
+export default function CreateCertificateAdmin() {
     const [students, setStudents] = useState([]);
     const [selectedStudentId, setSelectedStudentId] = useState("");
     const [title, setTitle] = useState("");
