@@ -31,6 +31,8 @@ import CreateClass from "./Admin/CreateClass";
 import PaymentHistoryAll from "./Admin/PaymentHistoryAll";
 import ViewQuestionsAdmin from "./Admin/ViewQuestionsAdmin";
 import TeacherQuestions from "./Admin/TeacherQuestions";
+import CreateCertificateAdmin from "./Admin/CreateCertificateAdmin";
+import ViewCertificateAdmin from "./Admin/ViewCertificateAdmin/page";
 
 
 const MainLayout = () => {
@@ -95,6 +97,8 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/paymentHistoryAll" && <PaymentHistoryAll />}
             {pathname === "/dashboard/admin/viewQuestionsAdmin" && <ViewQuestionsAdmin />}
             {pathname === "/dashboard/admin/teacherQuestions" && <TeacherQuestions />}
+            {pathname === "/dashboard/admin/createCertificateAdmin" && <CreateCertificateAdmin />}
+            {pathname === "/dashboard/admin/viewCertificateAdmin" && <ViewCertificateAdmin />}
 
           </div>
 
