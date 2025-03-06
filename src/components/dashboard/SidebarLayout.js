@@ -2,7 +2,7 @@
 import { MdAdminPanelSettings } from "react-icons/md";
 import { BiHomeSmile, BiBookBookmark } from "react-icons/bi";
 import { FaUserGraduate, FaChalkboardTeacher, FaPlus, FaRegIdBadge } from "react-icons/fa";
-import { HiOutlineClipboardList, HiOutlineReceiptRefund } from "react-icons/hi";
+import { HiOutlineReceiptRefund } from "react-icons/hi";
 import { GiNotebook } from "react-icons/gi";
 import { TbCertificate, TbListDetails } from "react-icons/tb";
 import { AiOutlineFileAdd, AiOutlineProfile } from "react-icons/ai";
