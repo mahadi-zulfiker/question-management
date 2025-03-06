@@ -14,8 +14,8 @@ export async function POST(req) {
       classNumber,
       level,
       subject,
-      chapterNumber, // Store separately
-      chapterName, // Store separately
+      chapterNumber,
+      chapterName,
       subjectPart: subjectPart || "None",
       createdAt: new Date(),
     });
