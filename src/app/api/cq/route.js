@@ -4,10 +4,13 @@ import { connectMongoDB } from "@/lib/mongodb";
 export async function POST(req) {
     try {
         const db = await connectMongoDB();
-        const { passage, questions, answers, classLevel, division, subjectName, subjectPart, chapterName, teacherEmail } = await req.json();
+        const body = await req.json();
+
+        // Extract values correctly
+        const { passage, questions, answers, classNumber, division, subject, subjectPart, chapterNumber, chapterName, teacherEmail } = body;
 
         // Validate required fields
-        if (!teacherEmail || !passage || questions.length !== 4 || answers.length !== 4 || !classLevel || !subjectName || !chapterName) {
+        if (!teacherEmail || !passage || questions.length !== 4 || answers.length !== 4 || !classNumber || !subject || !chapterNumber || !chapterName) {
             return NextResponse.json({ error: "❌ সমস্ত প্রয়োজনীয় তথ্য প্রদান করুন!" }, { status: 400 });
         }
 
@@ -21,10 +24,11 @@ export async function POST(req) {
             questions,
             answers,
             marks,
-            classLevel,
+            classNumber: parseInt(classNumber, 10),
             division: division || null,
-            subjectName,
+            subject,
             subjectPart: subjectPart || null,
+            chapterNumber: parseInt(chapterNumber, 10),
             chapterName,
             teacherEmail,
             createdAt: new Date(),
@@ -39,15 +43,21 @@ export async function POST(req) {
     }
 }
 
-export async function GET() {
+export async function GET(req) {
     try {
         const db = await connectMongoDB();
-        const cqCollection = db.collection("cqs");
-        const cqs = await cqCollection.find().toArray();
+        const url = new URL(req.url);
+        const classNumber = url.searchParams.get("classNumber");
 
-        return NextResponse.json(cqs);
+        if (classNumber) {
+            const classData = await db.collection("classes").find({ classNumber: parseInt(classNumber, 10) }).toArray();
+            return NextResponse.json(classData);
+        } else {
+            const allClasses = await db.collection("classes").find().toArray();
+            return NextResponse.json(allClasses);
+        }
     } catch (error) {
-        console.error("CQ Fetch Error:", error);
-        return NextResponse.json({ error: "❌ সার্ভারে সমস্যা হয়েছে!" }, { status: 500 });
+        console.error("❌ Fetching Classes Failed:", error);
+        return NextResponse.json({ error: "Server Error", details: error.message }, { status: 500 });
     }
 }

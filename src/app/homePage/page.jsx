@@ -1,5 +1,6 @@
 "use client";
 import Banner from '@/components/Banner';
+import Chat from '@/components/Chat';
 import Counter from '@/components/Counter';
 import ExtraInfo from '@/components/ExtraInfo';
 import FAQ from '@/components/FAQ';
@@ -24,6 +25,7 @@ function HomePage() {
             <Services />
             <FAQ />
             <Footer />
+            <Chat />
         </div>
     )
 }
