@@ -28,6 +28,8 @@ import PaymentHistoryStudent from "./Student/PaymentHistoryStudent";
 import StudentProfile from "./Student/StudentProfile";
 import TeacherProfile from "./Teacher/TeacherProfile";
 import CreateClass from "./Admin/CreateClass";
+import PaymentHistoryAll from "./Admin/PaymentHistoryAll";
+import ViewQuestionsAdmin from "./Admin/ViewQuestionsAdmin";
 
 
 const MainLayout = () => {
@@ -89,6 +91,8 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/createSQAdmin" && <CreateSQAdmin />}
             {pathname === "/dashboard/admin/createPackage" && <CreatePackage />}
             {pathname === "/dashboard/admin/createClass" && <CreateClass />}
+            {pathname === "/dashboard/admin/paymentHistoryAll" && <PaymentHistoryAll />}
+            {pathname === "/dashboard/admin/viewQuestionsAdmin" && <ViewQuestionsAdmin />}
 
           </div>
 

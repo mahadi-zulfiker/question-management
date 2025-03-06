@@ -60,6 +60,8 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         { href: "/dashboard/admin/createSQAdmin", icon: <AiOutlineFileAdd className="text-2xl mr-2" />, label: "Create SQ" },
         { href: "/dashboard/admin/createPackage", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "Create Package" },
         { href: "/dashboard/admin/createClass", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "Create Class" },
+        { href: "/dashboard/admin/viewQuestionsAdmin", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "View Questions" },
+        { href: "/dashboard/admin/paymentHistoryAll", icon: <HiOutlineClipboardList className="text-2xl mr-2" />, label: "Payment History" },
       ];
     } else {
       return commonMenuItems;
