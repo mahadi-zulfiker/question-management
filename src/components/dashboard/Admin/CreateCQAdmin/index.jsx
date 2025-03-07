@@ -81,12 +81,12 @@ export default function CreateCQAdmin() {
             answers,
             marks,
             classNumber: selectedClass,
-            division: null, // Add division if needed
+            division: null,
             subject: selectedSubject,
             subjectPart: selectedSubjectPart,
             chapterNumber: selectedChapter,
             chapterName: selectedChapterName,
-            teacherEmail: "teacher@example.com", // Ensure teacherEmail is present
+            teacherEmail: "admin",
         };
     
         console.log("📦 Sending CQ Data:", cqData); // Debugging the payload

@@ -30,7 +30,7 @@ export default function ViewQuestionsAdmin() {
     return (
         <div className="p-6 max-w-4xl mx-auto">
             {/* Header */}
-            <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">📚 Teacher Dashboard</h1>
+            <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">📚 Admin Dashboard</h1>
 
             {/* Filters */}
             <div className="flex flex-col md:flex-row gap-4 mb-6">

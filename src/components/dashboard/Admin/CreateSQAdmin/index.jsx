@@ -101,7 +101,7 @@ export default function CreateSQAdmin() {
             subjectPart: selectedSubjectPart || null,
             chapterNumber: parseInt(selectedChapterNumber),
             chapterName: selectedChapterName,
-            teacherEmail: "teacher@example.com",
+            teacherEmail: "admin",
         };
         console.log("📦 Sending SQ Data:", sqData);
 
