@@ -5,18 +5,16 @@ import { Send, X, MessageCircle } from "lucide-react";
 
 function Chat() {
   const { data: session, status } = useSession();
-  const [messages, setMessages] = useState([]); // Initialize as array to handle both cases
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isChatOpen, setIsChatOpen] = useState(false);
-  const [selectedConversation, setSelectedConversation] = useState(null); // For admin to select a conversation
-  const [selectedRecipientEmail, setSelectedRecipientEmail] = useState(null); // Safeguard for recipient email
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [selectedRecipientEmail, setSelectedRecipientEmail] = useState(null);
 
-  // Debug session data
   useEffect(() => {
     console.log("Session data:", session);
   }, [session]);
 
-  // Fetch messages every 5 seconds
   useEffect(() => {
     if (!isChatOpen || status !== "authenticated") return;
 
@@ -25,17 +23,18 @@ function Chat() {
       if (res.ok) {
         const data = await res.json();
         console.log("Fetched messages (raw):", data);
-        // Normalize data for Admin: convert array to grouped object if needed
-        const normalizedMessages = Array.isArray(data) && session?.user?.userType === "Admin"
-          ? data.reduce((acc, msg) => {
-              const otherEmail = msg.senderEmail === "admin123@gmail.com" ? msg.recipientEmail : msg.senderEmail;
-              if (otherEmail && otherEmail !== "admin123@gmail.com") {
-                if (!acc[otherEmail]) acc[otherEmail] = [];
-                acc[otherEmail].push(msg);
-              }
-              return acc;
-            }, {})
-          : data;
+        const normalizedMessages =
+          Array.isArray(data) && session?.user?.userType === "Admin"
+            ? data.reduce((acc, msg) => {
+                const otherEmail =
+                  msg.senderEmail === "admin123@gmail.com" ? msg.recipientEmail : msg.senderEmail;
+                if (otherEmail && otherEmail !== "admin123@gmail.com") {
+                  if (!acc[otherEmail]) acc[otherEmail] = [];
+                  acc[otherEmail].push(msg);
+                }
+                return acc;
+              }, {})
+            : data;
         setMessages(normalizedMessages);
       } else {
         console.error("Failed to fetch messages:", res.statusText);
@@ -43,8 +42,7 @@ function Chat() {
     };
 
     fetchMessages();
-    const interval = setInterval(fetchMessages, 5000); // Poll every 5 seconds
-
+    const interval = setInterval(fetchMessages, 5000);
     return () => clearInterval(interval);
   }, [isChatOpen, status]);
 
@@ -71,9 +69,8 @@ function Chat() {
         return;
       }
 
-      // Use the safeguarded recipient email
-      payload = { ...payload, senderEmail: selectedRecipientEmail };
-      console.log("Admin reply payload:", payload); // Debug log
+      payload = { text: input, recipientEmail: selectedRecipientEmail };
+      console.log("Admin reply payload (before sending):", payload);
     }
 
     const res = await fetch("/api/chat", {
@@ -88,16 +85,18 @@ function Chat() {
       if (updatedRes.ok) {
         const updatedData = await updatedRes.json();
         console.log("Updated messages after send:", updatedData);
-        const normalizedMessages = Array.isArray(updatedData) && userType === "Admin"
-          ? updatedData.reduce((acc, msg) => {
-              const otherEmail = msg.senderEmail === "admin123@gmail.com" ? msg.recipientEmail : msg.senderEmail;
-              if (otherEmail && otherEmail !== "admin123@gmail.com") {
-                if (!acc[otherEmail]) acc[otherEmail] = [];
-                acc[otherEmail].push(msg);
-              }
-              return acc;
-            }, {})
-          : updatedData;
+        const normalizedMessages =
+          Array.isArray(updatedData) && userType === "Admin"
+            ? data.reduce((acc, msg) => {
+                const otherEmail =
+                  msg.senderEmail === "admin123@gmail.com" ? msg.recipientEmail : msg.senderEmail;
+                if (otherEmail && otherEmail !== "admin123@gmail.com") {
+                  if (!acc[otherEmail]) acc[otherEmail] = [];
+                  acc[otherEmail].push(msg);
+                }
+                return acc;
+              }, {})
+            : updatedData;
         setMessages(normalizedMessages);
       }
     } else {
@@ -111,7 +110,6 @@ function Chat() {
 
   return (
     <div className="fixed bottom-6 right-6 md:right-10 md:bottom-10">
-      {/* Chat Bubble */}
       <div
         onClick={() => setIsChatOpen(!isChatOpen)}
         className="bg-blue-500 text-white rounded-full p-4 shadow-lg cursor-pointer hover:bg-blue-600 transition"
@@ -119,9 +117,8 @@ function Chat() {
         <MessageCircle className="h-8 w-8" />
       </div>
 
-      {/* Chat Box */}
       {isChatOpen && (
-        <div className="fixed bottom-20 right-4 md:right-10 w-72 sm:w-80 md:w-96 bg-white border border-gray-300 rounded-lg shadow-lg flex flex-col">
+        <div className="fixed bottom-20 right-4 md:right-10 w-72 sm:w-80 md:w-96 bg-white border border-gray-300 rounded-lg shadow-lg flex flex-col max-h-[70vh]">
           <div className="bg-blue-500 text-white p-4 rounded-t-lg flex justify-between items-center">
             <h2 className="text-lg font-medium">Chat ({userType})</h2>
             <button
@@ -132,24 +129,22 @@ function Chat() {
             </button>
           </div>
 
-          {/* Admin View: Show Conversations */}
           {userType === "Admin" ? (
             <div className="flex-1 overflow-y-auto p-4 space-y-2 h-64 sm:h-72 md:h-80">
-              {/* Conversation List */}
               <div className="mb-4">
                 <h3 className="text-sm font-medium text-gray-700">Conversations</h3>
                 {Object.keys(messages).length > 0 ? (
                   Object.keys(messages).map((senderEmail, index) => {
                     const firstMessage = messages[senderEmail][0] || {};
-                    console.log(`Conversation ${index}: ${senderEmail}, Sender: ${firstMessage.sender}`); // Debug log
+                    console.log(`Conversation ${index}: ${senderEmail}, Sender: ${firstMessage.sender}`);
                     return (
                       <button
                         key={senderEmail}
                         onClick={() => {
-                          console.log(`Selecting conversation: ${senderEmail}`); // Debug log
+                          console.log(`Selecting conversation with: ${senderEmail}`);
                           setSelectedConversation(senderEmail);
-                          setSelectedRecipientEmail(senderEmail); // Set the safeguarded recipient email
-                          console.log(`After setting - selectedRecipientEmail: ${senderEmail}`); // Debug log
+                          setSelectedRecipientEmail(senderEmail);
+                          console.log(`Selected recipient email set to: ${senderEmail}`);
                         }}
                         className={`block w-full text-left p-2 rounded-lg ${
                           selectedConversation === senderEmail ? "bg-blue-100" : "bg-gray-100"
@@ -164,33 +159,34 @@ function Chat() {
                 )}
               </div>
 
-              {/* Selected Conversation Messages */}
               {selectedConversation && Array.isArray(messages[selectedConversation]) ? (
                 messages[selectedConversation].length > 0 ? (
-                  <div className="space-y-2">
-                    {messages[selectedConversation].map((message, index) => (
-                      <div
-                        key={index}
-                        className={`flex ${
-                          message.sender === "Admin" ? "justify-end" : "justify-start"
-                        }`}
-                      >
+                  <div className="space-y-4 overflow-y-auto max-h-[calc(70vh-200px)]">
+                    {[...messages[selectedConversation]]
+                      .reverse() // Reverse the array to show latest messages at the bottom
+                      .map((message, index) => (
                         <div
-                          className={`p-3 rounded-lg shadow-sm max-w-xs ${
-                            message.sender === "Admin"
-                              ? "bg-blue-100"
-                              : message.sender === "Bot"
-                              ? "bg-green-100"
-                              : "bg-gray-100"
+                          key={index}
+                          className={`flex ${
+                            message.sender === "Admin" ? "justify-end" : "justify-start"
                           }`}
                         >
-                          <p className="text-sm font-medium text-gray-700 mb-1">
-                            {message.sender || "Unknown"} ({message.senderEmail || "Unknown"})
-                          </p>
-                          <p className="text-gray-800">{message.text}</p>
+                          <div
+                            className={`p-3 rounded-lg shadow-md max-w-xs ${
+                              message.sender === "Admin"
+                                ? "bg-blue-100 text-blue-800"
+                                : message.sender === "Bot"
+                                ? "bg-green-100 text-green-800"
+                                : "bg-gray-200 text-gray-800"
+                            }`}
+                          >
+                            <p className="text-xs font-medium mb-1">
+                              {message.sender || "Unknown"} ({message.senderEmail || "Unknown"})
+                            </p>
+                            <p className="text-sm break-words">{message.text}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
                   </div>
                 ) : (
                   <p className="text-gray-500">No messages in this conversation.</p>
@@ -198,39 +194,39 @@ function Chat() {
               ) : null}
             </div>
           ) : (
-            /* Student/Teacher View: Show Their Own Conversation */
-            <div className="flex-1 overflow-y-auto p-4 space-y-2 h-64 sm:h-72 md:h-80">
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(70vh-150px)]">
               {Array.isArray(messages) && messages.length > 0 ? (
-                messages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`flex ${
-                      message.sender === userType ? "justify-end" : "justify-start"
-                    }`}
-                  >
+                [...messages]
+                  .reverse() // Reverse the array to show latest messages at the bottom
+                  .map((message, index) => (
                     <div
-                      className={`p-3 rounded-lg shadow-sm max-w-xs ${
-                        message.sender === userType
-                          ? "bg-blue-100"
-                          : message.sender === "Bot"
-                          ? "bg-green-100"
-                          : "bg-gray-100"
+                      key={index}
+                      className={`flex ${
+                        message.sender === userType ? "justify-end" : "justify-start"
                       }`}
                     >
-                      <p className="text-sm font-medium text-gray-700 mb-1">
-                        {message.sender || "Unknown"} ({message.senderEmail || "Unknown"})
-                      </p>
-                      <p className="text-gray-800">{message.text}</p>
+                      <div
+                        className={`p-3 rounded-lg shadow-md max-w-xs ${
+                          message.sender === userType
+                            ? "bg-blue-100 text-blue-800"
+                            : message.sender === "Bot"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-200 text-gray-800"
+                        }`}
+                      >
+                        <p className="text-xs font-medium mb-1">
+                          {message.sender || "Unknown"} ({message.senderEmail || "Unknown"})
+                        </p>
+                        <p className="text-sm break-words">{message.text}</p>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  ))
               ) : (
                 <p className="text-gray-500">No messages yet. Send a message to start a conversation!</p>
               )}
             </div>
           )}
 
-          {/* Input Field */}
           <div className="p-4 bg-gray-50 border-t border-gray-300 flex items-center space-x-2">
             <input
               type="text"

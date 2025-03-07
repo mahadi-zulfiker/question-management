@@ -65,38 +65,53 @@ export async function POST(req) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
-  const userType = session.user.userType;
+  let userType = session.user.userType;
   const userEmail = session.user.email;
 
   console.log("Session data in POST:", { userType, userEmail });
 
+  // Fallback: Look up userType if missing
+  if (!userType && userEmail) {
+    const db = await connectMongoDB();
+    const user = await db.collection("users").findOne({ email: userEmail });
+    userType = user?.userType || "Unknown";
+    console.log("Looked up userType from database:", userType);
+  }
+
   try {
     const db = await connectMongoDB();
+    const payload = await req.json();
+    console.log("Raw payload received:", payload);
 
     if (userType === "Admin") {
-      const { text, senderEmail } = await req.json();
-      console.log("POST payload for Admin:", { text, senderEmail }); // Debug log
+      const { text, recipientEmail } = payload;
+      console.log("POST payload for Admin (destructured):", { text, recipientEmail });
 
-      if (!senderEmail || senderEmail === ADMIN_EMAIL) {
-        console.error("Invalid recipient email:", senderEmail);
-        return new Response(JSON.stringify({ error: "Valid recipient email required" }), { status: 400 });
+      if (!recipientEmail) {
+        console.error("Recipient email is missing in payload");
+        return new Response(JSON.stringify({ error: "Recipient email is required" }), { status: 400 });
+      }
+
+      if (recipientEmail === ADMIN_EMAIL) {
+        console.error("Invalid recipient email: Cannot send to self", recipientEmail);
+        return new Response(JSON.stringify({ error: "Cannot send message to self" }), { status: 400 });
       }
 
       const newMessage = {
         text,
         sender: "Admin",
         senderEmail: ADMIN_EMAIL,
-        recipientEmail: senderEmail, // Use senderEmail from payload directly
+        recipientEmail,
         timestamp: new Date(),
         isAutomated: false,
       };
 
-      console.log("New message to be inserted:", newMessage); // Debug log
-      await db.collection("messages").insertOne(newMessage);
+      console.log("New message to be inserted:", newMessage);
+      const result = await db.collection("messages").insertOne(newMessage);
+      console.log("Message inserted with ID:", result.insertedId);
       return new Response(JSON.stringify({ message: "Message sent" }), { status: 200 });
     } else {
-      const { text } = await req.json();
-
+      const { text } = payload;
       let sender = userType || "Unknown";
       if (!userType && userEmail) {
         const user = await db.collection("users").findOne({ email: userEmail });
