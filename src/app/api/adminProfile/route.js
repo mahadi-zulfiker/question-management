@@ -15,7 +15,7 @@ export async function GET(req) {
     const db = await connectMongoDB();
     const admin = await db.collection("users").findOne(
       { email },
-      { projection: { password: 0 } } // Exclude password from response
+      { projection: { password: 0 } }
     );
 
     if (!admin) {
