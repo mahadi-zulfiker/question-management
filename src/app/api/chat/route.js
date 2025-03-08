@@ -1,7 +1,7 @@
 import { connectMongoDB } from "@/lib/mongodb";
 import { getServerSession } from "next-auth/next";
 
-const ADMIN_EMAIL = "admin123@gmail.com"; // Define the admin email
+const ADMIN_EMAIL = "admin123@gmail.com";
 
 export async function GET(req) {
   const session = await getServerSession();
@@ -36,7 +36,7 @@ export async function GET(req) {
         }
         return acc;
       }, {});
-      console.log("Grouped messages for Admin (before response):", groupedMessages); // Debug log
+      // console.log("Grouped messages for Admin (before response):", groupedMessages);
       return new Response(JSON.stringify(groupedMessages), { status: 200 });
     } else {
       messages = await db
@@ -50,7 +50,7 @@ export async function GET(req) {
         .sort({ timestamp: -1 })
         .limit(50)
         .toArray();
-      console.log(`Messages for ${userType || "Unknown"} (Email: ${userEmail}):`, messages);
+      // console.log(`Messages for ${userType || "Unknown"} (Email: ${userEmail}):`, messages);
       return new Response(JSON.stringify(messages), { status: 200 });
     }
   } catch (error) {
@@ -68,24 +68,24 @@ export async function POST(req) {
   let userType = session.user.userType;
   const userEmail = session.user.email;
 
-  console.log("Session data in POST:", { userType, userEmail });
+  // console.log("Session data in POST:", { userType, userEmail });
 
   // Fallback: Look up userType if missing
   if (!userType && userEmail) {
     const db = await connectMongoDB();
     const user = await db.collection("users").findOne({ email: userEmail });
     userType = user?.userType || "Unknown";
-    console.log("Looked up userType from database:", userType);
+    // console.log("Looked up userType from database:", userType);
   }
 
   try {
     const db = await connectMongoDB();
     const payload = await req.json();
-    console.log("Raw payload received:", payload);
+    // console.log("Raw payload received:", payload);
 
     if (userType === "Admin") {
       const { text, recipientEmail } = payload;
-      console.log("POST payload for Admin (destructured):", { text, recipientEmail });
+      // console.log("POST payload for Admin (destructured):", { text, recipientEmail });
 
       if (!recipientEmail) {
         console.error("Recipient email is missing in payload");
@@ -106,9 +106,9 @@ export async function POST(req) {
         isAutomated: false,
       };
 
-      console.log("New message to be inserted:", newMessage);
+      // console.log("New message to be inserted:", newMessage);
       const result = await db.collection("messages").insertOne(newMessage);
-      console.log("Message inserted with ID:", result.insertedId);
+      // console.log("Message inserted with ID:", result.insertedId);
       return new Response(JSON.stringify({ message: "Message sent" }), { status: 200 });
     } else {
       const { text } = payload;

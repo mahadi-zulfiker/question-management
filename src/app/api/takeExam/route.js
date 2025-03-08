@@ -6,50 +6,79 @@ export async function GET(req) {
     try {
         const { searchParams } = new URL(req.url);
         const examId = searchParams.get("examId");
+        const classNumber = searchParams.get("classNumber");
+        const subject = searchParams.get("subject");
         const db = await connectMongoDB();
 
         if (examId) {
             const exam = await db.collection("Exams").findOne({ _id: new ObjectId(examId) });
-            if (!exam) return NextResponse.json({ error: "Exam not found" }, { status: 404 });
-
+            if (!exam) {
+                return NextResponse.json({ error: "Exam not found" }, { status: 404 });
+            }
             exam.duration = Number(exam.duration);
             return NextResponse.json({ exam }, { status: 200 });
-        } else {
-            const exams = await db.collection("Exams").find({}).toArray();
-            return NextResponse.json({ exams }, { status: 200 });
         }
+
+        const query = {};
+        if (classNumber) query.classNumber = parseInt(classNumber);
+        if (subject) query.subject = subject;
+
+        const exams = await db.collection("Exams").find(query).toArray();
+        if (!exams.length && (classNumber || subject)) {
+            return NextResponse.json({ message: "No exams found for the given filters" }, { status: 200 });
+        }
+
+        exams.forEach(exam => exam.duration = Number(exam.duration));
+        return NextResponse.json({ exams }, { status: 200 });
     } catch (error) {
-        console.error("Error fetching exams:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        console.error("Error fetching exams:", error.message);
+        return NextResponse.json({ error: "Internal server error", details: error.message }, { status: 500 });
     }
 }
 
 export async function POST(req) {
     try {
         const { examId, userEmail, answers } = await req.json();
-        if (!examId || !userEmail || !answers)
-            return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+        if (!examId || !userEmail || !answers) {
+            return NextResponse.json({ error: "Missing required fields: examId, userEmail, or answers" }, { status: 400 });
+        }
 
         const db = await connectMongoDB();
         const exam = await db.collection("Exams").findOne({ _id: new ObjectId(examId) });
-        if (!exam) return NextResponse.json({ error: "Exam not found" }, { status: 404 });
+        if (!exam) {
+            return NextResponse.json({ error: "Exam not found" }, { status: 404 });
+        }
 
         const results = exam.questions.map((q) => {
             const userAnswer = answers[q._id] || null;
-            let isCorrect = false;
+            let isCorrect = null;
 
             if (q.type === "MCQ") {
                 isCorrect = userAnswer !== null && userAnswer === q.correctAnswer;
-            } else if (q.type === "CQ" || q.type === "SQ") {
-                isCorrect = null; // CQ & SQ are subjective, needs manual checking
+                return {
+                    questionId: q._id,
+                    type: q.type,
+                    userAnswer,
+                    isCorrect,
+                };
+            } else if (q.type === "CQ") {
+                // For CQ, userAnswer should be an object with sub-question answers
+                const subAnswers = userAnswer || {};
+                return {
+                    questionId: q._id,
+                    type: q.type,
+                    userAnswer: subAnswers, // { subQuestion1: "answer1", subQuestion2: "answer2", ... }
+                    isCorrect: null, // Manual grading required
+                };
+            } else if (q.type === "SQ") {
+                // For SQ, userAnswer is a single string
+                return {
+                    questionId: q._id,
+                    type: q.type,
+                    userAnswer,
+                    isCorrect: null, // Manual grading required
+                };
             }
-
-            return {
-                questionId: q._id,
-                type: q.type,
-                userAnswer,
-                isCorrect,
-            };
         });
 
         const submission = {
@@ -61,9 +90,9 @@ export async function POST(req) {
         };
 
         await db.collection("submissions").insertOne(submission);
-        return NextResponse.json({ message: "Exam submitted successfully!", submission }, { status: 200 });
+        return NextResponse.json({ message: "Exam submitted successfully!", submission }, { status: 201 });
     } catch (error) {
-        console.error("Error submitting exam:", error);
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+        console.error("Error submitting exam:", error.message);
+        return NextResponse.json({ error: "Internal server error", details: error.message }, { status: 500 });
     }
 }

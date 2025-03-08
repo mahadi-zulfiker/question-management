@@ -11,9 +11,9 @@ function Chat() {
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [selectedRecipientEmail, setSelectedRecipientEmail] = useState(null);
 
-  useEffect(() => {
-    console.log("Session data:", session);
-  }, [session]);
+  // useEffect(() => {
+  //   console.log("Session data:", session);
+  // }, [session]);
 
   useEffect(() => {
     if (!isChatOpen || status !== "authenticated") return;
@@ -22,7 +22,7 @@ function Chat() {
       const res = await fetch("/api/chat");
       if (res.ok) {
         const data = await res.json();
-        console.log("Fetched messages (raw):", data);
+        // console.log("Fetched messages (raw):", data);
         const normalizedMessages =
           Array.isArray(data) && session?.user?.userType === "Admin"
             ? data.reduce((acc, msg) => {
@@ -55,8 +55,8 @@ function Chat() {
     const userType = session?.user?.userType;
     let payload = { text: input };
 
-    console.log("sendMessage - userType:", userType);
-    console.log("sendMessage - selectedRecipientEmail:", selectedRecipientEmail);
+    // console.log("sendMessage - userType:", userType);
+    // console.log("sendMessage - selectedRecipientEmail:", selectedRecipientEmail);
 
     if (userType === "Admin") {
       if (!selectedRecipientEmail) {
@@ -70,7 +70,7 @@ function Chat() {
       }
 
       payload = { text: input, recipientEmail: selectedRecipientEmail };
-      console.log("Admin reply payload (before sending):", payload);
+      // console.log("Admin reply payload (before sending):", payload);
     }
 
     const res = await fetch("/api/chat", {
@@ -141,10 +141,10 @@ function Chat() {
                       <button
                         key={senderEmail}
                         onClick={() => {
-                          console.log(`Selecting conversation with: ${senderEmail}`);
+                          // console.log(`Selecting conversation with: ${senderEmail}`);
                           setSelectedConversation(senderEmail);
                           setSelectedRecipientEmail(senderEmail);
-                          console.log(`Selected recipient email set to: ${senderEmail}`);
+                          // console.log(`Selected recipient email set to: ${senderEmail}`);
                         }}
                         className={`block w-full text-left p-2 rounded-lg ${
                           selectedConversation === senderEmail ? "bg-blue-100" : "bg-gray-100"
@@ -197,7 +197,7 @@ function Chat() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4 max-h-[calc(70vh-150px)]">
               {Array.isArray(messages) && messages.length > 0 ? (
                 [...messages]
-                  .reverse() // Reverse the array to show latest messages at the bottom
+                  .reverse()
                   .map((message, index) => (
                     <div
                       key={index}

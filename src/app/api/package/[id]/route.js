@@ -19,7 +19,10 @@ export async function GET(req, { params }) {
 
         return NextResponse.json(packageData, { status: 200 });
     } catch (error) {
-        console.error("Fetch Package Error:", error);
-        return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+        console.error("Fetch Package Error:", error.message);
+        return NextResponse.json(
+            { message: "Internal Server Error", details: error.message },
+            { status: 500 }
+        );
     }
 }
