@@ -33,7 +33,7 @@ export default function ModelTests() {
     <div>
       <Navbar />
       <Head>
-        <title>নমুনা মডেল টেস্ট - Daricomma</title>
+        <title>নমুনা মডেল টেস্ট</title>
         <meta name="description" content="প্রস্তুতি নিন আপনার পরীক্ষার জন্য নমুনা মডেল টেস্টের মাধ্যমে!" />
       </Head>
 

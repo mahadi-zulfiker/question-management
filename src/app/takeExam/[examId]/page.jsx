@@ -17,6 +17,12 @@ export default function TakeExam() {
     const [timeLeft, setTimeLeft] = useState(0);
     const [loading, setLoading] = useState(true);
     const [warning, setWarning] = useState(false);
+    const [clientReady, setClientReady] = useState(false);
+    const [isSubmitted, setIsSubmitted] = useState(false); // Track submission state
+
+    useEffect(() => {
+        setClientReady(true);
+    }, []);
 
     useEffect(() => {
         const fetchExam = async () => {
@@ -24,13 +30,15 @@ export default function TakeExam() {
                 const response = await fetch(`/api/takeExam?examId=${examId}`);
                 const data = await response.json();
                 if (response.ok && data.exam) {
-                    setExam(data.exam);
+                    console.log("Fetched exam data:", JSON.stringify(data.exam, null, 2));
+                    setExam({ ...data.exam });
                     setTimeLeft(Number(data.exam.duration) * 60);
                 } else {
                     throw new Error(data.error || "Failed to fetch exam");
                 }
             } catch (error) {
                 toast.error(`❌ Error fetching exam: ${error.message}`);
+                console.error("Fetch error:", error);
             } finally {
                 setLoading(false);
             }
@@ -39,23 +47,29 @@ export default function TakeExam() {
     }, [examId]);
 
     useEffect(() => {
-        if (!exam || !timeLeft) return;
-        if (timeLeft <= 0) {
-            handleSubmit();
-            return;
-        }
+        if (!exam || timeLeft === 0 || isSubmitted) return; // Stop timer if exam not loaded, time is up, or already submitted
         const timer = setInterval(() => {
             setTimeLeft((prev) => {
-                if (prev <= 60) setWarning(true);
-                return prev - 1;
+                const newTime = prev - 1;
+                if (newTime <= 60 && newTime > 0) setWarning(true);
+                if (newTime <= 0) {
+                    // Auto-submit when time is up
+                    toast.info("⏰ Time's up! Submitting your exam...");
+                    handleSubmit();
+                    return 0; // Ensure time doesn't go negative
+                }
+                return newTime;
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [timeLeft, exam]);
+    }, [exam, timeLeft, isSubmitted]);
 
     const handleAnswerChange = (questionId, value, subQuestionIndex = null) => {
+        if (timeLeft <= 0 || isSubmitted) return; // Prevent changes after submission
         setAnswers((prev) => {
+            console.log(`Updating answers for questionId: ${questionId}, subQuestionIndex: ${subQuestionIndex}, value: ${value}`);
             if (subQuestionIndex !== null) {
+                // CQ: Update sub-question answers
                 const currentAnswer = prev[questionId] || {};
                 return {
                     ...prev,
@@ -65,6 +79,7 @@ export default function TakeExam() {
                     },
                 };
             } else {
+                // MCQ and SQ: Update as a single value
                 return {
                     ...prev,
                     [questionId]: value,
@@ -78,6 +93,12 @@ export default function TakeExam() {
             toast.error("❌ Please log in to submit!");
             return;
         }
+        if (isSubmitted) {
+            toast.info("✅ Exam already submitted!");
+            return;
+        }
+
+        setIsSubmitted(true); // Mark as submitted to prevent further changes
         try {
             const response = await fetch("/api/takeExam", {
                 method: "POST",
@@ -88,136 +109,185 @@ export default function TakeExam() {
                     answers,
                 }),
             });
+            const data = await response.json();
             if (response.ok) {
                 toast.success("✅ পরীক্ষা সফলভাবে জমা হয়েছে!");
                 router.push(`/takeExam/${examId}/submitted`);
             } else {
-                const errorData = await response.json();
-                toast.error(`❌ ${errorData.error || "Submission failed"}`);
+                toast.error(`❌ ${data.error || "Submission failed"}`);
+                setIsSubmitted(false); // Allow retry if submission fails
             }
         } catch (error) {
             console.error("❌ Submit error:", error.message);
             toast.error(`❌ Submission failed: ${error.message}`);
+            setIsSubmitted(false); // Allow retry if submission fails
         }
     };
 
     const progress = exam?.questions
-        ? (Object.keys(answers).filter(id => {
+        ? (Object.keys(answers).filter((id) => {
               const answer = answers[id];
-              return exam.type === "CQ" ? Object.keys(answer).length > 0 : answer !== null && answer !== "";
+              return exam.type === "CQ"
+                  ? Object.keys(answer || {}).length > 0
+                  : answer !== null && answer !== "";
           }).length / exam.questions.length) * 100
         : 0;
 
-    if (loading) return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-gray-100 flex items-center justify-center">
-            <p className="text-2xl text-blue-700 animate-pulse">🔄 Loading exam...</p>
-        </div>
-    );
+    if (loading || !clientReady) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-gray-100 flex items-center justify-center">
+                <p className="text-2xl text-blue-700 animate-pulse">🔄 Loading exam...</p>
+            </div>
+        );
+    }
+
+    if (!exam) {
+        return (
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-gray-100 flex items-center justify-center">
+                <p className="text-center text-red-600 text-2xl">❌ Exam not found!</p>
+            </div>
+        );
+    }
+
+    console.log("Rendering exam:", JSON.stringify(exam, null, 2));
+    console.log("Exam questions:", JSON.stringify(exam.questions, null, 2));
+    console.log("Questions condition:", {
+        hasQuestions: !!exam?.questions,
+        isArray: Array.isArray(exam?.questions),
+        length: exam?.questions?.length,
+    });
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-gray-100">
+        <div key={examId} className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-gray-100">
             <Navbar />
             <div className="max-w-4xl mx-auto py-20 px-6">
                 <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl p-10 border border-blue-100">
-                    {exam ? (
-                        <div>
-                            <h2 className="text-4xl font-extrabold mb-8 text-indigo-900 drop-shadow-md">{exam.title}</h2>
-                            <div className="mb-8">
-                                <div className={`text-2xl font-semibold ${warning ? "text-red-600 animate-pulse" : "text-gray-700"} mb-2`}>
-                                    ⏳ Time Left: {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
-                                    {warning && " (Warning: Less than 1 minute!)"}
-                                </div>
-                                <div className="w-full bg-gray-200 rounded-full h-4">
-                                    <div
-                                        className="bg-gradient-to-r from-blue-500 to-indigo-600 h-4 rounded-full transition-all duration-500"
-                                        style={{ width: `${progress}%` }}
-                                    ></div>
-                                </div>
-                                <p className="text-sm text-gray-600 mt-2">Progress: {progress.toFixed(0)}%</p>
+                    <div>
+                        <h2 className="text-4xl font-extrabold mb-8 text-indigo-900 drop-shadow-md">{exam.title}</h2>
+                        <div className="mb-8">
+                            <div className={`text-2xl font-semibold ${warning ? "text-red-600 animate-pulse" : "text-gray-700"} mb-2`}>
+                                ⏳ Time Left: {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
+                                {warning && " (Warning: Less than 1 minute!)"}
                             </div>
+                            <div className="w-full bg-gray-200 rounded-full h-4">
+                                <div
+                                    className="bg-gradient-to-r from-blue-500 to-indigo-600 h-4 rounded-full transition-all duration-500"
+                                    style={{ width: `${progress}%` }}
+                                ></div>
+                            </div>
+                            <p className="text-sm text-gray-600 mt-2">Progress: {progress.toFixed(0)}%</p>
+                        </div>
+                        {timeLeft <= 0 && !isSubmitted ? (
+                            <p className="text-center text-blue-700 text-2xl py-8 animate-pulse">🔄 Submitting exam...</p>
+                        ) : (
                             <div className="space-y-8">
-                                {exam.questions && Array.isArray(exam.questions) && exam.questions.length > 0 ? (
-                                    exam.questions.map((q) => (
-                                        <div
-                                            key={q._id}
-                                            className="border border-blue-100 p-6 rounded-2xl bg-white hover:bg-blue-50/50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 duration-300"
-                                        >
-                                            {q.type === "MCQ" && (
-                                                <>
-                                                    <p className="text-xl font-semibold text-gray-900 mb-5">{q.question}</p>
-                                                    {q.options && q.options.length > 0 ? (
-                                                        q.options.map((opt, index) => (
-                                                            <label key={index} className="block mb-4">
-                                                                <input
-                                                                    type="radio"
-                                                                    name={q._id}
-                                                                    value={index}
-                                                                    checked={answers[q._id] === index}
-                                                                    onChange={() => handleAnswerChange(q._id, index)}
-                                                                    className="mr-4 text-blue-600 focus:ring-2 focus:ring-blue-400"
-                                                                />
-                                                                <span className="text-gray-800 text-lg">{opt}</span>
-                                                            </label>
-                                                        ))
-                                                    ) : (
-                                                        <p className="text-gray-500 text-lg">🔹 No options available</p>
-                                                    )}
-                                                </>
-                                            )}
-                                            {q.type === "CQ" && (
-                                                <>
-                                                    <p className="text-xl font-semibold text-gray-900 mb-4">{q.passage}</p>
-                                                    {q.questions && Array.isArray(q.questions) && q.questions.length > 0 ? (
-                                                        q.questions.map((subQuestion, index) => (
-                                                            <div key={index} className="mb-6">
-                                                                <p className="text-lg font-medium text-gray-800 mb-2">
-                                                                    {subQuestion} <span className="text-blue-600">(Marks: {index + 1})</span>
-                                                                </p>
-                                                                <textarea
-                                                                    className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-gray-800 resize-y"
-                                                                    rows="4"
-                                                                    placeholder={`Answer for question ${index + 1}...`}
-                                                                    value={answers[q._id]?.[`subQuestion${index + 1}`] || ""}
-                                                                    onChange={(e) => handleAnswerChange(q._id, e.target.value, index)}
-                                                                />
-                                                            </div>
-                                                        ))
-                                                    ) : (
-                                                        <p className="text-gray-500 text-lg">🔹 No sub-questions available</p>
-                                                    )}
-                                                </>
-                                            )}
-                                            {q.type === "SQ" && (
-                                                <>
-                                                    <p className="text-xl font-semibold text-gray-900 mb-4">
-                                                        {q.question} <span className="text-blue-600">(Marks: 1)</span>
-                                                    </p>
-                                                    <textarea
-                                                        className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-gray-800 resize-y"
-                                                        rows="3"
-                                                        placeholder="Write your answer here..."
-                                                        value={answers[q._id] || ""}
-                                                        onChange={(e) => handleAnswerChange(q._id, e.target.value)}
-                                                    />
-                                                </>
-                                            )}
-                                        </div>
-                                    ))
+                                {exam.questions && exam.questions.length > 0 ? (
+                                    exam.questions.map((q, index) => {
+                                        let questionType = q.type;
+                                        // If the type is not one of the expected values, infer the type based on structure
+                                        if (!["MCQ", "CQ", "SQ"].includes(questionType)) {
+                                            if (q.passage && q.questions && q.answers && q.marks) {
+                                                questionType = "CQ";
+                                            } else if (q.options && Array.isArray(q.options) && q.question) {
+                                                questionType = "MCQ";
+                                            } else if (q.question && !q.options && !q.passage) {
+                                                questionType = "SQ";
+                                            } else {
+                                                questionType = "unknown";
+                                            }
+                                        }
+                                        console.log(`Rendering question ${q._id || index} with type: ${questionType}`, JSON.stringify(q, null, 2));
+                                        return (
+                                            <div
+                                                key={q._id || index}
+                                                className="border border-blue-100 p-6 rounded-2xl bg-white hover:bg-blue-50/50 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-1 duration-300"
+                                            >
+                                                {questionType === "MCQ" && (
+                                                    <>
+                                                        <p className="text-xl font-semibold text-gray-900 mb-5">{q.question || "No question provided"}</p>
+                                                        {q.options && Array.isArray(q.options) && q.options.length > 0 ? (
+                                                            q.options.map((opt, optIndex) => (
+                                                                <label key={optIndex} className="block mb-4">
+                                                                    <input
+                                                                        type="radio"
+                                                                        name={q._id || `mcq-${index}`}
+                                                                        value={optIndex}
+                                                                        checked={answers[q._id] === optIndex}
+                                                                        onChange={() => handleAnswerChange(q._id || `mcq-${index}`, optIndex)}
+                                                                        className="mr-4 text-blue-600 focus:ring-2 focus:ring-blue-400"
+                                                                        disabled={timeLeft <= 0 || isSubmitted}
+                                                                    />
+                                                                    <span className="text-gray-800 text-lg">{opt || "No option text"}</span>
+                                                                </label>
+                                                            ))
+                                                        ) : (
+                                                            <p className="text-gray-500 text-lg">🔹 No options available</p>
+                                                        )}
+                                                    </>
+                                                )}
+                                                {questionType === "CQ" && (
+                                                    <>
+                                                        <p className="text-xl font-semibold text-gray-900 mb-4">{q.passage || "No passage provided"}</p>
+                                                        {q.questions && Array.isArray(q.questions) && q.questions.length > 0 ? (
+                                                            q.questions.map((subQuestion, subIndex) => (
+                                                                <div key={subIndex} className="mb-6">
+                                                                    <p className="text-lg font-medium text-gray-800 mb-2">
+                                                                        {subQuestion || "No sub-question provided"}{" "}
+                                                                        <span className="text-blue-600">
+                                                                            (Marks: {q.marks ? q.marks[subIndex] : 1})
+                                                                        </span>
+                                                                    </p>
+                                                                    <textarea
+                                                                        className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-gray-800 resize-y"
+                                                                        rows="4"
+                                                                        placeholder={`Answer for question ${subIndex + 1}...`}
+                                                                        value={answers[q._id]?.[`subQuestion${subIndex + 1}`] || ""}
+                                                                        onChange={(e) =>
+                                                                            handleAnswerChange(q._id, e.target.value, subIndex)
+                                                                        }
+                                                                        disabled={timeLeft <= 0 || isSubmitted}
+                                                                    />
+                                                                </div>
+                                                            ))
+                                                        ) : (
+                                                            <p className="text-gray-500 text-lg">🔹 No sub-questions available</p>
+                                                        )}
+                                                    </>
+                                                )}
+                                                {questionType === "SQ" && (
+                                                    <>
+                                                        <p className="text-xl font-semibold text-gray-900 mb-4">
+                                                            {q.question || "No question provided"} <span className="text-blue-600">(Marks: 1)</span>
+                                                        </p>
+                                                        <textarea
+                                                            className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all text-gray-800 resize-y"
+                                                            rows="3"
+                                                            placeholder="Write your answer here..."
+                                                            value={answers[q._id] || ""}
+                                                            onChange={(e) => handleAnswerChange(q._id, e.target.value)}
+                                                            disabled={timeLeft <= 0 || isSubmitted}
+                                                        />
+                                                    </>
+                                                )}
+                                                {questionType === "unknown" && (
+                                                    <p className="text-red-600 text-lg">❌ Unknown question type: {q.type}</p>
+                                                )}
+                                            </div>
+                                        );
+                                    })
                                 ) : (
                                     <p className="text-center text-red-600 text-2xl">❌ No questions found.</p>
                                 )}
                             </div>
-                            <button
-                                onClick={handleSubmit}
-                                className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-4 mt-10 rounded-xl hover:from-blue-700 hover:to-indigo-800 transition-all font-bold shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
-                                disabled={timeLeft <= 0}
-                            >
-                                ✅ Submit Exam
-                            </button>
-                        </div>
-                    ) : (
-                        <p className="text-center text-red-600 text-2xl">❌ Exam not found!</p>
-                    )}
+                        )}
+                        <button
+                            onClick={handleSubmit}
+                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-4 mt-10 rounded-xl hover:from-blue-700 hover:to-indigo-800 transition-all font-bold shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+                            disabled={timeLeft <= 0 || isSubmitted}
+                        >
+                            ✅ Submit Exam
+                        </button>
+                    </div>
                 </div>
             </div>
             <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
