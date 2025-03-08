@@ -78,6 +78,15 @@ export default function ExamList() {
         fetchExams();
     }, [classFilter, subjectFilter]);
 
+    // Function to determine exam type based on questions
+    const getExamType = (questions) => {
+        if (!questions || !Array.isArray(questions) || questions.length === 0) return "Unknown";
+        const types = [...new Set(questions.map(q => q.type || "unknown"))].filter(t => t !== "unknown");
+        if (types.length === 0) return "Unknown";
+        if (types.length === 1) return types[0];
+        return `Mixed (${types.join(", ")})`;
+    };
+
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-gray-100">
             <Navbar />
@@ -125,7 +134,8 @@ export default function ExamList() {
                                     <p className="text-2xl font-bold text-gray-900 mb-3">{exam.title}</p>
                                     <p className="text-blue-700 mb-2">🕒 Duration: {exam.duration} mins</p>
                                     <p className="text-gray-600 mb-2">📚 Class: {exam.classNumber}</p>
-                                    <p className="text-gray-600 mb-4">📖 Subject: {exam.subject}</p>
+                                    <p className="text-gray-600 mb-2">📖 Subject: {exam.subject}</p>
+                                    <p className="text-gray-600 mb-4">📝 Type: {exam.type}</p>
                                     <button
                                         onClick={() => router.push(`/takeExam/${exam._id}`)}
                                         className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-3 rounded-xl hover:from-blue-700 hover:to-indigo-800 transition-all font-semibold shadow-md"

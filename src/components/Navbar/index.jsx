@@ -24,6 +24,33 @@ const Navbar = () => {
     const getDashboardLink = () => dashboardRoutes[userType] || "/dashboard";
     const handleDashboardRedirect = () => router.push(getDashboardLink());
 
+    // Define all menu items
+    const allMenuItems = [
+        { name: "ক্লাস ৪-১২", link: "/classes" },
+        { name: "মডেল টেস্ট", link: "/modelTests" },
+        { name: "ভর্তি পরীক্ষা", link: "/admission" },
+        { name: "প্রশ্নব্যাংক", link: "/questionBank" },
+        { name: "পরীক্ষা তৈরি", link: "/createExam" },
+        { name: "পরীক্ষা দিন", link: "/takeExam" },
+        { name: "প্যাকেজ", link: "/packages" },
+    ];
+
+    // Filter menu items based on authentication and user type
+    const menuItems = allMenuItems.filter(item => {
+        // If no user is logged in, hide "পরীক্ষা তৈরি" and "পরীক্ষা দিন"
+        if (!session) {
+            if (item.name === "পরীক্ষা তৈরি" || item.name === "পরীক্ষা দিন") {
+                return false;
+            }
+        } else {
+            // If user is logged in, hide "পরীক্ষা তৈরি" for students
+            if (userType === "student" && item.name === "পরীক্ষা তৈরি") {
+                return false;
+            }
+        }
+        return true;
+    });
+
     return (
         <nav className="bg-white shadow-md relative z-50">
             <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 relative">
@@ -148,15 +175,5 @@ const Navbar = () => {
         </nav>
     );
 };
-
-const menuItems = [
-    { name: "ক্লাস ৪-১২", link: "/classes" },
-    { name: "মডেল টেস্ট", link: "/modelTests" },
-    { name: "ভর্তি পরীক্ষা", link: "/admission" },
-    { name: "প্রশ্নব্যাংক", link: "/questionBank" },
-    { name: "পরীক্ষা তৈরি", link: "/createExam" },
-    { name: "পরীক্ষা দিন", link: "/takeExam" },
-    { name: "প্যাকেজ", link: "/packages" },
-];
 
 export default Navbar;
