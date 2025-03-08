@@ -16,13 +16,23 @@ export async function GET(req) {
         else if (type === "SQ") collectionName = "SQ";
         else return NextResponse.json({ error: "Invalid question type" }, { status: 400 });
 
-        const query = {
-            classNumber: parseInt(classNumber),
-            subject,
-            chapterNumber: parseInt(chapterNumber),
-        };
+        // Dynamically set query fields based on collection
+        let query = {};
+        if (classNumber) {
+            query[collectionName === "SQ" ? "classLevel" : "classNumber"] = parseInt(classNumber);
+        }
+        if (subject) {
+            query[collectionName === "SQ" ? "subjectName" : "subject"] = subject;
+        }
+        if (chapterNumber) {
+            query.chapterNumber = parseInt(chapterNumber); // Assuming chapterNumber is consistent across all collections
+        }
+
+        console.log("Query:", query); // Debug log to verify the query
 
         const questions = await db.collection(collectionName).find(query).toArray();
+        console.log("Questions found:", questions); // Debug log to verify results
+
         return NextResponse.json({ questions }, { status: 200 });
     } catch (error) {
         console.error("❌ Error fetching questions:", error);
