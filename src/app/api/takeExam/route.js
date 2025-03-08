@@ -28,7 +28,12 @@ export async function GET(req) {
             return NextResponse.json({ message: "No exams found for the given filters" }, { status: 200 });
         }
 
-        exams.forEach(exam => exam.duration = Number(exam.duration));
+        // Include a summary of question types
+        exams.forEach(exam => {
+            exam.duration = Number(exam.duration);
+            exam.questionTypes = [...new Set(exam.questions.map(q => q.type || "unknown"))].filter(t => t !== "unknown");
+        });
+
         return NextResponse.json({ exams }, { status: 200 });
     } catch (error) {
         console.error("Error fetching exams:", error.message);
