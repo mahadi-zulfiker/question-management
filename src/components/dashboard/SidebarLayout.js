@@ -65,6 +65,9 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         { href: "/dashboard/admin/teacherQuestions", icon: <BiBookBookmark className="text-2xl mr-2" />, label: "Teacher Questions" },
         { href: "/dashboard/admin/createCertificateAdmin", icon: <TbCertificate className="text-2xl mr-2" />, label: "Create Certificate" },
         { href: "/dashboard/admin/viewCertificateAdmin", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "View Certificate" },
+        { href: "/dashboard/admin/createModelTest", icon: <BiBookBookmark className="text-2xl mr-2" />, label: "Create Model Test" },
+        { href: "/dashboard/admin/createAdmissionTest", icon: <TbCertificate className="text-2xl mr-2" />, label: "Create Admission Test" },
+        { href: "/dashboard/admin/createQuestionBank", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "Create Question Bank" },
         { href: "/dashboard/admin/paymentHistoryAll", icon: <HiOutlineReceiptRefund className="text-2xl mr-2" />, label: "Payment History" },
       ];
     } else {

@@ -33,6 +33,9 @@ import ViewQuestionsAdmin from "./Admin/ViewQuestionsAdmin";
 import TeacherQuestions from "./Admin/TeacherQuestions";
 import CreateCertificateAdmin from "./Admin/CreateCertificateAdmin";
 import ViewCertificateAdmin from "./Admin/ViewCertificateAdmin/page";
+import CreateModelTest from "./Admin/CreateModelTest";
+import CreateAdmissonTest from "./Admin/CreateAdmissonTest";
+import CreateQuestionBank from "./Admin/CreateQuestionBank";
 
 
 const MainLayout = () => {
@@ -99,6 +102,9 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/teacherQuestions" && <TeacherQuestions />}
             {pathname === "/dashboard/admin/createCertificateAdmin" && <CreateCertificateAdmin />}
             {pathname === "/dashboard/admin/viewCertificateAdmin" && <ViewCertificateAdmin />}
+            {pathname === "/dashboard/admin/createModelTest" && <CreateModelTest />}
+            {pathname === "/dashboard/admin/createAdmissionTest" && <CreateAdmissonTest />}
+            {pathname === "/dashboard/admin/createQuestionBank" && <CreateQuestionBank />}
 
           </div>
 
