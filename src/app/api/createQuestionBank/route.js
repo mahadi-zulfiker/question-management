@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectMongoDB } from '../../../lib/mongodb'; // Adjust path as needed
+import { ObjectId } from 'mongodb';
 
 export async function GET(request) {
   try {
@@ -66,7 +67,13 @@ export async function POST(request) {
 
     let classDetails = null;
     if (classId) {
-      classDetails = await db.collection('classes').findOne({ _id: classId });
+      if (!ObjectId.isValid(classId)) {
+        return NextResponse.json({ error: 'Invalid classId format' }, { status: 400 });
+      }
+      classDetails = await db.collection('classes').findOne({ _id: new ObjectId(classId) });
+      if (!classDetails) {
+        return NextResponse.json({ error: 'Class not found for the provided classId' }, { status: 404 });
+      }
     }
 
     const questionBank = {

@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, Search, Plus, Loader2 } from 'lucide-react';
 import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css'; // Import the CSS
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function CreateQuestionBank() {
   const [filters, setFilters] = useState({ classLevel: '', subject: '' });
-  const [allClasses, setAllClasses] = useState([]); // Store all classes initially
+  const [allClasses, setAllClasses] = useState([]);
   const [filteredClasses, setFilteredClasses] = useState([]);
   const [questions, setQuestions] = useState({ mcqs: [], cqs: [], sqs: [] });
   const [selectedQuestions, setSelectedQuestions] = useState([]);
@@ -20,12 +20,10 @@ export default function CreateQuestionBank() {
   });
   const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch all classes on mount
   useEffect(() => {
     fetchAllClasses();
   }, []);
 
-  // Refetch questions when filters change
   useEffect(() => {
     fetchQuestions();
   }, [filters]);
@@ -83,6 +81,8 @@ export default function CreateQuestionBank() {
     e.preventDefault();
     setIsLoading(true);
     
+    console.log('Submitting form data:', { ...formData, selectedQuestions }); // Debugging
+
     try {
       const res = await fetch('/api/createQuestionBank', {
         method: 'POST',
@@ -90,6 +90,7 @@ export default function CreateQuestionBank() {
         body: JSON.stringify({ ...formData, selectedQuestions })
       });
       
+      const data = await res.json();
       if (res.ok) {
         setFormData({ name: '', validity: '', description: '', price: '', classId: '' });
         setSelectedQuestions([]);
@@ -102,8 +103,7 @@ export default function CreateQuestionBank() {
           draggable: true,
         });
       } else {
-        const errorData = await res.json();
-        toast.error(`Failed to create Question Bank: ${errorData.error || 'Unknown error'}`, {
+        toast.error(`Failed to create Question Bank: ${data.error || 'Unknown error'}`, {
           position: "top-right",
           autoClose: 5000,
         });
@@ -115,7 +115,6 @@ export default function CreateQuestionBank() {
     setIsLoading(false);
   };
 
-  // Derive unique options from allClasses (not filteredClasses)
   const classNumbers = [...new Set(allClasses.map(cls => cls.classNumber))].sort((a, b) => a - b);
   const subjects = [...new Set(allClasses.map(cls => cls.subject))];
 
@@ -296,7 +295,6 @@ export default function CreateQuestionBank() {
           </div>
         </div>
       </div>
-      {/* Toast Container */}
       <ToastContainer />
     </div>
   );
