@@ -36,6 +36,8 @@ import ViewCertificateAdmin from "./Admin/ViewCertificateAdmin/page";
 import CreateModelTest from "./Admin/CreateModelTest";
 import CreateAdmissonTest from "./Admin/CreateAdmissonTest";
 import CreateQuestionBank from "./Admin/CreateQuestionBank";
+import ViewModelTest from "./Admin/ViewModelTest";
+import ViewAdmissionTest from "./Admin/ViewAdmissionTest";
 
 
 const MainLayout = () => {
@@ -105,6 +107,8 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/createModelTest" && <CreateModelTest />}
             {pathname === "/dashboard/admin/createAdmissionTest" && <CreateAdmissonTest />}
             {pathname === "/dashboard/admin/createQuestionBank" && <CreateQuestionBank />}
+            {pathname === "/dashboard/admin/viewModelTest" && <ViewModelTest />}
+            {pathname === "/dashboard/admin/viewAdmissionTest" && <ViewAdmissionTest />}
 
           </div>
 
