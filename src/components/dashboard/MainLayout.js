@@ -38,6 +38,7 @@ import CreateAdmissonTest from "./Admin/CreateAdmissonTest";
 import CreateQuestionBank from "./Admin/CreateQuestionBank";
 import ViewModelTest from "./Admin/ViewModelTest";
 import ViewAdmissionTest from "./Admin/ViewAdmissionTest";
+import ViewQuestionBank from "./Admin/ViewQuestionBank";
 
 
 const MainLayout = () => {
@@ -109,6 +110,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/createQuestionBank" && <CreateQuestionBank />}
             {pathname === "/dashboard/admin/viewModelTest" && <ViewModelTest />}
             {pathname === "/dashboard/admin/viewAdmissionTest" && <ViewAdmissionTest />}
+            {pathname === "/dashboard/admin/viewQuestionBank" && <ViewQuestionBank />}
 
           </div>
 
