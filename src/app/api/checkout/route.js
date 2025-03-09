@@ -4,21 +4,23 @@ import { ObjectId } from "mongodb";
 
 export async function POST(req) {
     try {
-        const { packageId, paymentMethod, email, userInfo } = await req.json();
+        const { packageId, questionBankId, paymentMethod, email, userInfo } = await req.json();
         const db = await connectMongoDB();
         const packagesCollection = db.collection("packages");
+        const questionBanksCollection = db.collection("questionBanks");
         const transactionsCollection = db.collection("transactions");
 
         // Validate input
-        if (!packageId || !paymentMethod || !email || !userInfo) {
+        if ((!packageId && !questionBankId) || !paymentMethod || !email || !userInfo) {
             return NextResponse.json(
-                { message: "Missing required fields: packageId, paymentMethod, email, or userInfo" },
+                { message: "Missing required fields: packageId or questionBankId, paymentMethod, email, or userInfo" },
                 { status: 400 }
             );
         }
 
-        if (!ObjectId.isValid(packageId)) {
-            return NextResponse.json({ message: "Invalid package ID format" }, { status: 400 });
+        const id = packageId || questionBankId;
+        if (!ObjectId.isValid(id)) {
+            return NextResponse.json({ message: "Invalid ID format" }, { status: 400 });
         }
 
         // Validate userInfo fields
@@ -46,43 +48,51 @@ export async function POST(req) {
             return NextResponse.json({ message: "Invalid payment method" }, { status: 400 });
         }
 
-        // Check if user already purchased the package
+        // Determine the collection and field to check
+        const collection = packageId ? packagesCollection : questionBanksCollection;
+        const idField = packageId ? "packageId" : "questionBankId";
+
+        // Check if user already purchased the item
         const existingPurchase = await transactionsCollection.findOne({
-            packageId: new ObjectId(packageId),
+            [idField]: new ObjectId(id),
             email,
             status: "Success",
         });
 
         if (existingPurchase) {
             return NextResponse.json(
-                { message: "Package already purchased", transactionId: existingPurchase._id },
+                { message: `${packageId ? "Package" : "Question Bank"} already purchased`, transactionId: existingPurchase._id },
                 { status: 400 }
             );
         }
 
-        // Fetch package details
-        const packageData = await packagesCollection.findOne({ _id: new ObjectId(packageId) });
-        if (!packageData) {
-            return NextResponse.json({ message: "Package not found" }, { status: 404 });
+        // Fetch item details
+        const itemData = await collection.findOne({ _id: new ObjectId(id) });
+        if (!itemData) {
+            return NextResponse.json(
+                { message: `${packageId ? "Package" : "Question Bank"} not found` },
+                { status: 404 }
+            );
         }
 
-        // Simulate payment processing (e.g., call to payment gateway)
-        const paymentStatus = "Success"; // In a real scenario, this would come from the payment gateway
+        // Simulate payment processing
+        const paymentStatus = "Success"; // Replace with actual payment gateway logic
 
-        // Save transaction with package details and user info
+        // Save transaction with item details and user info
         const transaction = {
-            packageId: new ObjectId(packageId),
+            [idField]: new ObjectId(id),
             email,
             userInfo: {
                 name,
                 phoneNumber,
                 email,
             },
-            packageName: packageData.name,
-            amount: packageData.cost,
+            itemName: itemData.name,
+            amount: itemData.price || itemData.cost, // Use price for questionBanks, cost for packages
             paymentMethod,
             status: paymentStatus,
             createdAt: new Date(),
+            type: packageId ? "package" : "questionBank", // Differentiate type
         };
 
         const result = await transactionsCollection.insertOne(transaction);

@@ -1,96 +1,112 @@
 'use client';
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import Image from 'next/image';
 import banner from '../../../public/questionBanner.jpg';
-import { motion } from 'framer-motion'; // Optional: Install `framer-motion` for animations
+import { motion } from 'framer-motion'; // Ensure `framer-motion` is installed (`npm install framer-motion`)
 import Link from 'next/link';
-
-const subjectsData = {
-  'Class 4': {
-    General: [
-      { id: 1, name: 'বাংলা', englishName: 'Bangla', chapters: ['ব্যাকরণ', 'রচনা', 'শব্দার্থ', 'পাঠ্যক্রম', 'ভাষাতত্ত্ব'] },
-      { id: 2, name: 'গণিত', englishName: 'Mathematics', chapters: ['সংখ্যা', 'যোগ-বিয়োগ', 'ভাগ-গুণ', 'জ্যামিতি'] },
-    ],
-  },
-  'Class 5': {
-    General: [
-      { id: 3, name: 'গণিত', englishName: 'Mathematics', chapters: ['যোগ', 'বিয়োগ', 'গুণ', 'ভাগ', 'ভগ্নাংশ', 'দশমিক'] },
-      { id: 4, name: 'বিজ্ঞান', englishName: 'Science', chapters: ['প্রকৃতি', 'পানি', 'বাতাস', 'জীবজগৎ'] },
-    ],
-  },
-  'Class 6': {
-    General: [
-      { id: 5, name: 'বিজ্ঞান', englishName: 'Science', chapters: ['দেহতত্ত্ব', 'জীবজগৎ', 'পদার্থ', 'শক্তি', 'পরিবেশ'] },
-      { id: 6, name: 'ইতিহাস', englishName: 'History', chapters: ['প্রাচীন ভারত', 'বাংলার ইতিহাস', 'মধ্যযুগ'] },
-    ],
-  },
-  'Class 7': {
-    General: [
-      { id: 7, name: 'ইংরেজি', englishName: 'English', chapters: ['ব্যাকরণ', 'লেখনী', 'পাঠ্য', 'বাক্য গঠন', 'প্রবন্ধ'] },
-      { id: 8, name: 'ভূগোল', englishName: 'Geography', chapters: ['ভূমি', 'জলবায়ু', 'প্রাকৃতিক সম্পদ', 'বাংলাদেশের ভূগোল'] },
-    ],
-  },
-  'Class 8': {
-    General: [
-      { id: 9, name: 'ইতিহাস', englishName: 'History', chapters: ['প্রাচীন যুগ', 'মধ্যযুগ', 'আধুনিক যুগ', 'স্বাধীনতা সংগ্রাম'] },
-      { id: 10, name: 'নাগরিকতা', englishName: 'Civics', chapters: ['রাষ্ট্র', 'গণতন্ত্র', 'নাগরিকের দায়িত্ব'] },
-    ],
-  },
-  SSC: {
-    Science: [
-      { id: 11, name: 'উচ্চতর গণিত', englishName: 'Higher Mathematics', chapters: ['সেট ও ফাংশন', 'বীজগণিতিক রাশি', 'জ্যামিতি', 'সম্ভাবনা', 'সংখ্যা তত্ত্ব'] },
-      { id: 12, name: 'পদার্থ বিজ্ঞান', englishName: 'Physics', chapters: ['গতিবিদ্যা', 'তাপগতিবিদ্যা', 'বিদ্যুৎ ও চুম্বক', 'আলোকবিজ্ঞান'] },
-      { id: 13, name: 'রসায়ন বিজ্ঞান', englishName: 'Chemistry', chapters: ['পরমাণুর গঠন', 'রাসায়নিক বন্ধন', 'অক্সিডেশন-রিডাকশন', 'গ্যাস'] },
-    ],
-    Commerce: [
-      { id: 14, name: 'হিসাব বিজ্ঞান', englishName: 'Accounting', chapters: ['হিসাবের ধারণা', 'জার্নাল', 'লেজার', 'আর্থিক বিবরণী', 'ব্যালেন্স শীট'] },
-      { id: 15, name: 'ব্যবসায় সংগঠন', englishName: 'Business Organization', chapters: ['ব্যবসার সংজ্ঞা', 'উদ্যোক্তা', 'প্রশাসন', 'বাজার বিশ্লেষণ'] },
-    ],
-    Arts: [
-      { id: 16, name: 'বাংলাদেশ ও বিশ্বপরিচয়', englishName: 'Bangladesh & World Studies', chapters: ['ভূগোল', 'ইতিহাস', 'রাজনীতি', 'অর্থনীতি'] },
-      { id: 17, name: 'অর্থনীতি', englishName: 'Economics', chapters: ['অর্থনীতির মৌলিক ধারণা', 'বাজার ব্যবস্থা', 'টাকা ও ব্যাংকিং', 'ব্যবসায়িক অর্থনীতি'] },
-    ],
-  },
-  HSC: {
-    Science: [
-      { id: 18, name: 'উচ্চতর গণিত', englishName: 'Higher Mathematics', chapters: ['ডিফারেনশিয়াল ক্যালকুলাস', 'ইন্টিগ্রাল ক্যালকুলাস', 'কমপ্লেক্স নাম্বার', 'ভেক্টর'] },
-      { id: 19, name: 'পদার্থ বিজ্ঞান', englishName: 'Physics', chapters: ['তরঙ্গ', 'পরমাণু ও নিউক্লিয়ার পদার্থবিজ্ঞান', 'অপটিক্স', 'যান্ত্রিক শক্তি'] },
-      { id: 20, name: 'রসায়ন বিজ্ঞান', englishName: 'Chemistry', chapters: ['অজৈব রসায়ন', 'জৈব রসায়ন', 'থার্মোকেমিস্ট্রি', 'ব্যালেন্স রাসায়ন'] },
-    ],
-    Commerce: [
-      { id: 21, name: 'ব্যবস্থাপনা', englishName: 'Management', chapters: ['সংগঠনের ভিত্তি', 'মানব সম্পদ ব্যবস্থাপনা', 'বাজার বিশ্লেষণ', 'আর্থিক পরিচালনা'] },
-      { id: 22, name: 'অর্থনীতি', englishName: 'Economics', chapters: ['মুদ্রা ও ব্যাংকিং', 'আন্তর্জাতিক অর্থনীতি', 'উত্পাদন ও ব্যয়', 'বাজার সম্পর্ক'] },
-    ],
-    Arts: [
-      { id: 23, name: 'রাষ্ট্রবিজ্ঞান', englishName: 'Political Science', chapters: ['রাষ্ট্রের সংজ্ঞা', 'সংবিধান', 'গণতন্ত্র', 'আন্তর্জাতিক সম্পর্ক'] },
-      { id: 24, name: 'সামাজিক বিজ্ঞান', englishName: 'Social Science', chapters: ['সমাজবিজ্ঞান', 'মানব সমাজের বিবর্তন', 'সংস্কৃতি', 'শিক্ষা'] },
-    ],
-  },
-};
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function SubjectsList() {
-  const [selectedClass, setSelectedClass] = useState('SSC');
-  const [selectedGroup, setSelectedGroup] = useState('Science');
+  const [classes, setClasses] = useState([]);
+  const [questions, setQuestions] = useState({ mcqs: [], cqs: [], sqs: [] });
+  const [selectedClass, setSelectedClass] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('');
   const [subjectStates, setSubjectStates] = useState({}); // Track open/closed state per subject
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+
+  // Fetch data on mount
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/createQuestionBank');
+      const data = await res.json();
+      if (res.ok) {
+        setClasses(data.classes);
+        setQuestions({ mcqs: data.mcqs, cqs: data.cqs, sqs: data.sqs });
+        // Set default selections to the first available class and subject
+        const classNumbers = [...new Set(data.classes.map(cls => cls.classNumber))].sort((a, b) => a - b);
+        if (classNumbers.length > 0) {
+          setSelectedClass(classNumbers[0].toString());
+          const subjectsForClass = data.classes.filter(cls => cls.classNumber === classNumbers[0]);
+          if (subjectsForClass.length > 0) {
+            setSelectedSubject(subjectsForClass[0].subject);
+          }
+        }
+      } else {
+        toast.error('Failed to fetch data');
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Error fetching data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch filtered questions when class or subject changes
+  useEffect(() => {
+    if (selectedClass && selectedSubject) {
+      fetchFilteredQuestions();
+    }
+  }, [selectedClass, selectedSubject]);
+
+  const fetchFilteredQuestions = async () => {
+    setLoading(true);
+    try {
+      const url = `/api/createQuestionBank?class=${selectedClass}&subject=${selectedSubject}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if (res.ok) {
+        setQuestions({ mcqs: data.mcqs, cqs: data.cqs, sqs: data.sqs });
+      } else {
+        toast.error('Failed to fetch filtered questions');
+      }
+    } catch (error) {
+      console.error('Error fetching filtered questions:', error);
+      toast.error('Error fetching filtered questions');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Toggle individual subject
   const toggleSubject = (id) => {
     setSubjectStates((prev) => ({
       ...prev,
-      [id]: !prev[id], // Toggle the state for this specific subject
+      [id]: !prev[id],
     }));
   };
 
-  // Filter subjects based on search term (search in both Bengali and English)
-  const isSSCOrHSC = ['SSC', 'HSC'].includes(selectedClass);
-  const baseSubjects = isSSCOrHSC ? subjectsData[selectedClass][selectedGroup] : subjectsData[selectedClass]?.General;
-  const subjects = baseSubjects?.filter((subject) =>
-    subject.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    subject.englishName.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Get unique class numbers and subjects
+  const classNumbers = [...new Set(classes.map(cls => cls.classNumber))].sort((a, b) => a - b);
+  const subjects = [...new Set(classes.filter(cls => cls.classNumber === parseInt(selectedClass)).map(cls => cls.subject))];
+
+  // Filter subjects based on selected class and search term
+  const filteredSubjects = classes
+    .filter(cls => cls.classNumber === parseInt(selectedClass))
+    .filter(cls =>
+      cls.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (cls.chapterName && cls.chapterName.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+
+  // Helper to get questions for a specific subject and class
+  const getQuestionsForSubject = (subject) => {
+    const classNum = parseInt(selectedClass);
+    return {
+      mcqs: questions.mcqs.filter(q => q.classNumber === classNum && q.subject === subject),
+      cqs: questions.cqs.filter(q => q.classNumber === classNum && q.subject === subject),
+      sqs: questions.sqs.filter(q => q.classLevel === classNum && q.subjectName === subject),
+    };
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -114,7 +130,7 @@ export default function SubjectsList() {
         <div className="mb-8 flex flex-col md:flex-row gap-4 items-center">
           <input
             type="text"
-            placeholder="খুজুন... (Search...)"
+            placeholder="খুজুন... (Search by subject or chapter)"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full md:w-1/2 p-4 rounded-lg border border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-lg shadow-md transition-all duration-300 placeholder-gray-500"
@@ -124,76 +140,110 @@ export default function SubjectsList() {
             value={selectedClass}
             onChange={(e) => {
               setSelectedClass(e.target.value);
-              setSelectedGroup(Object.keys(subjectsData[e.target.value])[0] || 'General');
+              const firstSubject = classes.find(cls => cls.classNumber === parseInt(e.target.value))?.subject || '';
+              setSelectedSubject(firstSubject);
               setSubjectStates({});
               setSearchTerm('');
             }}
           >
-            {Object.keys(subjectsData).map((classLevel) => (
-              <option key={classLevel} value={classLevel}>
-                {classLevel}
+            <option value="">Select Class</option>
+            {classNumbers.map((classNum) => (
+              <option key={classNum} value={classNum}>
+                Class {classNum}
               </option>
             ))}
           </select>
-
-          {isSSCOrHSC && (
-            <select
-              className="w-full md:w-1/3 border rounded-lg px-4 py-3 bg-white shadow-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-lg"
-              value={selectedGroup}
-              onChange={(e) => {
-                setSelectedGroup(e.target.value);
-                setSubjectStates({});
-                setSearchTerm('');
-              }}
-            >
-              {Object.keys(subjectsData[selectedClass]).map((group) => (
-                <option key={group} value={group}>
-                  {group}
-                </option>
-              ))}
-            </select>
-          )}
+          <select
+            className="w-full md:w-1/3 border rounded-lg px-4 py-3 bg-white shadow-md focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none text-lg"
+            value={selectedSubject}
+            onChange={(e) => {
+              setSelectedSubject(e.target.value);
+              setSubjectStates({});
+              setSearchTerm('');
+            }}
+          >
+            <option value="">Select Subject</option>
+            {subjects.map((subject) => (
+              <option key={subject} value={subject}>
+                {subject}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Subjects List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {subjects?.length > 0 ? (
-            subjects.map((subject) => (
-              <motion.div
-                key={subject.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: subject.id * 0.1 }}
-                className="border rounded-xl p-5 bg-white shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer"
-              >
-                <div
-                  className="flex justify-between items-center text-lg font-semibold text-gray-800"
-                  onClick={() => toggleSubject(subject.id)}
-                >
-                  <span>{subject.name} ({subject.englishName})</span>
-                  <span className="text-blue-600 text-xl">{subjectStates[subject.id] ? '−' : '+'}</span>
-                </div>
-                {subjectStates[subject.id] && (
-                  <motion.ul
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="mt-4 space-y-2"
+        {loading ? (
+          <div className="flex justify-center items-center h-40">
+            <p className="text-indigo-700 text-2xl animate-pulse">লোড হচ্ছে...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredSubjects.length > 0 ? (
+              filteredSubjects.map((cls) => {
+                const subjectQuestions = getQuestionsForSubject(cls.subject);
+                return (
+                  <motion.div
+                    key={cls._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="border rounded-xl p-5 bg-white shadow-md hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer"
                   >
-                    {subject.chapters.map((chapter, index) => (
-                      <li key={index} className="pl-4 text-gray-700 text-base border-l-4 border-blue-300">
-                        {chapter}
-                      </li>
-                    ))}
-                  </motion.ul>
-                )}
-              </motion.div>
-            ))
-          ) : (
-            <p className="text-center text-gray-600 col-span-full text-lg">কোনো ফলাফল পাওয়া যায়নি। (No results found.)</p>
-          )}
-        </div>
+                    <div
+                      className="flex justify-between items-center text-lg font-semibold text-gray-800"
+                      onClick={() => toggleSubject(cls._id)}
+                    >
+                      <span>{cls.subject} (Class {cls.classNumber})</span>
+                      <span className="text-blue-600 text-xl">{subjectStates[cls._id] ? '−' : '+'}</span>
+                    </div>
+                    {subjectStates[cls._id] && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="mt-4 space-y-4"
+                      >
+                        {/* MCQs */}
+                        {subjectQuestions.mcqs.map((q, idx) => (
+                          <div key={q._id} className="pl-4 text-gray-700 text-base border-l-4 border-blue-300">
+                            <p><strong>MCQ {idx + 1}:</strong> {q.question}</p>
+                            <ul className="list-disc pl-5">
+                              {q.options.map((opt, i) => (
+                                <li key={i} className={i === q.correctOption ? 'text-green-600' : ''}>
+                                  {opt} {i === q.correctOption ? '(Correct)' : ''}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                        {/* CQs */}
+                        {subjectQuestions.cqs.map((q, idx) => (
+                          <div key={q._id} className="pl-4 text-gray-700 text-base border-l-4 border-blue-300">
+                            <p><strong>CQ {idx + 1}:</strong> {q.passage.slice(0, 50)}...</p>
+                            <p><strong>Answer:</strong> {q.answer || 'Not provided'}</p>
+                          </div>
+                        ))}
+                        {/* SQs */}
+                        {subjectQuestions.sqs.map((q, idx) => (
+                          <div key={q._id} className="pl-4 text-gray-700 text-base border-l-4 border-blue-300">
+                            <p><strong>SQ {idx + 1}:</strong> {q.question}</p>
+                            <p><strong>Answer:</strong> {q.answer || 'Not provided'}</p>
+                          </div>
+                        ))}
+                        {subjectQuestions.mcqs.length === 0 && subjectQuestions.cqs.length === 0 && subjectQuestions.sqs.length === 0 && (
+                          <p className="text-gray-500">No questions available for this subject.</p>
+                        )}
+                      </motion.div>
+                    )}
+                  </motion.div>
+                );
+              })
+            ) : (
+              <p className="text-center text-gray-600 col-span-full text-lg">কোনো ফলাফল পাওয়া যায়নি। (No results found.)</p>
+            )}
+          </div>
+        )}
 
         {/* Call to Action */}
         <div className="mt-12 text-center">
@@ -206,6 +256,7 @@ export default function SubjectsList() {
         </div>
       </div>
       <Footer />
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
     </div>
   );
 }

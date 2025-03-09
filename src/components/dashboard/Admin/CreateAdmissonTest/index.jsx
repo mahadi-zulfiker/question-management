@@ -282,7 +282,6 @@ export default function CreateAdmissionTest() {
                 <option value="">Select Test Type</option>
                 <option value="MCQ">Multiple Choice (MCQ)</option>
                 <option value="CQ">Creative Questions (CQ)</option>
-                <option value="SQ">Short Questions (SQ)</option>
               </select>
             </div>
             {testType && classNumber && subject && chapterNumber && (
@@ -359,7 +358,7 @@ export default function CreateAdmissionTest() {
                       <div>
                         {testType === "MCQ" && <p className="font-medium text-gray-900">{q.question}</p>}
                         {testType === "CQ" && <p className="font-medium text-gray-900">{q.passage}</p>}
-                        {testType === "SQ" && <p className="font-medium text-gray-900">{q.passage}</p>}
+                        {testType === "SQ" && <p className="font-medium text-gray-900">{q.question}</p>}
                       </div>
                       <button onClick={() => handleSelect(q)} className="text-red-600 hover:text-red-800">Remove</button>
                     </div>
