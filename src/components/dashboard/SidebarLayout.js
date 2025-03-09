@@ -56,6 +56,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
       return [
         ...commonMenuItems,
         { href: "/dashboard/admin/adminProfileManagement", icon: <MdAdminPanelSettings className="text-2xl mr-2" />, label: "Profile Management" },
+        { href: "/dashboard/admin/userManagement", icon: <MdAdminPanelSettings className="text-2xl mr-2" />, label: "User Management" },
         { href: "/dashboard/admin/createMCQAdmin", icon: <IoMdCreate className="text-2xl mr-2" />, label: "Create MCQ" },
         { href: "/dashboard/admin/createCQAdmin", icon: <FaPlus className="text-2xl mr-2" />, label: "Create CQ" },
         { href: "/dashboard/admin/createSQAdmin", icon: <AiOutlineFileAdd className="text-2xl mr-2" />, label: "Create SQ" },
