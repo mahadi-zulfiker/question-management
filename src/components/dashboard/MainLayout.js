@@ -40,6 +40,8 @@ import ViewModelTest from "./Admin/ViewModelTest";
 import ViewAdmissionTest from "./Admin/ViewAdmissionTest";
 import ViewQuestionBank from "./Admin/ViewQuestionBank";
 import UserManagment from "./Admin/UserManagement";
+import AffiliateAdmin from "./Admin/AffiliateAdmin";
+import AffiliateTeacher from "./Teacher/AffiliateTeacher";
 
 
 const MainLayout = () => {
@@ -93,6 +95,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/teacher/viewCircle" && <ViewCircle />}
             {pathname === "/dashboard/teacher/viewQuestions" && <ViewQuestions />}
             {pathname === "/dashboard/teacher/paymentHistory" && <PaymentHistory />}
+            {pathname === "/dashboard/teacher/affiliateTeacher" && <AffiliateTeacher />}
 
             {pathname === "/dashboard/admin" && <Admin />}
             {pathname === "/dashboard/admin/adminProfileManagement" && <AdminProfileManagement />}
@@ -113,6 +116,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/viewAdmissionTest" && <ViewAdmissionTest />}
             {pathname === "/dashboard/admin/viewQuestionBank" && <ViewQuestionBank />}
             {pathname === "/dashboard/admin/userManagement" && <UserManagment />}
+            {pathname === "/dashboard/admin/affiliateAdmin" && <AffiliateAdmin />}
 
           </div>
 

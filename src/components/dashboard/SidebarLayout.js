@@ -50,6 +50,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         { href: "/dashboard/teacher/viewCertificate", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "View Certificate" },
         { href: "/dashboard/teacher/viewCircle", icon: <AiOutlineProfile className="text-2xl mr-2" />, label: "View Circle" },
         { href: "/dashboard/teacher/viewQuestions", icon: <RiQuestionnaireLine className="text-2xl mr-2" />, label: "View Questions" },
+        { href: "/dashboard/teacher/affiliateTeacher", icon: <RiQuestionnaireLine className="text-2xl mr-2" />, label: "Affiliate teacher" },
         { href: "/dashboard/teacher/paymentHistory", icon: <HiOutlineReceiptRefund className="text-2xl mr-2" />, label: "Payment History" },
       ];
     } else if (pathname.startsWith("/dashboard/admin")) {
@@ -72,6 +73,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         { href: "/dashboard/admin/viewAdmissionTest", icon: <TbCertificate className="text-2xl mr-2" />, label: "View Admission Test" },
         { href: "/dashboard/admin/createQuestionBank", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "Create Question Bank" },
         { href: "/dashboard/admin/viewQuestionBank", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "View Question Bank" },
+        { href: "/dashboard/admin/affiliateAdmin", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "Affiliate" },
         { href: "/dashboard/admin/paymentHistoryAll", icon: <HiOutlineReceiptRefund className="text-2xl mr-2" />, label: "Payment History" },
       ];
     } else {
