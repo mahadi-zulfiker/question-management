@@ -9,7 +9,6 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-// Importing icons from react-icons for visual enhancement
 import { FaClock, FaQuestionCircle, FaBook, FaPlay } from "react-icons/fa";
 
 export default function AdmissionTestList() {
