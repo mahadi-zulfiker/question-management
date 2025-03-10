@@ -50,12 +50,14 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         { href: "/dashboard/teacher/viewCertificate", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "View Certificate" },
         { href: "/dashboard/teacher/viewCircle", icon: <AiOutlineProfile className="text-2xl mr-2" />, label: "View Circle" },
         { href: "/dashboard/teacher/viewQuestions", icon: <RiQuestionnaireLine className="text-2xl mr-2" />, label: "View Questions" },
+        { href: "/dashboard/teacher/affiliateTeacher", icon: <RiQuestionnaireLine className="text-2xl mr-2" />, label: "Affiliate teacher" },
         { href: "/dashboard/teacher/paymentHistory", icon: <HiOutlineReceiptRefund className="text-2xl mr-2" />, label: "Payment History" },
       ];
     } else if (pathname.startsWith("/dashboard/admin")) {
       return [
         ...commonMenuItems,
         { href: "/dashboard/admin/adminProfileManagement", icon: <MdAdminPanelSettings className="text-2xl mr-2" />, label: "Profile Management" },
+        { href: "/dashboard/admin/userManagement", icon: <MdAdminPanelSettings className="text-2xl mr-2" />, label: "User Management" },
         { href: "/dashboard/admin/createMCQAdmin", icon: <IoMdCreate className="text-2xl mr-2" />, label: "Create MCQ" },
         { href: "/dashboard/admin/createCQAdmin", icon: <FaPlus className="text-2xl mr-2" />, label: "Create CQ" },
         { href: "/dashboard/admin/createSQAdmin", icon: <AiOutlineFileAdd className="text-2xl mr-2" />, label: "Create SQ" },
@@ -66,8 +68,12 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         { href: "/dashboard/admin/createCertificateAdmin", icon: <TbCertificate className="text-2xl mr-2" />, label: "Create Certificate" },
         { href: "/dashboard/admin/viewCertificateAdmin", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "View Certificate" },
         { href: "/dashboard/admin/createModelTest", icon: <BiBookBookmark className="text-2xl mr-2" />, label: "Create Model Test" },
+        { href: "/dashboard/admin/viewModelTest", icon: <BiBookBookmark className="text-2xl mr-2" />, label: "View Model Test" },
         { href: "/dashboard/admin/createAdmissionTest", icon: <TbCertificate className="text-2xl mr-2" />, label: "Create Admission Test" },
+        { href: "/dashboard/admin/viewAdmissionTest", icon: <TbCertificate className="text-2xl mr-2" />, label: "View Admission Test" },
         { href: "/dashboard/admin/createQuestionBank", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "Create Question Bank" },
+        { href: "/dashboard/admin/viewQuestionBank", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "View Question Bank" },
+        { href: "/dashboard/admin/affiliateAdmin", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "Affiliate" },
         { href: "/dashboard/admin/paymentHistoryAll", icon: <HiOutlineReceiptRefund className="text-2xl mr-2" />, label: "Payment History" },
       ];
     } else {
