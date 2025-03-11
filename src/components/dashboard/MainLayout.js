@@ -42,6 +42,7 @@ import ViewQuestionBank from "./Admin/ViewQuestionBank";
 import UserManagment from "./Admin/UserManagement";
 import AffiliateAdmin from "./Admin/AffiliateAdmin";
 import AffiliateTeacher from "./Teacher/AffiliateTeacher";
+import PriceSetQuestion from "./Admin/PriceSetQuestions";
 
 
 const MainLayout = () => {
@@ -117,6 +118,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/viewQuestionBank" && <ViewQuestionBank />}
             {pathname === "/dashboard/admin/userManagement" && <UserManagment />}
             {pathname === "/dashboard/admin/affiliateAdmin" && <AffiliateAdmin />}
+            {pathname === "/dashboard/admin/priceSetQuestions" && <PriceSetQuestion/>}
 
           </div>
 
