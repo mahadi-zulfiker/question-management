@@ -74,6 +74,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         { href: "/dashboard/admin/createQuestionBank", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "Create Question Bank" },
         { href: "/dashboard/admin/viewQuestionBank", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "View Question Bank" },
         { href: "/dashboard/admin/affiliateAdmin", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "Affiliate" },
+        { href: "/dashboard/admin/priceSetQuestions", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "Pricing Questions" },
         { href: "/dashboard/admin/paymentHistoryAll", icon: <HiOutlineReceiptRefund className="text-2xl mr-2" />, label: "Payment History" },
       ];
     } else {
