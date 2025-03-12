@@ -46,7 +46,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         { section: "My Profile", items: [
           { href: "/dashboard/student/studentProfile", icon: <FaUserGraduate className="text-2xl mr-2" />, label: "My Profile" },
           { href: "/dashboard/student/studentRequest", icon: <BsQuestionSquare className="text-2xl mr-2" />, label: "My Requests" },
-          { href: "/dashboard/student/studentGuardian", icon: <FaUsers className="text-2xl mr-2" />, label: "My Guardian" },
+          { href: "/dashboard/student/studentGurdian", icon: <FaUsers className="text-2xl mr-2" />, label: "My Guardian" },
         ]},
         // Exams Section
         { section: "Exams", items: [
