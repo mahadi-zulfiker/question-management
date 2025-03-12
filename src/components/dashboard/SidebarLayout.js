@@ -43,6 +43,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         // Student Profile Segment
         { section: "Profile", items: [
           { href: "/dashboard/student/studentProfile", icon: <FaUserGraduate className="text-2xl mr-2" />, label: "Student Profile" },
+          { href: "/dashboard/student/studentRequest", icon: <FaUserGraduate className="text-2xl mr-2" />, label: "Student Request"},
         ]},
         // Exams Segment
         { section: "Exams", items: [
