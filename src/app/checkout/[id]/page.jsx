@@ -31,7 +31,7 @@ export default function CheckoutPage() {
         async function fetchPackageDetails() {
             if (!id || !session?.user?.email) {
                 toast.error("Please log in to proceed with checkout.");
-                setTimeout(() => router.push("/login"), 2000);
+                setTimeout(() => router.push("/signIn"), 2000);
                 return;
             }
             try {
