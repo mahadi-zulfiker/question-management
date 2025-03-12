@@ -43,6 +43,9 @@ import UserManagment from "./Admin/UserManagement";
 import AffiliateAdmin from "./Admin/AffiliateAdmin";
 import AffiliateTeacher from "./Teacher/AffiliateTeacher";
 import PriceSetQuestion from "./Admin/PriceSetQuestions";
+import StudentRequest from "./Student/StudentRequest";
+import StudentGurdian from "./Student/StudentGurdian";
+import ExamResult from "./Teacher/ExamResult";
 
 
 const MainLayout = () => {
@@ -84,6 +87,8 @@ const MainLayout = () => {
             {pathname === "/dashboard/student/marksHistory" && <MarksHistory />}
             {pathname === "/dashboard/student/attendedExams" && <AttendedExams />}
             {pathname === "/dashboard/student/paymentHistoryStudent" && <PaymentHistoryStudent />}
+            {pathname === "/dashboard/student/studentRequest" && <StudentRequest />}
+            {pathname === "/dashboard/student/studentGurdian" && <StudentGurdian />}
 
             {pathname === "/dashboard/teacher" && <Teacher />}
             {pathname === "/dashboard/teacher/teacherProfile" && <TeacherProfile />}
@@ -97,6 +102,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/teacher/viewQuestions" && <ViewQuestions />}
             {pathname === "/dashboard/teacher/paymentHistory" && <PaymentHistory />}
             {pathname === "/dashboard/teacher/affiliateTeacher" && <AffiliateTeacher />}
+            {pathname === "/dashboard/teacher/examResult" && <ExamResult />}
 
             {pathname === "/dashboard/admin" && <Admin />}
             {pathname === "/dashboard/admin/adminProfileManagement" && <AdminProfileManagement />}

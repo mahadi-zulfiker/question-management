@@ -1,15 +1,17 @@
 'use client';
 import { useState } from 'react';
 import { MdAdminPanelSettings, MdExpandMore, MdExpandLess } from "react-icons/md";
-import { BiHomeSmile, BiBookBookmark, BiMoney } from "react-icons/bi";
-import { FaUserGraduate, FaChalkboardTeacher, FaPlus, FaRegIdBadge, FaUsers } from "react-icons/fa";
+import { BiHomeSmile, BiMoney, BiBook } from "react-icons/bi";
+import { FaUserGraduate, FaChalkboardTeacher, FaPlus, FaRegIdBadge, FaUsers, FaHistory } from "react-icons/fa";
 import { HiOutlineReceiptRefund } from "react-icons/hi";
 import { GiNotebook } from "react-icons/gi";
 import { TbCertificate, TbListDetails } from "react-icons/tb";
 import { AiOutlineFileAdd, AiOutlineProfile, AiOutlineEye } from "react-icons/ai";
 import { RiTeamLine, RiQuestionnaireLine, RiBookReadLine } from "react-icons/ri";
-import { IoMdCreate } from "react-icons/io";
+import { IoMdCreate, IoMdSettings } from "react-icons/io";
 import { usePathname } from "next/navigation";
+import { BsQuestionSquare } from "react-icons/bs";
+import { VscPackage } from "react-icons/vsc";
 import Link from "next/link";
 
 const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
@@ -40,89 +42,92 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
     if (pathname.startsWith("/dashboard/student")) {
       return [
         ...commonMenuItems,
-        // Student Profile Segment
-        { section: "Profile", items: [
-          { href: "/dashboard/student/studentProfile", icon: <FaUserGraduate className="text-2xl mr-2" />, label: "Student Profile" },
+        // Profile Section
+        { section: "My Profile", items: [
+          { href: "/dashboard/student/studentProfile", icon: <FaUserGraduate className="text-2xl mr-2" />, label: "My Profile" },
+          { href: "/dashboard/student/studentRequest", icon: <BsQuestionSquare className="text-2xl mr-2" />, label: "My Requests" },
+          { href: "/dashboard/student/studentGurdian", icon: <FaUsers className="text-2xl mr-2" />, label: "My Guardian" },
         ]},
-        // Exams Segment
+        // Exams Section
         { section: "Exams", items: [
           { href: "/dashboard/student/viewExams", icon: <TbListDetails className="text-2xl mr-2" />, label: "View Exams" },
           { href: "/dashboard/student/attendedExams", icon: <RiBookReadLine className="text-2xl mr-2" />, label: "Attended Exams" },
         ]},
-        // Progress Segment
-        { section: "Progress", items: [
+        // Achievements Section
+        { section: "Achievements", items: [
           { href: "/dashboard/student/certificates", icon: <TbCertificate className="text-2xl mr-2" />, label: "Certificates" },
           { href: "/dashboard/student/marksHistory", icon: <GiNotebook className="text-2xl mr-2" />, label: "Marks History" },
         ]},
-        // Payment Segment
-        { section: "Payment", items: [
+        // Payments Section
+        { section: "Payments", items: [
           { href: "/dashboard/student/paymentHistoryStudent", icon: <BiMoney className="text-2xl mr-2" />, label: "Payment History" },
         ]},
       ];
     } else if (pathname.startsWith("/dashboard/teacher")) {
       return [
         ...commonMenuItems,
-        // Teacher Profile Segment
-        { section: "Profile", items: [
-          { href: "/dashboard/teacher/teacherProfile", icon: <FaChalkboardTeacher className="text-2xl mr-2" />, label: "Teacher Profile" },
+        // Profile Section
+        { section: "My Profile", items: [
+          { href: "/dashboard/teacher/teacherProfile", icon: <FaChalkboardTeacher className="text-2xl mr-2" />, label: "My Profile" },
         ]},
-        // Creation Segment
-        { section: "Create", items: [
+        // Content Creation Section
+        { section: "Content Creation", items: [
           { href: "/dashboard/teacher/createMCQTeacher", icon: <IoMdCreate className="text-2xl mr-2" />, label: "Create MCQ" },
           { href: "/dashboard/teacher/createCQTeacher", icon: <FaPlus className="text-2xl mr-2" />, label: "Create CQ" },
           { href: "/dashboard/teacher/createSQTeacher", icon: <AiOutlineFileAdd className="text-2xl mr-2" />, label: "Create SQ" },
           { href: "/dashboard/teacher/createCertificate", icon: <TbCertificate className="text-2xl mr-2" />, label: "Create Certificate" },
         ]},
-        // Class Segment
-        { section: "Class", items: [
+        // Classes Section
+        { section: "Classes", items: [
           { href: "/dashboard/teacher/createStudentCircle", icon: <RiTeamLine className="text-2xl mr-2" />, label: "Create Student Circle" },
-          { href: "/dashboard/teacher/viewCircle", icon: <AiOutlineProfile className="text-2xl mr-2" />, label: "View Circle" },
+          { href: "/dashboard/teacher/viewCircle", icon: <AiOutlineProfile className="text-2xl mr-2" />, label: "View Circles" },
+          { href: "/dashboard/teacher/examResult", icon: <RiBookReadLine className="text-2xl mr-2" />, label: "Exam Results" },
         ]},
-        // View Segment
-        { section: "View", items: [
+        // Resources Section
+        { section: "Resources", items: [
           { href: "/dashboard/teacher/viewQuestions", icon: <RiQuestionnaireLine className="text-2xl mr-2" />, label: "View Questions" },
-          { href: "/dashboard/teacher/viewCertificate", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "View Certificate" },
+          { href: "/dashboard/teacher/viewCertificate", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "View Certificates" },
         ]},
-        // Payment Segment
-        { section: "Payment", items: [
-          { href: "/dashboard/teacher/affiliateTeacher", icon: <FaUsers className="text-2xl mr-2" />, label: "Affiliate Teacher" },
+        // Payments Section
+        { section: "Payments", items: [
+          { href: "/dashboard/teacher/affiliateTeacher", icon: <FaUsers className="text-2xl mr-2" />, label: "Affiliate Program" },
           { href: "/dashboard/teacher/paymentHistory", icon: <BiMoney className="text-2xl mr-2" />, label: "Payment History" },
         ]},
       ];
     } else if (pathname.startsWith("/dashboard/admin")) {
       return [
         ...commonMenuItems,
-        // Admin Profile Segment
-        { section: "Profile", items: [
+        // Management Section
+        { section: "Management", items: [
           { href: "/dashboard/admin/adminProfileManagement", icon: <MdAdminPanelSettings className="text-2xl mr-2" />, label: "Profile Management" },
-          { href: "/dashboard/admin/userManagement", icon: <FaUsers className="text-2xl mr-2" />, label: "User Management" },
+          { href: "/dashboard/admin/userManagement", icon: <IoMdSettings className="text-2xl mr-2" />, label: "User Management" },
         ]},
-        // Creation Segment
-        { section: "Create", items: [
+        // Content Creation Section
+        { section: "Content Creation", items: [
           { href: "/dashboard/admin/createMCQAdmin", icon: <IoMdCreate className="text-2xl mr-2" />, label: "Create MCQ" },
           { href: "/dashboard/admin/createCQAdmin", icon: <FaPlus className="text-2xl mr-2" />, label: "Create CQ" },
           { href: "/dashboard/admin/createSQAdmin", icon: <AiOutlineFileAdd className="text-2xl mr-2" />, label: "Create SQ" },
-          { href: "/dashboard/admin/createPackage", icon: <TbListDetails className="text-2xl mr-2" />, label: "Create Package" },
+          { href: "/dashboard/admin/createPackage", icon: <VscPackage className="text-2xl mr-2" />, label: "Create Package" },
           { href: "/dashboard/admin/createClass", icon: <RiTeamLine className="text-2xl mr-2" />, label: "Create Class" },
           { href: "/dashboard/admin/createCertificateAdmin", icon: <TbCertificate className="text-2xl mr-2" />, label: "Create Certificate" },
-          { href: "/dashboard/admin/createModelTest", icon: <BiBookBookmark className="text-2xl mr-2" />, label: "Create Model Test" },
+          { href: "/dashboard/admin/createModelTest", icon: <BiBook className="text-2xl mr-2" />, label: "Create Model Test" },
           { href: "/dashboard/admin/createAdmissionTest", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "Create Admission Test" },
           { href: "/dashboard/admin/createQuestionBank", icon: <GiNotebook className="text-2xl mr-2" />, label: "Create Question Bank" },
         ]},
-        // View Segment
-        { section: "View", items: [
+        // Resources Section
+        { section: "Resources", items: [
           { href: "/dashboard/admin/viewQuestionsAdmin", icon: <RiQuestionnaireLine className="text-2xl mr-2" />, label: "View Questions" },
           { href: "/dashboard/admin/teacherQuestions", icon: <AiOutlineEye className="text-2xl mr-2" />, label: "Teacher Questions" },
-          { href: "/dashboard/admin/viewCertificateAdmin", icon: <TbCertificate className="text-2xl mr-2" />, label: "View Certificate" },
-          { href: "/dashboard/admin/viewModelTest", icon: <BiBookBookmark className="text-2xl mr-2" />, label: "View Model Test" },
-          { href: "/dashboard/admin/viewAdmissionTest", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "View Admission Test" },
-          { href: "/dashboard/admin/viewQuestionBank", icon: <GiNotebook className="text-2xl mr-2" />, label: "View Question Bank" },
+          { href: "/dashboard/admin/viewCertificateAdmin", icon: <TbCertificate className="text-2xl mr-2" />, label: "View Certificates" },
+          { href: "/dashboard/admin/viewModelTest", icon: <BiBook className="text-2xl mr-2" />, label: "View Model Tests" },
+          { href: "/dashboard/admin/viewAdmissionTest", icon: <FaRegIdBadge className="text-2xl mr-2" />, label: "View Admission Tests" },
+          { href: "/dashboard/admin/viewQuestionBank", icon: <GiNotebook className="text-2xl mr-2" />, label: "View Question Banks" },
         ]},
-        // Payment Segment
-        { section: "Payment", items: [
-          { href: "/dashboard/admin/affiliateAdmin", icon: <FaUsers className="text-2xl mr-2" />, label: "Affiliate" },
-          { href: "/dashboard/admin/priceSetQuestions", icon: <BiMoney className="text-2xl mr-2" />, label: "Pricing Questions" },
-          { href: "/dashboard/admin/paymentHistoryAll", icon: <HiOutlineReceiptRefund className="text-2xl mr-2" />, label: "Payment History" },
+        // Payments Section
+        { section: "Payments", items: [
+          { href: "/dashboard/admin/affiliateAdmin", icon: <FaUsers className="text-2xl mr-2" />, label: "Affiliate Program" },
+          { href: "/dashboard/admin/priceSetQuestions", icon: <BiMoney className="text-2xl mr-2" />, label: "Set Pricing" },
+          { href: "/dashboard/admin/paymentHistoryAll", icon: <FaHistory className="text-2xl mr-2" />, label: "Payment History" },
         ]},
       ];
     }
