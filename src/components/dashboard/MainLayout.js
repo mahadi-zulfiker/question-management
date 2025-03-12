@@ -43,6 +43,7 @@ import UserManagment from "./Admin/UserManagement";
 import AffiliateAdmin from "./Admin/AffiliateAdmin";
 import AffiliateTeacher from "./Teacher/AffiliateTeacher";
 import PriceSetQuestion from "./Admin/PriceSetQuestions";
+import StudentRequest from "./Student/StudentRequest";
 
 
 const MainLayout = () => {
@@ -84,6 +85,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/student/marksHistory" && <MarksHistory />}
             {pathname === "/dashboard/student/attendedExams" && <AttendedExams />}
             {pathname === "/dashboard/student/paymentHistoryStudent" && <PaymentHistoryStudent />}
+            {pathname === "/dashboard/student/studentRequest" && <StudentRequest />}
 
             {pathname === "/dashboard/teacher" && <Teacher />}
             {pathname === "/dashboard/teacher/teacherProfile" && <TeacherProfile />}
