@@ -11,19 +11,13 @@ export async function GET(request) {
     const userEmail = searchParams.get("userEmail");
 
     let collections = ["ExamSubmissions", "ModelTestSubmissions", "submissions"];
-    if (collectionName) {
-      collections = [collectionName];
-    }
+    if (collectionName) collections = [collectionName];
 
     const submissions = [];
     for (const coll of collections) {
       let query = {};
-      if (examId) {
-        query.examId = examId;
-      }
-      if (userEmail) {
-        query.userEmail = { $regex: new RegExp(userEmail, "i") };
-      }
+      if (examId) query.examId = examId;
+      if (userEmail) query.userEmail = { $regex: new RegExp(userEmail, "i") };
 
       const collectionSubmissions = await db.collection(coll).find(query).toArray();
       submissions.push(
@@ -50,8 +44,6 @@ export async function PUT(request) {
     const data = await request.json();
     const { id, collection, scores } = data;
 
-    console.log("PUT Request Data:", { id, collection, scores });
-
     if (!id || !collection) {
       return NextResponse.json(
         { message: "Missing required fields: id or collection" },
@@ -60,43 +52,61 @@ export async function PUT(request) {
     }
 
     if (!ObjectId.isValid(id)) {
-      console.error("Invalid ID format:", id);
       return NextResponse.json({ message: "Invalid ID format" }, { status: 400 });
     }
 
-    const updateData = {};
-    if (scores) {
-      updateData["scores"] = scores;
-    }
-    updateData.updatedAt = new Date();
-
     const objectId = new ObjectId(id);
-    console.log("Querying for:", { _id: objectId, collection });
 
-    // First, update the document
-    const updateResult = await db
-      .collection(collection)
-      .updateOne({ _id: objectId }, { $set: updateData });
-
-    if (updateResult.matchedCount === 0) {
-      console.log("No document matched for update:", { _id: objectId, collection });
+    // Fetch the original submission
+    const submission = await db.collection(collection).findOne({ _id: objectId });
+    if (!submission) {
       return NextResponse.json({ message: "Submission not found" }, { status: 404 });
     }
 
-    // Fetch the updated document
-    const updatedDoc = await db
-      .collection(collection)
-      .findOne({ _id: objectId });
+    // Update the submission with scores
+    const updateData = { scores, updatedAt: new Date() };
+    const updateResult = await db.collection(collection).updateOne(
+      { _id: objectId },
+      { $set: updateData }
+    );
 
-    if (!updatedDoc) {
-      console.log("Updated document not found after update:", { _id: objectId, collection });
-      return NextResponse.json({ message: "Submission not found after update" }, { status: 404 });
+    if (updateResult.matchedCount === 0) {
+      return NextResponse.json({ message: "Submission not found" }, { status: 404 });
     }
 
-    console.log("Updated submission:", updatedDoc);
+    // Fetch the updated submission
+    const updatedSubmission = await db.collection(collection).findOne({ _id: objectId });
+
+    // Store or update the result in ExamResults collection
+    const result = {
+      examId: submission.examId,
+      userEmail: submission.userEmail,
+      submissionId: objectId,
+      title: submission.title || "Untitled Exam", // Adjust if title is available elsewhere
+      totalMarks: Object.values(scores || {}).reduce((sum, score) => sum + Number(score), 0),
+      maxMarks: Object.keys(submission.answers || {}).length, // Adjust based on your schema
+      details: Object.entries(submission.answers || {}).reduce((acc, [key, value]) => {
+        acc[key] = {
+          answer: value,
+          score: scores?.[key] || 0,
+        };
+        return acc;
+      }, {}),
+      evaluated: true,
+      evaluatedAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    // Upsert into ExamResults (update if exists, insert if not)
+    await db.collection("ExamResults").updateOne(
+      { submissionId: objectId },
+      { $set: result },
+      { upsert: true }
+    );
+
     return NextResponse.json({
-      message: "Submission updated successfully",
-      submission: updatedDoc,
+      message: "Submission updated and results stored successfully",
+      submission: updatedSubmission,
     });
   } catch (error) {
     console.error("PUT Error:", error);
@@ -123,13 +133,18 @@ export async function DELETE(request) {
       return NextResponse.json({ message: "Invalid ID format" }, { status: 400 });
     }
 
-    const result = await db.collection(collection).deleteOne({ _id: new ObjectId(id) });
+    const objectId = new ObjectId(id);
 
+    // Delete from the submission collection
+    const result = await db.collection(collection).deleteOne({ _id: objectId });
     if (result.deletedCount === 0) {
       return NextResponse.json({ message: "Submission not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ message: "Submission deleted successfully" });
+    // Delete corresponding result from ExamResults
+    await db.collection("ExamResults").deleteOne({ submissionId: objectId });
+
+    return NextResponse.json({ message: "Submission and result deleted successfully" });
   } catch (error) {
     console.error("DELETE Error:", error);
     return NextResponse.json(
