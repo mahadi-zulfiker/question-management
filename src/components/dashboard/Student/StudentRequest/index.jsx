@@ -23,11 +23,11 @@ function StudentRequest() {
   const [filteredTeachers, setFilteredTeachers] = useState([]);
   const [selectedTeacherData, setSelectedTeacherData] = useState(null);
   const [requestStats, setRequestStats] = useState({
-    total: 0,
-    pending: 0,
-    approved: 0,
-    rejected: 0,
+    totalPending: 0,
+    sentToTeachers: 0,
+    receivedFromTeachers: 0,
   });
+  const [teacherRequests, setTeacherRequests] = useState([]);
 
   const categories = [
     "All",
@@ -41,6 +41,7 @@ function StudentRequest() {
     if (status === "authenticated") {
       fetchTeachers();
       fetchRequestStats();
+      fetchTeacherRequests();
     }
   }, [status]);
 
@@ -84,18 +85,35 @@ function StudentRequest() {
       if (!response.ok) throw new Error("Failed to fetch request stats");
       const { requests } = await response.json();
 
+      // Since processed requests are deleted, stats will only reflect pending requests
       const stats = requests.reduce(
         (acc, req) => {
-          acc.total++;
-          acc[req.status]++;
+          acc.totalPending++;
+          if (req.requestType === "studentToTeacher") {
+            acc.sentToTeachers++;
+          } else if (req.requestType === "teacherToStudent") {
+            acc.receivedFromTeachers++;
+          }
           return acc;
         },
-        { total: 0, pending: 0, approved: 0, rejected: 0 }
+        { totalPending: 0, sentToTeachers: 0, receivedFromTeachers: 0 }
       );
 
       setRequestStats(stats);
     } catch (error) {
       console.error("Error fetching stats:", error);
+    }
+  };
+
+  const fetchTeacherRequests = async () => {
+    if (!session?.user?.id) return;
+    try {
+      const response = await fetch(`/api/studentRequest?studentId=${session.user.id}`);
+      if (!response.ok) throw new Error("Failed to fetch teacher requests");
+      const { requests } = await response.json();
+      setTeacherRequests(requests.filter((req) => req.requestType === "teacherToStudent"));
+    } catch (error) {
+      console.error("Error fetching teacher requests:", error);
     }
   };
 
@@ -123,7 +141,9 @@ function StudentRequest() {
           studentId: session.user.id,
           teacherId: teacher._id,
           studentEmail: session.user.email,
+          teacherEmail: teacher.email,
           message: `Request from ${session.user.name || session.user.email} to join ${teacher.username}'s course`,
+          requestType: "studentToTeacher",
         }),
       });
 
@@ -133,12 +153,39 @@ function StudentRequest() {
       setMessage(`Request sent to ${selectedTeacher} successfully!`);
       setMessageType("success");
       setSelectedTeacher("");
-      fetchRequestStats();
+      await fetchRequestStats(); // Refresh stats after sending a request
     } catch (error) {
       setMessage(`Error: ${error.message}`);
       setMessageType("error");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTeacherRequestResponse = async (requestId, accept) => {
+    try {
+      const response = await fetch("/api/studentRequest", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requestId,
+          status: accept ? "approved" : "rejected",
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Failed to update request");
+      }
+
+      // Refresh the teacher requests and stats to reflect the deletion
+      await fetchTeacherRequests();
+      await fetchRequestStats();
+      setMessage(`Request ${accept ? "accepted" : "rejected"} successfully!`);
+      setMessageType("success");
+    } catch (error) {
+      setMessage(`Error: ${error.message}`);
+      setMessageType("error");
     }
   };
 
@@ -180,45 +227,43 @@ function StudentRequest() {
                 </div>
               </div>
 
-              {/* Request Statistics */}
               <div className="hidden md:flex items-center space-x-6">
                 <div className="bg-white/10 rounded-lg p-4 text-center shadow-sm">
                   <div className="flex items-center justify-center mb-2">
                     <FaChartBar className="mr-2 text-xl" />
-                    <span className="font-semibold">Total</span>
+                    <span className="font-semibold">Total Pending</span>
                   </div>
-                  <span className="text-2xl font-bold">{requestStats.total}</span>
+                  <span className="text-2xl font-bold">{requestStats.totalPending}</span>
                 </div>
                 <div className="bg-yellow-400/20 rounded-lg p-4 text-center shadow-sm">
                   <div className="flex items-center justify-center mb-2">
                     <FaClock className="mr-2 text-xl" />
-                    <span className="font-semibold">Pending</span>
+                    <span className="font-semibold">Sent to Teachers</span>
                   </div>
-                  <span className="text-2xl font-bold">{requestStats.pending}</span>
+                  <span className="text-2xl font-bold">{requestStats.sentToTeachers}</span>
                 </div>
                 <div className="bg-green-400/20 rounded-lg p-4 text-center shadow-sm">
                   <div className="flex items-center justify-center mb-2">
                     <FaCheckCircle className="mr-2 text-xl" />
-                    <span className="font-semibold">Approved</span>
+                    <span className="font-semibold">From Teachers</span>
                   </div>
-                  <span className="text-2xl font-bold">{requestStats.approved}</span>
+                  <span className="text-2xl font-bold">{requestStats.receivedFromTeachers}</span>
                 </div>
               </div>
             </div>
 
-            {/* Mobile Stats */}
             <div className="md:hidden grid grid-cols-3 gap-3 mt-6">
               <div className="bg-white/10 rounded-lg p-3 text-center">
-                <div className="text-sm text-white/80 mb-1">Total</div>
-                <div className="text-xl font-bold">{requestStats.total}</div>
+                <div className="text-sm text-white/80 mb-1">Total Pending</div>
+                <div className="text-xl font-bold">{requestStats.totalPending}</div>
               </div>
               <div className="bg-yellow-400/20 rounded-lg p-3 text-center">
-                <div className="text-sm text-white/80 mb-1">Pending</div>
-                <div className="text-xl font-bold">{requestStats.pending}</div>
+                <div className="text-sm text-white/80 mb-1">Sent</div>
+                <div className="text-xl font-bold">{requestStats.sentToTeachers}</div>
               </div>
               <div className="bg-green-400/20 rounded-lg p-3 text-center">
-                <div className="text-sm text-white/80 mb-1">Approved</div>
-                <div className="text-xl font-bold">{requestStats.approved}</div>
+                <div className="text-sm text-white/80 mb-1">Received</div>
+                <div className="text-xl font-bold">{requestStats.receivedFromTeachers}</div>
               </div>
             </div>
           </div>
@@ -287,7 +332,6 @@ function StudentRequest() {
                   </button>
                 </form>
 
-                {/* Message */}
                 {message && (
                   <div
                     className={`mt-6 p-4 rounded-xl flex items-center shadow-sm ${
@@ -345,8 +389,7 @@ function StudentRequest() {
                       </h4>
                       <p className="text-gray-600 text-sm leading-relaxed">
                         {selectedTeacherData.username} is an experienced educator with a passion
-                        for teaching {selectedTeacherData.subject || "various subjects"}. Join
-                        120+ students who have benefited from their expertise.
+                        for teaching {selectedTeacherData.subject || "various subjects"}.
                       </p>
                     </div>
                   </div>
@@ -363,6 +406,42 @@ function StudentRequest() {
                 )}
               </div>
             </div>
+
+            {/* Teacher Requests Section */}
+            {teacherRequests.length > 0 && (
+              <div className="mt-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Requests from Teachers</h2>
+                <div className="space-y-4">
+                  {teacherRequests.map((req) => (
+                    <div
+                      key={req._id}
+                      className="bg-white p-4 rounded-xl shadow-md flex justify-between items-center"
+                    >
+                      <div>
+                        <p className="font-semibold text-gray-800">
+                          {req.teacherEmail} wants you to join their circle
+                        </p>
+                        <p className="text-sm text-gray-600">{req.message}</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleTeacherRequestResponse(req._id, true)}
+                          className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+                        >
+                          Accept
+                        </button>
+                        <button
+                          onClick={() => handleTeacherRequestResponse(req._id, false)}
+                          className="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
