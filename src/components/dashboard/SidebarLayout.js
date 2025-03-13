@@ -81,6 +81,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         { section: "Classes", items: [
           { href: "/dashboard/teacher/createStudentCircle", icon: <RiTeamLine className="text-2xl mr-2" />, label: "Create Student Circle" },
           { href: "/dashboard/teacher/viewCircle", icon: <AiOutlineProfile className="text-2xl mr-2" />, label: "View Circles" },
+          { href: "/dashboard/teacher/teacherRequests", icon: <AiOutlineProfile className="text-2xl mr-2" />, label: "Teacher Requests" },
           { href: "/dashboard/teacher/examResult", icon: <RiBookReadLine className="text-2xl mr-2" />, label: "Exam Results" },
         ]},
         // Resources Section
@@ -101,6 +102,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         { section: "Management", items: [
           { href: "/dashboard/admin/adminProfileManagement", icon: <MdAdminPanelSettings className="text-2xl mr-2" />, label: "Profile Management" },
           { href: "/dashboard/admin/userManagement", icon: <IoMdSettings className="text-2xl mr-2" />, label: "User Management" },
+          { href: "/dashboard/admin/userAccessControl", icon: <IoMdSettings className="text-2xl mr-2" />, label: "User Access Control" },
         ]},
         // Content Creation Section
         { section: "Content Creation", items: [
