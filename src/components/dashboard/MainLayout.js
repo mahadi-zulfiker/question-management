@@ -47,6 +47,7 @@ import StudentRequest from "./Student/StudentRequest";
 import StudentGurdian from "./Student/StudentGurdian";
 import ExamResult from "./Teacher/ExamResult";
 import TeacherRequests from "./Teacher/TeacherRequests";
+import UserAccessControl from "./Admin/UserAccessControl";
 
 
 const MainLayout = () => {
@@ -126,7 +127,8 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/viewQuestionBank" && <ViewQuestionBank />}
             {pathname === "/dashboard/admin/userManagement" && <UserManagment />}
             {pathname === "/dashboard/admin/affiliateAdmin" && <AffiliateAdmin />}
-            {pathname === "/dashboard/admin/priceSetQuestions" && <PriceSetQuestion/>}
+            {pathname === "/dashboard/admin/priceSetQuestions" && <PriceSetQuestion />}
+            {pathname === "/dashboard/admin/userAccessControl" && <UserAccessControl />}
 
           </div>
 
