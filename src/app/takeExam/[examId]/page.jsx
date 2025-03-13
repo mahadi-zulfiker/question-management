@@ -18,7 +18,7 @@ export default function TakeExam() {
     const [loading, setLoading] = useState(true);
     const [warning, setWarning] = useState(false);
     const [clientReady, setClientReady] = useState(false);
-    const [isSubmitted, setIsSubmitted] = useState(false); // Track submission state
+    const [isSubmitted, setIsSubmitted] = useState(false);
 
     useEffect(() => {
         setClientReady(true);
