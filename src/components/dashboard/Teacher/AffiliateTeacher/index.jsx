@@ -103,7 +103,7 @@ function AffiliateTeacher() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
       <div className="max-w-3xl mx-auto">
         <h1 className="text-5xl font-extrabold text-gray-800 mb-8 bg-gradient-to-r from-blue-600 to-purple-600 text-transparent bg-clip-text">
-          Teacher Affiliate Code Generator
+          Teacher Discount Code Generator
         </h1>
         <div className="bg-white shadow-2xl rounded-2xl p-8">
           <form onSubmit={handleGenerateCode} className="space-y-6">
