@@ -24,7 +24,6 @@ const Navbar = () => {
     const getDashboardLink = () => dashboardRoutes[userType] || "/dashboard";
     const handleDashboardRedirect = () => router.push(getDashboardLink());
 
-    // Define all menu items
     const allMenuItems = [
         { name: "ক্লাস ৪-১২", link: "/classes" },
         { name: "মডেল টেস্ট", link: "/modelTests" },
@@ -35,15 +34,12 @@ const Navbar = () => {
         { name: "প্যাকেজ", link: "/packages" },
     ];
 
-    // Filter menu items based on authentication and user type
     const menuItems = allMenuItems.filter(item => {
-        // If no user is logged in, hide "পরীক্ষা তৈরি" and "পরীক্ষা দিন"
         if (!session) {
             if (item.name === "পরীক্ষা তৈরি" || item.name === "পরীক্ষা দিন") {
                 return false;
             }
         } else {
-            // If user is logged in, hide "পরীক্ষা তৈরি" for students
             if (userType === "student" && item.name === "পরীক্ষা তৈরি") {
                 return false;
             }
@@ -52,75 +48,97 @@ const Navbar = () => {
     });
 
     return (
-        <nav className="bg-white shadow-md relative z-50">
-            <div className="max-w-7xl mx-auto px-6 sm:px-12 lg:px-16 relative">
-                <div className="flex justify-between items-center py-4">
+        <nav className="bg-gradient-to-r from-blue-900 to-blue-700 shadow-lg sticky top-0 z-50">
+            <div className="w-full px-8 sm:px-12 lg:px-16 relative">
+                <div className="flex justify-between items-center py-5">
+                    {/* Logo */}
                     <div className="flex items-center">
                         <Link href="/">
-                            <h1 className="text-2xl font-bold text-gradient-to-r from-[#1b0a37] to-[#24104f]">QA</h1>
+                            <h1 className="text-3xl font-extrabold text-white tracking-wide">QA</h1>
                         </Link>
                     </div>
 
-                    <div className="hidden md:flex items-center bg-gray-100 rounded-md px-3 py-2">
-                        <Search className="h-5 w-5 text-gray-500" />
-                        <input
-                            type="text"
-                            placeholder="কোর্স, বিষয়ের নাম লিখুন..."
-                            className="bg-transparent outline-none ml-2 text-sm"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
+                    {/* Desktop Layout */}
+                    <div className="hidden md:flex items-center flex-1 justify-center">
+                        {/* Search Bar */}
+                        <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full px-5 py-3 border border-white/20 mx-8 w-1/3">
+                            <Search className="h-5 w-5 text-gray-300" />
+                            <input
+                                type="text"
+                                placeholder="কোর্স, বিষয়ের নাম লিখুন..."
+                                className="bg-transparent outline-none ml-4 text-sm text-white placeholder-gray-300 w-full focus:w-full transition-all duration-300"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Menu Items */}
+                        <div className="flex space-x-10">
+                            {menuItems.map((item, index) => (
+                                <Link
+                                    key={index}
+                                    href={item.link}
+                                    className="text-gray-200 text-lg font-medium hover:text-blue-300 transition-colors duration-200 relative group"
+                                >
+                                    {item.name}
+                                    <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-blue-300 transition-all duration-300 group-hover:w-full"></span>
+                                </Link>
+                            ))}
+                        </div>
                     </div>
 
-                    <div className="hidden md:flex space-x-8">
-                        {menuItems.map((item, index) => (
-                            <Link key={index} href={item.link} className="text-gray-700 hover:text-[#24104f]">
-                                {item.name}
-                            </Link>
-                        ))}
-                    </div>
-
-                    <div className="hidden md:flex space-x-4">
+                    {/* Auth Buttons */}
+                    <div className="hidden md:flex space-x-6">
                         {session ? (
                             <>
                                 <button
                                     onClick={handleDashboardRedirect}
-                                    className="px-4 py-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]"
+                                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-full font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300"
                                 >
                                     Dashboard
                                 </button>
                                 <button
                                     onClick={() => signOut()}
-                                    className="px-4 py-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white"
+                                    className="px-6 py-3 border border-white/20 text-white rounded-full font-semibold hover:bg-white/10 hover:shadow-lg transition-all duration-300"
                                 >
                                     Logout
                                 </button>
                             </>
                         ) : (
                             <>
-                                <Link href="/signIn" className="px-4 py-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white">
+                                <Link
+                                    href="/signIn"
+                                    className="px-6 py-3 border border-white/20 text-white rounded-full font-semibold hover:bg-white/10 hover:shadow-lg transition-all duration-300"
+                                >
                                     Login
                                 </Link>
-                                <Link href="/signUp" className="px-4 py-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]">
+                                <Link
+                                    href="/signUp"
+                                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-full font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300"
+                                >
                                     Sign Up
                                 </Link>
                             </>
                         )}
                     </div>
 
+                    {/* Mobile Menu Toggle */}
                     <div className="md:hidden">
-                        <button onClick={toggleMenu}>{isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}</button>
+                        <button onClick={toggleMenu}>
+                            {isOpen ? <X className="h-6 w-6 text-white" /> : <Menu className="h-6 w-6 text-white" />}
+                        </button>
                     </div>
                 </div>
 
+                {/* Mobile Menu */}
                 {isOpen && (
-                    <div className="md:hidden bg-white shadow-md rounded-md p-4">
-                        <div className="flex items-center bg-gray-100 rounded-md px-3 py-2 my-2">
-                            <Search className="h-5 w-5 text-gray-500" />
+                    <div className="md:hidden bg-blue-800/95 backdrop-blur-lg rounded-b-xl p-8 absolute top-16 left-0 w-full shadow-xl animate-slideDown">
+                        <div className="flex items-center bg-white/10 rounded-full px-5 py-3 mb-6 border border-white/20">
+                            <Search className="h-5 w-5 text-gray-300" />
                             <input
                                 type="text"
                                 placeholder="কোর্স, বিষয়ের নাম লিখুন..."
-                                className="bg-transparent outline-none ml-2 text-sm w-full"
+                                className="bg-transparent outline-none ml-4 text-sm text-white placeholder-gray-300 w-full"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
@@ -130,24 +148,24 @@ const Navbar = () => {
                             <Link
                                 key={index}
                                 href={item.link}
-                                className="block px-4 py-2 text-gray-700 hover:bg-gray-100"
+                                className="block px-4 py-4 text-gray-200 text-lg font-medium hover:bg-white/10 rounded-lg transition-colors duration-200"
                             >
                                 {item.name}
                             </Link>
                         ))}
 
-                        <div className="mt-4">
+                        <div className="mt-8 space-y-4">
                             {session ? (
                                 <>
                                     <button
                                         onClick={handleDashboardRedirect}
-                                        className="block w-full text-center px-4 py-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]"
+                                        className="block w-full text-center px-4 py-4 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300"
                                     >
                                         Dashboard
                                     </button>
                                     <button
                                         onClick={() => signOut()}
-                                        className="block w-full text-center px-4 py-2 mt-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white"
+                                        className="block w-full text-center px-4 py-4 border border-white/20 text-white rounded-full font-semibold hover:bg-white/10 hover:shadow-lg transition-all duration-300"
                                     >
                                         Logout
                                     </button>
@@ -156,13 +174,13 @@ const Navbar = () => {
                                 <>
                                     <Link
                                         href="/signIn"
-                                        className="block w-full text-center px-4 py-2 border border-[#24104f] text-[#24104f] rounded-md hover:bg-[#1b0a37] hover:text-white"
+                                        className="block w-full text-center px-4 py-4 border border-white/20 text-white rounded-full font-semibold hover:bg-white/10 hover:shadow-lg transition-all duration-300"
                                     >
                                         Login
                                     </Link>
                                     <Link
                                         href="/signUp"
-                                        className="block w-full text-center px-4 py-2 mt-2 bg-[#24104f] text-white rounded-md hover:bg-[#1b0a37]"
+                                        className="block w-full text-center px-4 py-4 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300"
                                     >
                                         Sign Up
                                     </Link>
