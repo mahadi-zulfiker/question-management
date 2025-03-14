@@ -114,7 +114,7 @@ function Chat() {
         onClick={() => setIsChatOpen(!isChatOpen)}
         className="bg-blue-500 text-white rounded-full p-4 shadow-lg cursor-pointer hover:bg-blue-600 transition"
       >
-        <MessageCircle className="h-8 w-8" />
+        <MessageCircle className="h-12 w-12" />
       </div>
 
       {isChatOpen && (

@@ -1,99 +1,53 @@
-import React from 'react';
+import React from "react";
+import { HelpCircle, Users, CheckCircle } from "lucide-react";
+
+const questions = [
+  {
+    title: "আনলিমিটেড প্রশ্ন",
+    description: "প্রতি উত্তরের জন্য টিকেট দিয়ে সহজে কাজ করা যাবে হারাধ।",
+    icon: <HelpCircle className="text-blue-600 w-10 h-10" />,
+  },
+  {
+    title: "আগ্রহী উত্তর পাবি",
+    description: "প্রশ্নের কল সেবা দিয়ে তাৎক্ষণিক উত্তর পাবে তুমি।",
+    icon: <Users className="text-blue-600 w-10 h-10" />,
+  },
+  {
+    title: "নির্দিষ্ট প্রশ্ন ও সমাধান",
+    description: "সকল প্রশ্নের জন্য নির্দিষ্ট ও সঠিক সমাধান রয়েছে সঙ্গে সায়ান।",
+    icon: <CheckCircle className="text-blue-600 w-10 h-10" />,
+  },
+];
 
 function Questions() {
   return (
-    <div className="bg-white shadow-lg rounded-lg p-6 mb-8 max-w-6xl mx-auto my-16">
-      {/* Header Section */}
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">
-          প্রশ্নের উত্তর জানতে চান?
-        </h1>
-        <p className="text-gray-600 mb-4">
-          পারিপার্শ্বিক ও কার্যক্ষেত্রের আগ্রহী সম্পর্কে তথ্য। আপনি কি নির্দিষ্ট বা মোটা আকারে তথ্যি করতে চান? আপনি উত্তরের সঙ্গে ৩০ দিন রিটার্ন পলিসি বা হার টার্গেট করে কাজ করতে পারেন।
-        </p>
-        <button className="bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition duration-300">
-          প্রশ্নের উত্তর জানুন
-        </button>
-      </div>
-
-      {/* Feature Cards Section */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Card 1 */}
-        <div className="bg-white border border-blue-200 rounded-lg p-4 shadow-md hover:shadow-lg transition duration-300">
-          <div className="flex justify-center mb-4">
-            <span className="text-3xl text-blue-500">
-              <svg
-                className="w-8 h-8"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </span>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-2 text-center">
-            আনলিমিটেড প্রশ্ন
-          </h3>
-          <p className="text-gray-600 text-center">
-            প্রতি উত্তরের জন্য টিকেট দিয়ে সহজে কাজ করা যাবে হারাধ।
+    <div className="bg-gradient-to-b from-gray-50 to-white py-24">
+      <div className="max-w-6xl mx-auto px-6">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-extrabold text-gray-800 bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-500">
+            প্রশ্নের উত্তর জানতে চান?
+          </h1>
+          <p className="text-xl text-gray-600 mt-6 max-w-2xl mx-auto">
+            পারিপার্শ্বিক ও কার্যক্ষেত্রের আগ্রহী সম্পর্কে তথ্য। আপনি কি নির্দিষ্ট বা মোটা আকারে তথ্যি করতে চান? আপনি উত্তরের সঙ্গে ৩০ দিন রিটার্ন পলিসি বা হার টার্গেট করে কাজ করতে পারেন।
           </p>
+          <button className="mt-8 bg-gradient-to-r from-blue-500 to-blue-700 text-white px-10 py-5 rounded-full font-semibold hover:scale-105 hover:shadow-lg transition-all duration-300">
+            প্রশ্নের উত্তর জানুন
+          </button>
         </div>
 
-        {/* Card 2 */}
-        <div className="bg-white border border-blue-200 rounded-lg p-4 shadow-md hover:shadow-lg transition duration-300">
-          <div className="flex justify-center mb-4">
-            <span className="text-3xl text-blue-500">
-              <svg
-                className="w-8 h-8"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </span>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-2 text-center">
-            আগ্রহী উত্তর পাবি
-          </h3>
-          <p className="text-gray-600 text-center">
-            প্রশ্নের কল সেবা দিয়ে তাৎক্ষণিক উত্তর পাবে তুমি।
-          </p>
-        </div>
-
-        {/* Card 3 */}
-        <div className="bg-white border border-blue-200 rounded-lg p-4 shadow-md hover:shadow-lg transition duration-300">
-          <div className="flex justify-center mb-4">
-            <span className="text-3xl text-blue-500">
-              <svg
-                className="w-8 h-8"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </span>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-800 mb-2 text-center">
-            নির্দিষ্ট প্রশ্ন ও সমাধান
-            </h3>
-          <p className="text-gray-600 text-center">
-            সকল প্রশ্নের জন্য নির্দিষ্ট ও সঠিক সমাধান রয়েছে সঙ্গে সায়ান।
-          </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+          {questions.map((item, index) => (
+            <div
+              key={index}
+              className="relative bg-white/80 backdrop-blur-md rounded-xl p-8 border border-gray-100/50 shadow-lg group hover:shadow-xl hover:-translate-y-2 transition-all duration-300 animate-fadeInUp"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-700 opacity-0 group-hover:opacity-10 rounded-xl transition-opacity duration-300"></div>
+              <div className="flex justify-center mb-6">{item.icon}</div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-3 text-center">{item.title}</h3>
+              <p className="text-gray-600 text-lg text-center">{item.description}</p>
+            </div>
+          ))}
         </div>
       </div>
     </div>
