@@ -48,6 +48,8 @@ import StudentGurdian from "./Student/StudentGurdian";
 import ExamResult from "./Teacher/ExamResult";
 import TeacherRequests from "./Teacher/TeacherRequests";
 import UserAccessControl from "./Admin/UserAccessControl";
+import AffiliateShareView from "./Admin/AffiliateShareView";
+import AffiliateShareTeacher from "./Teacher/AffiliateShareTeacher";
 
 
 const MainLayout = () => {
@@ -103,9 +105,10 @@ const MainLayout = () => {
             {pathname === "/dashboard/teacher/viewCircle" && <ViewCircle />}
             {pathname === "/dashboard/teacher/viewQuestions" && <ViewQuestions />}
             {pathname === "/dashboard/teacher/paymentHistory" && <PaymentHistory />}
-            {pathname === "/dashboard/teacher/affiliateTeacher" && <AffiliateTeacher />}
+            {pathname === "/dashboard/teacher/affiliateTeacher" && <AffiliateTeacher />} {/*Discount Generator*/}
             {pathname === "/dashboard/teacher/examResult" && <ExamResult />}
             {pathname === "/dashboard/teacher/teacherRequests" && <TeacherRequests />}
+            {pathname === "/dashboard/teacher/affiliateShareTeacher" && <AffiliateShareTeacher/>}
 
             {pathname === "/dashboard/admin" && <Admin />}
             {pathname === "/dashboard/admin/adminProfileManagement" && <AdminProfileManagement />}
@@ -126,9 +129,10 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/viewAdmissionTest" && <ViewAdmissionTest />}
             {pathname === "/dashboard/admin/viewQuestionBank" && <ViewQuestionBank />}
             {pathname === "/dashboard/admin/userManagement" && <UserManagment />}
-            {pathname === "/dashboard/admin/affiliateAdmin" && <AffiliateAdmin />}
+            {pathname === "/dashboard/admin/affiliateAdmin" && <AffiliateAdmin />} {/*Discount Generator*/}
             {pathname === "/dashboard/admin/priceSetQuestions" && <PriceSetQuestion />}
             {pathname === "/dashboard/admin/userAccessControl" && <UserAccessControl />}
+            {pathname === "/dashboard/admin/affiliateShareView" && <AffiliateShareView />}
 
           </div>
 
