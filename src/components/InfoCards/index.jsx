@@ -41,7 +41,7 @@ const InfoCards = () => {
 
   return (
     <div className="container mx-auto px-6 py-28">
-      <h2 className="text-5xl font-extrabold text-gray-800 text-center mb-12 bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-500">
+      <h2 className="text-5xl font-extrabold text-gray-800 text-center mb-12 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-700">
         আমাদের প্রশ্নব্যাংক দেখুন
       </h2>
       {loading ? (
