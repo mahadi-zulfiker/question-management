@@ -34,7 +34,7 @@ function Counter() {
   return (
     <section className="py-24 bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-6 text-center">
-        <h2 className="text-5xl font-extrabold text-gray-900 bg-clip-text text-transparent bg-gradient-to-r from-blue-300 to-blue-500">
+        <h2 className="text-5xl font-extrabold text-gray-900 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-700">
           আমাদের অর্জন
         </h2>
         <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto">
