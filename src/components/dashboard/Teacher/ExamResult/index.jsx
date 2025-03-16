@@ -1,19 +1,16 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Edit, Trash2, CheckCircle, XCircle, Search } from "lucide-react";
+import { CheckCircle, XCircle } from "lucide-react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import Swal from "sweetalert2";
 
 const ExamResult = () => {
   const [submissions, setSubmissions] = useState([]);
-  const [filteredSubmissions, setFilteredSubmissions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [collectionFilter, setCollectionFilter] = useState("");
   const [examIdFilter, setExamIdFilter] = useState("");
   const [userEmailFilter, setUserEmailFilter] = useState("");
   const [markingSubmission, setMarkingSubmission] = useState(null);
-  const [editingSubmission, setEditingSubmission] = useState(null);
 
   useEffect(() => {
     fetchSubmissions();
@@ -31,13 +28,7 @@ const ExamResult = () => {
       if (!response.ok) throw new Error("Failed to fetch submissions");
       const data = await response.json();
 
-      const normalizedSubmissions = (data.submissions || []).map((sub) => ({
-        ...sub,
-        collection: sub.collection,
-      }));
-
-      setSubmissions(normalizedSubmissions);
-      setFilteredSubmissions(normalizedSubmissions);
+      setSubmissions(data.submissions || []);
     } catch (error) {
       toast.error(`Failed to load submissions: ${error.message}`);
     } finally {
@@ -63,112 +54,73 @@ const ExamResult = () => {
         setSubmissions(
           submissions.map((sub) =>
             sub._id.toString() === submission._id.toString()
-              ? { ...sub, scores: data.submission.scores }
+              ? {
+                  ...sub,
+                  scores: data.submission.scores,
+                  achievedMarks: Object.values(data.submission.scores).reduce((a, b) => a + b, 0),
+                }
               : sub
           )
         );
-        setFilteredSubmissions(
-          filteredSubmissions.map((sub) =>
-            sub._id.toString() === submission._id.toString()
-              ? { ...sub, scores: data.submission.scores }
-              : sub
-          )
-        );
-        toast.success("Marks updated and stored successfully!");
+        toast.success("Marks updated successfully!");
         setMarkingSubmission(null);
       } else {
-        await fetchSubmissions();
-        toast.error(data.message || "Failed to update marks, data refreshed.");
+        toast.error(data.message || "Failed to update marks.");
       }
     } catch (error) {
-      await fetchSubmissions();
-      toast.error(`Failed to update marks: ${error.message}. Data refreshed.`);
+      toast.error(`Failed to update marks: ${error.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDeleteSubmission = async (submission) => {
-    const result = await Swal.fire({
-      title: "Are you sure?",
-      text: "This will also delete the associated results!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#3085d6",
-      cancelButtonColor: "#d33",
-      confirmButtonText: "Yes, delete it!",
-    });
-
-    if (result.isConfirmed) {
-      setLoading(true);
-      try {
-        const response = await fetch("/api/examResult", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: submission._id.toString(), collection: submission.collection }),
-        });
-
-        if (response.ok) {
-          setSubmissions(submissions.filter((sub) => sub._id.toString() !== submission._id.toString()));
-          setFilteredSubmissions(
-            filteredSubmissions.filter((sub) => sub._id.toString() !== submission._id.toString())
-          );
-          Swal.fire({
-            icon: "success",
-            title: "Deleted!",
-            text: "Submission and results deleted.",
-          });
-        } else {
-          const errorData = await response.json();
-          Swal.fire({ icon: "error", title: "Error", text: errorData.message || "Failed to delete" });
-        }
-      } catch (error) {
-        Swal.fire({ icon: "error", title: "Error", text: `Failed to delete: ${error.message}` });
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-200">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-200 font-sans">
       <ToastContainer position="top-right" autoClose={3000} />
 
       <div className="text-center py-16 px-4">
-        <h1 className="text-5xl font-extrabold text-indigo-700">Exam Result Dashboard</h1>
-        <p className="mt-4 text-lg text-gray-700 max-w-3xl mx-auto">
-          Review and mark student submissions efficiently.
+        <h1 className="text-5xl font-extrabold text-indigo-800 drop-shadow-md">
+          Exam Result Dashboard
+        </h1>
+        <p className="mt-4 text-lg text-gray-600 max-w-3xl mx-auto">
+          Effortlessly review and mark student submissions with an intuitive interface.
         </p>
       </div>
 
       <div className="container mx-auto px-4 md:px-6 py-8">
-        <div className="bg-white rounded-2xl shadow-2xl p-6 mb-6">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 mb-8 transform transition-all hover:shadow-3xl">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <select
-              value={collectionFilter}
-              onChange={(e) => setCollectionFilter(e.target.value)}
-              className="p-3 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-            >
-              <option value="">All Collections</option>
-              <option value="ExamSubmissions">Admission Exams</option>
-              <option value="ModelTestSubmissions">Model Tests</option>
-              <option value="submissions">Regular Exams</option>
-            </select>
-            <input
-              type="text"
-              value={examIdFilter}
-              onChange={(e) => setExamIdFilter(e.target.value)}
-              placeholder="Filter by Exam ID..."
-              className="p-3 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-            />
-            <div className="flex items-center">
-              <Search className="mr-2 text-gray-400" size={20} />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Exam Type:</label>
+              <select
+                value={collectionFilter}
+                onChange={(e) => setCollectionFilter(e.target.value)}
+                className="w-full p-3 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all bg-white"
+              >
+                <option value="">All Types of Exams</option>
+                <option value="ExamSubmissions">Admission Exams</option>
+                <option value="ModelTestSubmissions">Model Tests</option>
+                <option value="submissions">Regular Exams</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Exam ID:</label>
+              <input
+                type="text"
+                value={examIdFilter}
+                onChange={(e) => setExamIdFilter(e.target.value)}
+                placeholder="Enter Exam ID..."
+                className="w-full p-3 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">User Email:</label>
               <input
                 type="text"
                 value={userEmailFilter}
                 onChange={(e) => setUserEmailFilter(e.target.value)}
-                placeholder="Search by user email..."
-                className="w-full p-3 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                placeholder="Enter User Email..."
+                className="w-full p-3 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
               />
             </div>
           </div>
@@ -177,45 +129,44 @@ const ExamResult = () => {
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <h2 className="text-3xl font-bold mb-6 text-indigo-800">Student Submissions</h2>
           {loading ? (
-            <p className="text-center text-gray-600 py-10">Loading submissions...</p>
-          ) : filteredSubmissions.length === 0 ? (
+            <div className="flex justify-center items-center py-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+            </div>
+          ) : submissions.length === 0 ? (
             <p className="text-center text-gray-500 py-10">No submissions found.</p>
           ) : (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {filteredSubmissions.map((submission) => (
-                <div
-                  key={submission._id}
-                  className="border rounded-xl p-6 bg-white shadow-md hover:shadow-lg transition-all"
-                >
-                  <h3 className="text-xl font-semibold text-gray-800">{submission.userEmail}</h3>
-                  <p className="text-gray-600">Collection: {submission.collection}</p>
-                  <p className="text-gray-600">
-                    Submitted: {new Date(submission.submittedAt).toLocaleString()}
-                  </p>
-                  <p className="text-gray-600">Exam ID: {submission.examId || "N/A"}</p>
-                  {submission.scores && (
-                    <p className="text-gray-600">
-                      Total Marks: {Object.values(submission.scores).reduce((a, b) => a + b, 0)}
-                    </p>
-                  )}
-                  <div className="flex gap-2 mt-4 justify-end">
-                    <button
-                      onClick={() => setMarkingSubmission({ ...submission, normalizedAnswers: submission.answers })}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                      disabled={loading}
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-collapse">
+                <thead>
+                  <tr className="bg-gray-200">
+                    <th className="border px-6 py-4 text-left text-gray-700 font-semibold">Student Name</th>
+                    <th className="border px-6 py-4 text-left text-gray-700 font-semibold">Total Number</th>
+                    <th className="border px-6 py-4 text-left text-gray-700 font-semibold">Achieved Number</th>
+                    <th className="border px-6 py-4 text-left text-gray-700 font-semibold">Submit</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {submissions.map((submission) => (
+                    <tr
+                      key={submission._id}
+                      className="hover:bg-gray-50 transition-colors duration-200"
                     >
-                      Mark
-                    </button>
-                    <button
-                      onClick={() => handleDeleteSubmission(submission)}
-                      className="p-2 text-red-600 hover:bg-red-100 rounded-full"
-                      disabled={loading}
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      <td className="border px-6 py-4 text-gray-800">{submission.userEmail}</td>
+                      <td className="border px-6 py-4 text-gray-600">{submission.totalMarks}</td>
+                      <td className="border px-6 py-4 text-gray-600">{submission.achievedMarks || 0}</td>
+                      <td className="border px-6 py-4">
+                        <button
+                          onClick={() => setMarkingSubmission(submission)}
+                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50"
+                          disabled={loading}
+                        >
+                          Edit/Change
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -223,62 +174,71 @@ const ExamResult = () => {
 
       {markingSubmission && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
-            <h3 className="text-xl font-bold mb-4">Mark Submission: {markingSubmission.userEmail}</h3>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const scores = {};
-                Object.keys(markingSubmission.normalizedAnswers || {}).forEach((key) => {
-                  const scoreInput = e.target[`${key}Score`];
-                  if (scoreInput && scoreInput.value) scores[key.split("_")[0]] = Number(scoreInput.value);
-                });
-                if (Object.keys(scores).length === 0) {
-                  toast.error("Please provide at least one score.");
-                  return;
-                }
-                handleMarkSubmission(markingSubmission, scores);
-              }}
-            >
-              <div className="space-y-4">
-                {Object.entries(markingSubmission.normalizedAnswers || {}).map(([key, value]) => {
-                  const { question, answer } = typeof value === "object" ? value : { question: key, answer: value };
+          <div className="bg-white rounded-2xl p-6 w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl">
+            <h3 className="text-2xl font-bold mb-6 text-indigo-800">Mark Submission: {markingSubmission.userEmail}</h3>
+            <div className="space-y-6">
+              {Object.entries(markingSubmission.normalizedAnswers || {}).length > 0 ? (
+                Object.entries(markingSubmission.normalizedAnswers).map(([key, value]) => {
+                  const maxMarks = value.marks || 1;
+                  const currentScore = markingSubmission.scores?.[key] || 0;
                   return (
-                    <div key={key} className="border-b pb-4">
-                      <p className="text-gray-700"><strong>Question:</strong> {question}</p>
-                      <p className="text-gray-600"><strong>Answer:</strong> {answer || "N/A"}</p>
-                      <label className="block text-sm font-medium text-gray-700 mt-2">
-                        Score (0-100)
-                      </label>
-                      <input
-                        type="number"
-                        name={`${key}Score`}
-                        defaultValue={markingSubmission.scores?.[key.split("_")[0]] || ""}
-                        min="0"
-                        max="100"
-                        className="w-full p-3 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                      />
+                    <div
+                      key={key}
+                      className="border-l-4 border-indigo-500 p-4 bg-gray-50 rounded-lg shadow-sm hover:bg-gray-100 transition-all"
+                    >
+                      <p className="text-gray-700 font-medium">
+                        <strong>Question:</strong> {value.question}
+                      </p>
+                      <p className="text-gray-600">
+                        <strong>Answer:</strong> {value.answer}
+                      </p>
+                      <div className="mt-3 flex items-center gap-4">
+                        <label className="text-sm font-medium text-gray-700">
+                          Score (0-{maxMarks})
+                        </label>
+                        <input
+                          type="number"
+                          name={`${key}Score`}
+                          defaultValue={currentScore}
+                          min="0"
+                          max={maxMarks}
+                          className="w-24 p-2 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                        />
+                      </div>
                     </div>
                   );
-                })}
-              </div>
-              <div className="flex justify-end gap-4 mt-6">
+                })
+              ) : (
+                <p className="text-center text-gray-500">No answers available for this submission.</p>
+              )}
+              <div className="flex justify-end gap-4 mt-8">
                 <button
-                  type="button"
                   onClick={() => setMarkingSubmission(null)}
-                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300"
+                  className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  onClick={() => {
+                    const scores = {};
+                    Object.keys(markingSubmission.normalizedAnswers || {}).forEach((key) => {
+                      const scoreInput = document.querySelector(`input[name="${key}Score"]`);
+                      if (scoreInput && scoreInput.value) scores[key] = Number(scoreInput.value);
+                    });
+                    if (Object.keys(scores).length === 0) {
+                      toast.error("Please provide at least one score.");
+                      return;
+                    }
+                    handleMarkSubmission(markingSubmission, scores);
+                  }}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center gap-2 transition-colors"
                   disabled={loading}
                 >
-                  {loading ? "Saving..." : "Save Marks"}
+                  <CheckCircle size={18} />
+                  {loading ? "Saving..." : "Submit Marks"}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

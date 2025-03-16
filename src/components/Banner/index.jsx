@@ -24,7 +24,7 @@ const Banner = () => {
         {/* Left Side: Text */}
         <div className="md:w-1/2 text-center md:text-left animate-fadeInUp">
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-blue-500 drop-shadow-md">
-            দেশের প্রথম স্মার্ট এবং কাগজবিহীন<br className="hidden md:inline" /> প্রশ্নবতস!
+            দেশের প্রথম স্মার্ট এবং কাগজবিহীন<br className="hidden md:inline" /> প্রশ্নব্যাংক!
           </h1>
           <p className="mt-8 text-xl text-gray-200 leading-relaxed max-w-lg mx-auto md:mx-0">
             প্রযুক্তির সাথে তাল মিলিয়ে শেখার নতুন অভিজ্ঞতা উপভোগ করুন। আমাদের প্ল্যাটফর্মে পাবেন দ্রুত, নির্ভরযোগ্য ও বুদ্ধিবৃত্তিক সমাধান।
