@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import * as XLSX from "xlsx";
 
 export default function CreateSQAdmin() {
     const [classes, setClasses] = useState([]);
@@ -85,7 +86,7 @@ export default function CreateSQAdmin() {
         setChapters([]);
         setSelectedChapterNumber("");
         setSelectedChapterName("");
-        setType("জ্ঞানেরমূলক");
+        setType("জ্ঞানমূলক");
         setQuestion("");
         setAnswer("");
     };
@@ -95,7 +96,6 @@ export default function CreateSQAdmin() {
         const sqData = {
             type,
             question,
-            answer,
             classLevel: parseInt(selectedClass), // Use classLevel for SQ collection
             subjectName: selectedSubject, // Map to subjectName for SQ
             subjectPart: selectedSubjectPart || null,
@@ -113,7 +113,7 @@ export default function CreateSQAdmin() {
             });
 
             if (response.ok) {
-                toast.success("✅ সংক্ষিপ্ত প্রশ্ন সফলভাবে যোগ করা হয়েছে!", { position: "top-right" });
+                toast.success("সংক্ষিপ্ত প্রশ্ন সফলভাবে যোগ করা হয়েছে!", { position: "top-right" });
                 resetForm();
             } else {
                 const error = await response.json();
@@ -125,6 +125,46 @@ export default function CreateSQAdmin() {
             toast.error("❌ নেটওয়ার্ক সমস্যা! আবার চেষ্টা করুন।", { position: "top-right" });
         }
     };
+    const handleFileUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            const binaryStr = event.target.result;
+            const workbook = XLSX.read(binaryStr, { type: "binary" });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const data = XLSX.utils.sheet_to_json(sheet);
+
+            if (data.length > 0) {
+                const extractedQuestions = data.map(row => ({
+                    classNumber: row.Class || selectedClass,
+                    subject: row.Subject || selectedSubject,
+                    chapterNumber: row["Chapter Number"] || selectedChapter,
+                    chapterName: row["Chapter Name"] || selectedChapterName,
+                    question: row.Question
+                }));
+
+                // Send data to API
+                const response = await fetch("/api/sq/import", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ questions: extractedQuestions })
+                });
+
+                if (response.ok) {
+                    toast.success("প্রশ্ন সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!");
+                } else {
+                    toast.error("❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ হয়েছে!");
+                }
+            } else {
+                toast.error("❌ এক্সেল ফাইল খালি বা ভুল ফরম্যাটে আছে!");
+            }
+        };
+
+        reader.readAsBinaryString(file);
+    };
 
     return (
         <motion.div
@@ -135,6 +175,20 @@ export default function CreateSQAdmin() {
         >
             <h2 className="text-2xl font-bold mb-4 text-center text-blue-600">📝 সংক্ষিপ্ত প্রশ্ন তৈরি করুন</h2>
             <form onSubmit={handleSubmit}>
+                <div className="mb-4">
+                    <label
+                        className="block text-gray-700 mb-2"
+                        style={{ fontWeight: "bold" }}
+                    >
+                        এক্সেল ফাইল থেকে প্রশ্ন আমদানি করুন
+                    </label>
+                    <input
+                        type="file"
+                        accept=".xlsx, .xls"
+                        onChange={handleFileUpload}
+                        className="w-full p-2 border rounded"
+                    />
+                </div>
                 <select
                     className="w-full p-2 border rounded mb-4"
                     value={selectedClass}
@@ -207,7 +261,7 @@ export default function CreateSQAdmin() {
                     onChange={(e) => setType(e.target.value)}
                     required
                 >
-                    <option value="জ্ঞানেরমূলক">জ্ঞানেরমূলক</option>
+                    <option value="জ্ঞানেরমূলক">জ্ঞানমূলক</option>
                     <option value="অনুধাবনমূলক">অনুধাবনমূলক</option>
                     <option value="প্রয়োগমূলক">প্রয়োগমূলক</option>
                     <option value="উচ্চতর দক্ষতা">উচ্চতর দক্ষতা</option>
@@ -219,13 +273,6 @@ export default function CreateSQAdmin() {
                     className="w-full p-2 border rounded mb-4"
                     value={question}
                     onChange={(e) => setQuestion(e.target.value)}
-                    required
-                />
-                <textarea
-                    placeholder="🔹 উত্তর লিখুন"
-                    className="w-full p-2 border rounded mb-4 h-24"
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
                     required
                 />
 

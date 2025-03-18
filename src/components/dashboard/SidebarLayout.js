@@ -163,7 +163,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
           ],
         },
         {
-          section: "Content Creation",
+          section: "Question Creation",
           items: [
             { href: "/dashboard/admin/createMCQAdmin", icon: <IoMdCreate className="text-xl mr-2" />, label: "Create MCQ" },
             { href: "/dashboard/admin/createCQAdmin", icon: <FaPlus className="text-xl mr-2" />, label: "Create CQ" },

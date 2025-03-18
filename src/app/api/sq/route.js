@@ -4,9 +4,9 @@ import { connectMongoDB } from "@/lib/mongodb";
 export async function POST(req) {
     try {
         const db = await connectMongoDB();
-        const { type, question, answer, classLevel, subjectName, subjectPart, chapterNumber, chapterName, teacherEmail } = await req.json();
+        const { type, question, classLevel, subjectName, subjectPart, chapterNumber, chapterName, teacherEmail } = await req.json();
 
-        if (!type || !question || !answer || !classLevel || !subjectName || !chapterNumber || !chapterName) {
+        if (!type || !question || !classLevel || !subjectName || !chapterNumber || !chapterName) {
             return NextResponse.json({ error: "❌ সমস্ত প্রয়োজনীয় তথ্য প্রদান করুন!" }, { status: 400 });
         }
 
@@ -14,7 +14,6 @@ export async function POST(req) {
         const newSQ = {
             type,
             question,
-            answer,
             classLevel: parseInt(classLevel, 10), // Keep as classLevel for SQ consistency
             subjectName,
             subjectPart: subjectPart || null,
