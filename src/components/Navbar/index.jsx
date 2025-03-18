@@ -54,14 +54,14 @@ const Navbar = () => {
                     {/* Logo */}
                     <div className="flex items-center">
                         <Link href="/">
-                            <h1 className="text-3xl font-extrabold text-white tracking-wide">QA</h1>
+                            <h1 className="text-3xl font-extrabold text-white tracking-wide">P.Edu</h1>
                         </Link>
                     </div>
 
                     {/* Desktop Layout */}
                     <div className="hidden md:flex items-center flex-1 justify-center">
                         {/* Search Bar */}
-                        <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full px-5 py-3 border border-white/20 mx-8 w-1/3">
+                        {/* <div className="flex items-center bg-white/10 backdrop-blur-md rounded-full px-5 py-3 border border-white/20 mx-8 w-1/3">
                             <Search className="h-5 w-5 text-gray-300" />
                             <input
                                 type="text"
@@ -70,7 +70,7 @@ const Navbar = () => {
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
-                        </div>
+                        </div> */}
 
                         {/* Menu Items */}
                         <div className="flex space-x-10">
@@ -108,15 +108,9 @@ const Navbar = () => {
                             <>
                                 <Link
                                     href="/signIn"
-                                    className="px-6 py-3 border border-white/20 text-white rounded-full font-semibold hover:bg-white/10 hover:shadow-lg transition-all duration-300"
-                                >
-                                    Login
-                                </Link>
-                                <Link
-                                    href="/signUp"
                                     className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-full font-semibold hover:shadow-lg hover:scale-105 transition-all duration-300"
                                 >
-                                    Sign Up
+                                    Login
                                 </Link>
                             </>
                         )}
@@ -173,16 +167,10 @@ const Navbar = () => {
                             ) : (
                                 <>
                                     <Link
-                                        href="/signIn"
-                                        className="block w-full text-center px-4 py-4 border border-white/20 text-white rounded-full font-semibold hover:bg-white/10 hover:shadow-lg transition-all duration-300"
-                                    >
-                                        Login
-                                    </Link>
-                                    <Link
-                                        href="/signUp"
+                                        href="/signin"
                                         className="block w-full text-center px-4 py-4 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300"
                                     >
-                                        Sign Up
+                                        Login
                                     </Link>
                                 </>
                             )}
