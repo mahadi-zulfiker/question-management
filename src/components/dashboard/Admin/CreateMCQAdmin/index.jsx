@@ -26,7 +26,7 @@ export default function CreateMCQAdmin() {
         higherOptions: ["", "", "", "", "", "", ""],
         higherCorrectAnswer: null,
         image: null,
-        imageAlignment: "center", // Added image alignment field
+        imageAlignment: "center",
     }]);
 
     useEffect(() => {
@@ -148,7 +148,7 @@ export default function CreateMCQAdmin() {
                                 row["Option 7"] || ""
                             ],
                         correctAnswer: row["Correct Answer"] || null,
-                        imageAlignment: row["Image Alignment"] || "center", // Add support for Excel
+                        imageAlignment: row["Image Alignment"] || "center",
                     }));
 
                     const response = await fetch("/api/mcq/import", {
@@ -231,139 +231,176 @@ export default function CreateMCQAdmin() {
     };
 
     return (
-        <div className="p-6 max-w-5xl mx-auto bg-gray-50 min-h-screen">
+        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 p-6">
             <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
-            <h1 className="text-3xl font-bold mb-6 text-center text-blue-600">📝 এমসিকিউ তৈরি করুন</h1>
+            <motion.h1
+                initial={{ opacity: 0, y: -30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-4xl font-extrabold text-center text-blue-700 mb-8"
+            >
+                📝 এমসিকিউ তৈরি করুন
+            </motion.h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
                 {/* Form Section */}
                 <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="bg-white rounded-lg shadow-lg border border-gray-200 p-6"
+                    className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
                 >
                     <form onSubmit={handleSubmit}>
-                        <div className="mb-4">
-                            <label className="block text-gray-700 mb-2 font-bold">এক্সেল ফাইল থেকে প্রশ্ন আমদানি করুন</label>
-                            <input
-                                type="file"
-                                accept=".xlsx, .xls"
-                                onChange={handleFileUpload}
-                                className="w-full p-2 border rounded"
-                            />
+                        <div className="mb-6">
+                            <label className="block text-gray-700 font-semibold mb-2">এক্সেল ফাইল থেকে আমদানি</label>
+                            <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                                <input
+                                    type="file"
+                                    accept=".xlsx, .xls"
+                                    onChange={handleFileUpload}
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                />
+                                <p className="text-center text-gray-500">এক্সেল ফাইল টেনে আনুন বা ক্লিক করুন</p>
+                            </div>
                         </div>
-                        <p className="text-center">অথবা</p>
-                        <hr className="mb-4" />
+                        <p className="text-center text-gray-500 mb-4">অথবা</p>
 
-                        <select
-                            value={questionType}
-                            onChange={(e) => setQuestionType(e.target.value)}
-                            className="w-full p-2 border rounded mb-3"
-                            required
-                        >
-                            <option value="general">সাধারণ এমসিকিউ</option>
-                            <option value="higher">উচ্চতর দক্ষতা এমসিকিউ</option>
-                        </select>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-gray-700 font-semibold mb-1">প্রশ্নের ধরণ</label>
+                                <select
+                                    value={questionType}
+                                    onChange={(e) => setQuestionType(e.target.value)}
+                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+                                    required
+                                >
+                                    <option value="general">সাধারণ এমসিকিউ</option>
+                                    <option value="higher">উচ্চতর দক্ষতা এমসিকিউ</option>
+                                </select>
+                            </div>
 
-                        <div className="flex items-center mb-3">
-                            <input
-                                type="checkbox"
-                                checked={isMultipleQuestions}
-                                onChange={(e) => setIsMultipleQuestions(e.target.checked)}
-                                className="mr-2"
-                            />
-                            <label>একাধিক প্রশ্ন যোগ করুন</label>
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={isMultipleQuestions}
+                                    onChange={(e) => setIsMultipleQuestions(e.target.checked)}
+                                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <label className="ml-2 text-gray-700 font-medium">একাধিক প্রশ্ন যোগ করুন</label>
+                            </div>
+
+                            <div>
+                                <label className="block text-gray-700 font-semibold mb-1">ক্লাস</label>
+                                <select
+                                    value={selectedClass}
+                                    onChange={(e) => setSelectedClass(e.target.value)}
+                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+                                    required
+                                >
+                                    <option value="">ক্লাস নির্বাচন করুন</option>
+                                    {classes.map((cls) => (
+                                        <option key={cls.classNumber} value={cls.classNumber}>
+                                            ক্লাস {cls.classNumber}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {selectedClass && subjects.length > 0 && (
+                                <div>
+                                    <label className="block text-gray-700 font-semibold mb-1">বিষয়</label>
+                                    <select
+                                        value={selectedSubject}
+                                        onChange={(e) => setSelectedSubject(e.target.value)}
+                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+                                        required
+                                    >
+                                        <option value="">বিষয় নির্বাচন করুন</option>
+                                        {subjects.map((subject) => (
+                                            <option key={subject} value={subject}>{subject}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {selectedSubject && subjectParts.length > 0 && (
+                                <div>
+                                    <label className="block text-gray-700 font-semibold mb-1">বিষয়ের অংশ</label>
+                                    <select
+                                        value={selectedSubjectPart}
+                                        onChange={(e) => setSelectedSubjectPart(e.target.value)}
+                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+                                    >
+                                        <option value="">বিষয়ের অংশ (যদি থাকে)</option>
+                                        {subjectParts.map((part) => (
+                                            <option key={part} value={part}>{part}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {selectedSubject && chapters.length > 0 && (
+                                <div>
+                                    <label className="block text-gray-700 font-semibold mb-1">অধ্যায়</label>
+                                    <select
+                                        value={selectedChapter}
+                                        onChange={(e) => {
+                                            const selected = chapters.find(chap => chap.number === parseInt(e.target.value));
+                                            setSelectedChapter(e.target.value);
+                                            setSelectedChapterName(selected?.name || "");
+                                        }}
+                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+                                        required
+                                    >
+                                        <option value="">অধ্যায় নির্বাচন করুন</option>
+                                        {chapters.map((chapter) => (
+                                            <option key={chapter.number} value={chapter.number}>{chapter.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                         </div>
-
-                        <select
-                            value={selectedClass}
-                            onChange={(e) => setSelectedClass(e.target.value)}
-                            className="w-full p-2 border rounded mb-3"
-                            required
-                        >
-                            <option value="">ক্লাস নির্বাচন করুন</option>
-                            {classes.map((cls) => (
-                                <option key={cls.classNumber} value={cls.classNumber}>
-                                    ক্লাস {cls.classNumber}
-                                </option>
-                            ))}
-                        </select>
-
-                        {selectedClass && subjects.length > 0 && (
-                            <select
-                                value={selectedSubject}
-                                onChange={(e) => setSelectedSubject(e.target.value)}
-                                className="w-full p-2 border rounded mb-3"
-                                required
-                            >
-                                <option value="">বিষয় নির্বাচন করুন</option>
-                                {subjects.map((subject) => (
-                                    <option key={subject} value={subject}>{subject}</option>
-                                ))}
-                            </select>
-                        )}
-
-                        {selectedSubject && subjectParts.length > 0 && (
-                            <select
-                                value={selectedSubjectPart}
-                                onChange={(e) => setSelectedSubjectPart(e.target.value)}
-                                className="w-full p-2 border rounded mb-3"
-                            >
-                                <option value="">বিষয়ের অংশ (যদি থাকে)</option>
-                                {subjectParts.map((part) => (
-                                    <option key={part} value={part}>{part}</option>
-                                ))}
-                            </select>
-                        )}
-
-                        {selectedSubject && chapters.length > 0 && (
-                            <select
-                                value={selectedChapter}
-                                onChange={(e) => {
-                                    const selected = chapters.find(chap => chap.number === parseInt(e.target.value));
-                                    setSelectedChapter(e.target.value);
-                                    setSelectedChapterName(selected?.name || "");
-                                }}
-                                className="w-full p-2 border rounded mb-3"
-                                required
-                            >
-                                <option value="">অধ্যায় নির্বাচন করুন</option>
-                                {chapters.map((chapter) => (
-                                    <option key={chapter.number} value={chapter.number}>{chapter.name}</option>
-                                ))}
-                            </select>
-                        )}
 
                         {questions.map((q, qIndex) => (
-                            <div key={qIndex} className="mb-6 p-4 border rounded bg-gray-50">
-                                <h3 className="text-lg font-semibold mb-2">প্রশ্ন {qIndex + 1}</h3>
+                            <motion.div
+                                key={qIndex}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="mt-6 p-5 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
+                            >
+                                <h3 className="text-lg font-semibold text-gray-800 mb-3">প্রশ্ন {qIndex + 1}</h3>
                                 <input
                                     type="text"
                                     placeholder="প্রশ্ন লিখুন"
-                                    className="w-full p-2 border rounded mb-3"
+                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-4"
                                     value={q.question}
                                     onChange={(e) => handleQuestionChange(qIndex, e.target.value)}
                                     required
                                 />
 
                                 <div className="mb-4">
-                                    <label className="block text-gray-700 mb-2 font-bold">প্রশ্নের সাথে ছবি যুক্ত করুন (ঐচ্ছিক)</label>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => handleImageChange(qIndex, e)}
-                                        className="w-full p-2 border rounded"
-                                    />
+                                    <label className="block text-gray-700 font-semibold mb-2">ছবি যুক্ত করুন (ঐচ্ছিক)</label>
+                                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handleImageChange(qIndex, e)}
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                        />
+                                        <p className="text-center text-gray-500">
+                                            {q.image ? q.image.name : "ছবি টেনে আনুন বা ক্লিক করুন"}
+                                        </p>
+                                    </div>
                                 </div>
 
                                 {q.image && (
                                     <div className="mb-4">
-                                        <label className="block text-gray-700 mb-2 font-bold">ছবির অ্যালাইনমেন্ট</label>
+                                        <label className="block text-gray-700 font-semibold mb-2">ছবির অ্যালাইনমেন্ট</label>
                                         <select
                                             value={q.imageAlignment}
                                             onChange={(e) => handleImageAlignmentChange(qIndex, e.target.value)}
-                                            className="w-full p-2 border rounded"
+                                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
                                         >
                                             <option value="left">বামে</option>
                                             <option value="center">মাঝে</option>
@@ -373,11 +410,11 @@ export default function CreateMCQAdmin() {
                                 )}
 
                                 {questionType === "general" && q.options.map((option, i) => (
-                                    <div key={i} className="flex items-center mb-2">
+                                    <div key={i} className="flex items-center mb-3">
                                         <input
                                             type="text"
                                             placeholder={`বিকল্প ${i + 1}`}
-                                            className="flex-1 p-2 border rounded"
+                                            className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
                                             value={option}
                                             onChange={(e) => handleOptionChange(qIndex, i, e.target.value)}
                                             required
@@ -385,7 +422,7 @@ export default function CreateMCQAdmin() {
                                         <input
                                             type="radio"
                                             name={`correct-${qIndex}`}
-                                            className="ml-2"
+                                            className="ml-3 h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
                                             onChange={() => handleCorrectAnswerChange(qIndex, i)}
                                             checked={q.correctAnswer === i}
                                         />
@@ -395,24 +432,24 @@ export default function CreateMCQAdmin() {
                                 {questionType === "higher" && (
                                     <>
                                         {q.higherOptions.slice(0, 3).map((option, i) => (
-                                            <div key={i} className="flex items-center mb-2">
+                                            <div key={i} className="mb-3">
                                                 <input
                                                     type="text"
                                                     placeholder={`বিকল্প ${i + 1}`}
-                                                    className="flex-1 p-2 border rounded"
+                                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
                                                     value={option}
                                                     onChange={(e) => handleOptionChange(qIndex, i, e.target.value, "higher")}
                                                     required
                                                 />
                                             </div>
                                         ))}
-                                        <h3 className="mt-4 mb-2 text-lg font-bold text-gray-700">নিচের কোনটি সঠিক?</h3>
+                                        <h3 className="mt-4 mb-2 text-md font-bold text-gray-700">নিচের কোনটি সঠিক?</h3>
                                         {q.higherOptions.slice(3, 7).map((option, i) => (
-                                            <div key={i} className="flex items-center mb-2">
+                                            <div key={i} className="flex items-center mb-3">
                                                 <input
                                                     type="text"
                                                     placeholder={`অপশন ${i + 1}`}
-                                                    className="flex-1 p-2 border rounded"
+                                                    className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
                                                     value={option}
                                                     onChange={(e) => handleOptionChange(qIndex, i + 3, e.target.value, "higher")}
                                                     required
@@ -420,7 +457,7 @@ export default function CreateMCQAdmin() {
                                                 <input
                                                     type="radio"
                                                     name={`higherCorrect-${qIndex}`}
-                                                    className="ml-2"
+                                                    className="ml-3 h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
                                                     onChange={() => handleCorrectAnswerChange(qIndex, i + 3, "higher")}
                                                     checked={q.higherCorrectAnswer === i + 3}
                                                 />
@@ -428,38 +465,48 @@ export default function CreateMCQAdmin() {
                                         ))}
                                     </>
                                 )}
-                            </div>
+                            </motion.div>
                         ))}
 
                         {isMultipleQuestions && (
-                            <button
+                            <motion.button
                                 type="button"
                                 onClick={addNewQuestion}
-                                className="w-full bg-green-500 text-white py-2 mt-3 rounded hover:bg-green-600 transition flex items-center justify-center"
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="w-full bg-green-600 text-white py-3 mt-4 rounded-lg hover:bg-green-700 transition flex items-center justify-center shadow-md"
                             >
                                 <span className="text-xl mr-2">+</span> নতুন প্রশ্ন যোগ করুন
-                            </button>
+                            </motion.button>
                         )}
 
-                        <button
+                        <motion.button
                             type="submit"
-                            className="w-full bg-blue-500 text-white py-2 mt-3 rounded hover:bg-blue-600 transition"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="w-full bg-blue-600 text-white py-3 mt-6 rounded-lg hover:bg-blue-700 transition shadow-md"
                         >
                             ✅ সাবমিট করুন
-                        </button>
+                        </motion.button>
                     </form>
                 </motion.div>
 
                 {/* Preview Section */}
                 <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="bg-white rounded-lg shadow-lg border border-gray-200 p-6"
+                    className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
                 >
-                    <h2 className="text-xl font-bold mb-4 text-blue-600">প্রিভিউ</h2>
+                    <h2 className="text-xl font-bold text-blue-700 mb-4">প্রিভিউ</h2>
                     {questions.map((q, qIndex) => (
-                        <div key={qIndex} className="mb-6">
+                        <motion.div
+                            key={qIndex}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="mb-6 p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100"
+                        >
                             <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-2">MCQ</p>
                             <p className="text-lg font-semibold text-gray-900 mb-2">{q.question || "প্রশ্ন লিখুন"}</p>
                             {q.image && (
@@ -467,7 +514,7 @@ export default function CreateMCQAdmin() {
                                     <img
                                         src={URL.createObjectURL(q.image)}
                                         alt={`MCQ preview ${qIndex + 1}`}
-                                        className="rounded shadow-md max-h-48 inline-block"
+                                        className="rounded-lg shadow-md max-h-48 inline-block"
                                     />
                                 </div>
                             )}
@@ -476,7 +523,7 @@ export default function CreateMCQAdmin() {
                                     {q.options.map((opt, i) => (
                                         <p
                                             key={i}
-                                            className={q.correctAnswer === i ? "bg-green-100 font-bold p-2 rounded" : "p-2"}
+                                            className={`p-2 rounded-lg ${q.correctAnswer === i ? "bg-green-100 font-bold text-green-800" : "text-gray-700"}`}
                                         >
                                             {String.fromCharCode(2453 + i)}. {opt || "বিকল্প লিখুন"}
                                         </p>
@@ -489,12 +536,12 @@ export default function CreateMCQAdmin() {
                                             <p key={i}>{String.fromCharCode(2453 + i)}. {opt || "বিকল্প লিখুন"}</p>
                                         ))}
                                     </div>
-                                    <p className="font-bold mb-2">নিচের কোনটি সঠিক?</p>
+                                    <p className="font-bold mb-2 text-gray-800">নিচের কোনটি সঠিক?</p>
                                     <div className="grid grid-cols-2 gap-4 text-gray-700">
                                         {q.higherOptions.slice(3, 7).map((opt, i) => (
                                             <p
                                                 key={i + 3}
-                                                className={q.higherCorrectAnswer === i + 3 ? "bg-green-100 font-bold p-2 rounded" : "p-2"}
+                                                className={`p-2 rounded-lg ${q.higherCorrectAnswer === i + 3 ? "bg-green-100 font-bold text-green-800" : "text-gray-700"}`}
                                             >
                                                 {String.fromCharCode(2453 + i)}. {opt || "অপশন লিখুন"}
                                             </p>
@@ -502,10 +549,10 @@ export default function CreateMCQAdmin() {
                                     </div>
                                 </div>
                             )}
-                            <p className="text-sm text-gray-500 mt-2">
+                            <p className="text-sm text-gray-500 mt-3">
                                 Class: {selectedClass || "N/A"} | Subject: {selectedSubject || "N/A"} | Chapter: {selectedChapterName || "N/A"} | Type: {questionType}
                             </p>
-                        </div>
+                        </motion.div>
                     ))}
                 </motion.div>
             </div>
