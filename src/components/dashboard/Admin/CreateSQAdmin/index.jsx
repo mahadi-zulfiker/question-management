@@ -21,9 +21,9 @@ export default function CreateSQAdmin() {
     const [sqs, setSQs] = useState([{
         type: "জ্ঞানমূলক",
         question: "",
-        answer: "", // Optional answer field
+        answer: "",
         image: null,
-        imageAlignment: "center", // Added image alignment
+        imageAlignment: "center",
     }]);
 
     useEffect(() => {
@@ -143,7 +143,7 @@ export default function CreateSQAdmin() {
                         subjectPart: row["Subject Part"] || selectedSubjectPart,
                         chapterNumber: row["Chapter Number"] || selectedChapterNumber,
                         chapterName: row["Chapter Name"] || selectedChapterName,
-                        imageAlignment: row["Image Alignment"] || "center", // Support for Excel
+                        imageAlignment: row["Image Alignment"] || "center",
                     }));
 
                     const response = await fetch("/api/sq/import", {
@@ -220,121 +220,153 @@ export default function CreateSQAdmin() {
     };
 
     return (
-        <div className="p-6 max-w-5xl mx-auto bg-gray-50 min-h-screen">
+        <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 p-6">
             <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
-            <h1 className="text-3xl font-bold mb-6 text-center text-blue-600">📝 সংক্ষিপ্ত প্রশ্ন তৈরি করুন</h1>
+            <motion.h1
+                initial={{ opacity: 0, y: -30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-4xl font-extrabold text-center text-blue-700 mb-8"
+            >
+                📝 সংক্ষিপ্ত প্রশ্ন তৈরি করুন
+            </motion.h1>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
                 {/* Form Section */}
                 <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="bg-white rounded-lg shadow-lg border border-gray-200 p-6"
+                    className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
                 >
                     <form onSubmit={handleSubmit}>
-                        <div className="mb-4">
-                            <label className="block text-gray-700 mb-2 font-bold">এক্সেল ফাইল থেকে প্রশ্ন আমদানি করুন</label>
-                            <input
-                                type="file"
-                                accept=".xlsx, .xls"
-                                onChange={handleFileUpload}
-                                className="w-full p-2 border rounded"
-                            />
+                        <div className="mb-6">
+                            <label className="block text-gray-700 font-semibold mb-2">এক্সেল ফাইল থেকে আমদানি</label>
+                            <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                                <input
+                                    type="file"
+                                    accept=".xlsx, .xls"
+                                    onChange={handleFileUpload}
+                                    className="absolute inset-0 opacity-0 cursor-pointer"
+                                />
+                                <p className="text-center text-gray-500">এক্সেল ফাইল টেনে আনুন বা ক্লিক করুন</p>
+                            </div>
                         </div>
-                        <p className="text-center">অথবা</p>
-                        <hr className="mb-4" />
+                        <p className="text-center text-gray-500 mb-4">অথবা</p>
 
-                        <select
-                            className="w-full p-2 border rounded mb-4"
-                            value={selectedClass}
-                            onChange={(e) => setSelectedClass(e.target.value)}
-                            required
-                        >
-                            <option value="">ক্লাস নির্বাচন করুন</option>
-                            {classes.map((cls) => (
-                                <option key={cls.classNumber} value={cls.classNumber}>
-                                    ক্লাস {cls.classNumber}
-                                </option>
-                            ))}
-                        </select>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-gray-700 font-semibold mb-1">ক্লাস</label>
+                                <select
+                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+                                    value={selectedClass}
+                                    onChange={(e) => setSelectedClass(e.target.value)}
+                                    required
+                                >
+                                    <option value="">ক্লাস নির্বাচন করুন</option>
+                                    {classes.map((cls) => (
+                                        <option key={cls.classNumber} value={cls.classNumber}>
+                                            ক্লাস {cls.classNumber}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
-                        {selectedClass && subjects.length > 0 && (
-                            <select
-                                className="w-full p-2 border rounded mb-4"
-                                value={selectedSubject}
-                                onChange={(e) => setSelectedSubject(e.target.value)}
-                                required
-                            >
-                                <option value="">বিষয় নির্বাচন করুন</option>
-                                {subjects.map((subject) => (
-                                    <option key={subject} value={subject}>{subject}</option>
-                                ))}
-                            </select>
-                        )}
+                            {selectedClass && subjects.length > 0 && (
+                                <div>
+                                    <label className="block text-gray-700 font-semibold mb-1">বিষয়</label>
+                                    <select
+                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+                                        value={selectedSubject}
+                                        onChange={(e) => setSelectedSubject(e.target.value)}
+                                        required
+                                    >
+                                        <option value="">বিষয় নির্বাচন করুন</option>
+                                        {subjects.map((subject) => (
+                                            <option key={subject} value={subject}>{subject}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
 
-                        {selectedSubject && subjectParts.length > 0 && (
-                            <select
-                                className="w-full p-2 border rounded mb-4"
-                                value={selectedSubjectPart}
-                                onChange={(e) => setSelectedSubjectPart(e.target.value)}
-                            >
-                                <option value="">বিষয়ের অংশ (যদি থাকে)</option>
-                                {subjectParts.map((part) => (
-                                    <option key={part} value={part}>{part}</option>
-                                ))}
-                            </select>
-                        )}
+                            {selectedSubject && subjectParts.length > 0 && (
+                                <div>
+                                    <label className="block text-gray-700 font-semibold mb-1">বিষয়ের অংশ</label>
+                                    <select
+                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+                                        value={selectedSubjectPart}
+                                        onChange={(e) => setSelectedSubjectPart(e.target.value)}
+                                    >
+                                        <option value="">বিষয়ের অংশ (যদি থাকে)</option>
+                                        {subjectParts.map((part) => (
+                                            <option key={part} value={part}>{part}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
 
-                        {selectedSubject && chapters.length > 0 && (
-                            <select
-                                className="w-full p-2 border rounded mb-4"
-                                value={selectedChapterNumber}
-                                onChange={(e) => {
-                                    const selected = chapters.find((chap) => chap.chapterNumber === parseInt(e.target.value));
-                                    setSelectedChapterNumber(e.target.value);
-                                    setSelectedChapterName(selected?.chapterName || "");
-                                }}
-                                required
-                            >
-                                <option value="">অধ্যায় নির্বাচন করুন</option>
-                                {chapters.map((chapter) => (
-                                    <option key={chapter.chapterNumber} value={chapter.chapterNumber}>
-                                        {chapter.chapterNumber} - {chapter.chapterName}
-                                    </option>
-                                ))}
-                            </select>
-                        )}
+                            {selectedSubject && chapters.length > 0 && (
+                                <div>
+                                    <label className="block text-gray-700 font-semibold mb-1">অধ্যায়</label>
+                                    <select
+                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+                                        value={selectedChapterNumber}
+                                        onChange={(e) => {
+                                            const selected = chapters.find((chap) => chap.chapterNumber === parseInt(e.target.value));
+                                            setSelectedChapterNumber(e.target.value);
+                                            setSelectedChapterName(selected?.chapterName || "");
+                                        }}
+                                        required
+                                    >
+                                        <option value="">অধ্যায় নির্বাচন করুন</option>
+                                        {chapters.map((chapter) => (
+                                            <option key={chapter.chapterNumber} value={chapter.chapterNumber}>
+                                                {chapter.chapterNumber} - {chapter.chapterName}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
 
-                        <div className="flex items-center mb-4">
-                            <input
-                                type="checkbox"
-                                checked={isMultipleSQs}
-                                onChange={(e) => setIsMultipleSQs(e.target.checked)}
-                                className="mr-2"
-                            />
-                            <label>একাধিক সংক্ষিপ্ত প্রশ্ন যোগ করুন</label>
+                            <div className="flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={isMultipleSQs}
+                                    onChange={(e) => setIsMultipleSQs(e.target.checked)}
+                                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                />
+                                <label className="ml-2 text-gray-700 font-medium">একাধিক সংক্ষিপ্ত প্রশ্ন যোগ করুন</label>
+                            </div>
                         </div>
 
                         {sqs.map((sq, index) => (
-                            <div key={index} className="mb-6 p-4 border rounded bg-gray-50">
-                                <h3 className="text-lg font-semibold mb-2">সংক্ষিপ্ত প্রশ্ন {index + 1}</h3>
-                                <select
-                                    className="w-full p-2 border rounded mb-4"
-                                    value={sq.type}
-                                    onChange={(e) => handleTypeChange(index, e.target.value)}
-                                    required
-                                >
-                                    <option value="জ্ঞানমূলক">জ্ঞানমূলক</option>
-                                    <option value="অনুধাবনমূলক">অনুধাবনমূলক</option>
-                                    <option value="প্রয়োগমূলক">প্রয়োগমূলক</option>
-                                    <option value="উচ্চতর দক্ষতা">উচ্চতর দক্ষতা</option>
-                                </select>
+                            <motion.div
+                                key={index}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3 }}
+                                className="mt-6 p-5 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
+                            >
+                                <h3 className="text-lg font-semibold text-gray-800 mb-3">সংক্ষিপ্ত প্রশ্ন {index + 1}</h3>
+                                <div>
+                                    <label className="block text-gray-700 font-semibold mb-1">প্রশ্নের ধরণ</label>
+                                    <select
+                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-4"
+                                        value={sq.type}
+                                        onChange={(e) => handleTypeChange(index, e.target.value)}
+                                        required
+                                    >
+                                        <option value="জ্ঞানমূলক">জ্ঞানমূলক</option>
+                                        <option value="অনুধাবনমূলক">অনুধাবনমূলক</option>
+                                        <option value="প্রয়োগমূলক">প্রয়োগমূলক</option>
+                                        <option value="উচ্চতর দক্ষতা">উচ্চতর দক্ষতা</option>
+                                    </select>
+                                </div>
 
                                 <input
                                     type="text"
                                     placeholder="🔹 প্রশ্ন লিখুন"
-                                    className="w-full p-2 border rounded mb-4"
+                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-4"
                                     value={sq.question}
                                     onChange={(e) => handleQuestionChange(index, e.target.value)}
                                     required
@@ -342,28 +374,33 @@ export default function CreateSQAdmin() {
 
                                 <textarea
                                     placeholder="🔹 উত্তর লিখুন (ঐচ্ছিক)"
-                                    className="w-full p-2 border rounded mb-4 h-24"
+                                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-4 h-28"
                                     value={sq.answer}
                                     onChange={(e) => handleAnswerChange(index, e.target.value)}
                                 />
 
                                 <div className="mb-4">
-                                    <label className="block text-gray-700 mb-2 font-bold">প্রশ্নের সাথে ছবি যুক্ত করুন (ঐচ্ছিক)</label>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={(e) => handleImageChange(index, e)}
-                                        className="w-full p-2 border rounded"
-                                    />
+                                    <label className="block text-gray-700 font-semibold mb-2">ছবি যুক্ত করুন (ঐচ্ছিক)</label>
+                                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={(e) => handleImageChange(index, e)}
+                                            className="absolute inset-0 opacity-0 cursor-pointer"
+                                        />
+                                        <p className="text-center text-gray-500">
+                                            {sq.image ? sq.image.name : "ছবি টেনে আনুন বা ক্লিক করুন"}
+                                        </p>
+                                    </div>
                                 </div>
 
                                 {sq.image && (
                                     <div className="mb-4">
-                                        <label className="block text-gray-700 mb-2 font-bold">ছবির অ্যালাইনমেন্ট</label>
+                                        <label className="block text-gray-700 font-semibold mb-2">ছবির অ্যালাইনমেন্ট</label>
                                         <select
                                             value={sq.imageAlignment}
                                             onChange={(e) => handleImageAlignmentChange(index, e.target.value)}
-                                            className="w-full p-2 border rounded"
+                                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
                                         >
                                             <option value="left">বামে</option>
                                             <option value="center">মাঝে</option>
@@ -371,35 +408,48 @@ export default function CreateSQAdmin() {
                                         </select>
                                     </div>
                                 )}
-                            </div>
+                            </motion.div>
                         ))}
 
                         {isMultipleSQs && (
-                            <button
+                            <motion.button
                                 type="button"
                                 onClick={addNewSQ}
-                                className="w-full bg-green-500 text-white py-2 mt-3 rounded hover:bg-green-600 transition flex items-center justify-center"
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                className="w-full bg-green-600 text-white py-3 mt-4 rounded-lg hover:bg-green-700 transition flex items-center justify-center shadow-md"
                             >
                                 <span className="text-xl mr-2">+</span> নতুন সংক্ষিপ্ত প্রশ্ন যোগ করুন
-                            </button>
+                            </motion.button>
                         )}
 
-                        <button type="submit" className="w-full bg-blue-500 text-white py-2 mt-4 rounded hover:bg-blue-600">
+                        <motion.button
+                            type="submit"
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            className="w-full bg-blue-600 text-white py-3 mt-6 rounded-lg hover:bg-blue-700 transition shadow-md"
+                        >
                             ✅ সাবমিট করুন
-                        </button>
+                        </motion.button>
                     </form>
                 </motion.div>
 
                 {/* Preview Section */}
                 <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="bg-white rounded-lg shadow-lg border border-gray-200 p-6"
+                    className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
                 >
-                    <h2 className="text-xl font-bold mb-4 text-blue-600">প্রিভিউ</h2>
+                    <h2 className="text-xl font-bold text-blue-700 mb-4">প্রিভিউ</h2>
                     {sqs.map((sq, index) => (
-                        <div key={index} className="mb-6">
+                        <motion.div
+                            key={index}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="mb-6 p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100"
+                        >
                             <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-2">SQ</p>
                             <p className="text-lg font-semibold text-gray-900 mb-2">
                                 {sq.type ? `${sq.type}: ` : ""}{sq.question || "প্রশ্ন লিখুন"}
@@ -409,17 +459,17 @@ export default function CreateSQAdmin() {
                                     <img
                                         src={URL.createObjectURL(sq.image)}
                                         alt={`SQ preview ${index + 1}`}
-                                        className="rounded shadow-md max-h-48 inline-block"
+                                        className="rounded-lg shadow-md max-h-48 inline-block"
                                     />
                                 </div>
                             )}
                             {sq.answer && (
                                 <p className="text-gray-700 mb-4"><span className="font-semibold">উত্তর:</span> {sq.answer}</p>
                             )}
-                            <p className="text-sm text-gray-500 mt-2">
+                            <p className="text-sm text-gray-500 mt-3">
                                 Class: {selectedClass || "N/A"} | Subject: {selectedSubject || "N/A"} | Chapter: {selectedChapterName || "N/A"}
                             </p>
-                        </div>
+                        </motion.div>
                     ))}
                 </motion.div>
             </div>
