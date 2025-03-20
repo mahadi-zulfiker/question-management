@@ -18,12 +18,14 @@ export default function CreateMCQAdmin() {
     const [selectedSubjectPart, setSelectedSubjectPart] = useState("");
     const [questionType, setQuestionType] = useState("general");
     const [isMultipleQuestions, setIsMultipleQuestions] = useState(false);
+
     const [questions, setQuestions] = useState([{
         question: "",
         options: ["", "", "", ""],
         correctAnswer: null,
         higherOptions: ["", "", "", "", "", "", ""],
-        higherCorrectAnswer: null
+        higherCorrectAnswer: null,
+        image: null // Added image field
     }]);
 
     useEffect(() => {
@@ -48,10 +50,7 @@ export default function CreateMCQAdmin() {
                 if (data.length > 0) {
                     setSubjects([...new Set(data.map((item) => item.subject))]);
                     setSubjectParts([...new Set(data.map((item) => item.subjectPart).filter(part => part))]);
-                    setChapters([...new Set(data.map((item) => ({
-                        number: item.chapterNumber,
-                        name: item.chapterName
-                    })))]);
+                    setChapters([...new Set(data.map((item) => ({ number: item.chapterNumber, name: item.chapterName })))]);
                 }
             } catch (error) {
                 toast.error("Failed to load class data");
@@ -66,7 +65,8 @@ export default function CreateMCQAdmin() {
             options: ["", "", "", ""],
             correctAnswer: null,
             higherOptions: ["", "", "", "", "", "", ""],
-            higherCorrectAnswer: null
+            higherCorrectAnswer: null,
+            image: null
         }]);
     };
 
@@ -93,6 +93,12 @@ export default function CreateMCQAdmin() {
         } else {
             newQuestions[qIndex].higherCorrectAnswer = value;
         }
+        setQuestions(newQuestions);
+    };
+
+    const handleImageChange = (index, e) => {
+        const newQuestions = [...questions];
+        newQuestions[index].image = e.target.files[0];
         setQuestions(newQuestions);
     };
 
@@ -133,6 +139,7 @@ export default function CreateMCQAdmin() {
                                 row["Option 6"] || "",
                                 row["Option 7"] || ""
                             ],
+                        correctAnswer: row["Correct Answer"] || null,
                     }));
 
                     const response = await fetch("/api/mcq/import", {
@@ -156,60 +163,6 @@ export default function CreateMCQAdmin() {
         reader.readAsBinaryString(file);
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-    
-        const mcqData = questions.map(q => ({
-            classNumber: selectedClass,
-            subject: selectedSubject,
-            subjectPart: selectedSubjectPart || null,
-            chapterNumber: selectedChapter,
-            chapterName: selectedChapterName,
-            question: q.question,
-            options: questionType === "general" ? q.options : q.higherOptions,
-            correctAnswer: questionType === "general" ? q.correctAnswer : q.higherCorrectAnswer,
-            questionType,
-            teacherEmail: "admin"
-        }));
-    
-        // Client-side validation
-        for (const q of mcqData) {
-            if (!q.question || 
-                (questionType === "general" && q.correctAnswer === null) || 
-                (questionType === "higher" && q.correctAnswer === null) ||
-                !q.classNumber ||
-                !q.subject ||
-                !q.chapterNumber ||
-                !q.chapterName) {
-                toast.error("দয়া করে সব প্রয়োজনীয় ক্ষেত্র পূরণ করুন!", { position: "top-right" });
-                return;
-            }
-        }
-    
-        console.log("Submitting data:", JSON.stringify(mcqData, null, 2));
-    
-        try {
-            const response = await fetch("/api/mcq/import", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ questions: mcqData })
-            });
-    
-            const responseData = await response.json();
-            console.log("Server response:", responseData);
-    
-            if (response.ok) {
-                toast.success(`✅ ${questions.length}টি এমসিকিউ সফলভাবে যোগ করা হয়েছে!`, { position: "top-right" });
-                resetForm();
-            } else {
-                toast.error(`❌ ${responseData.error || "কিছু সমস্যা হয়েছে!"}`, { position: "top-right" });
-            }
-        } catch (error) {
-            console.error("Submission error:", error);
-            toast.error("❌ সার্ভারের সাথে সংযোগে সমস্যা!", { position: "top-right" });
-        }
-    };
-
     const resetForm = () => {
         setSelectedClass("");
         setSelectedSubject("");
@@ -221,8 +174,49 @@ export default function CreateMCQAdmin() {
             options: ["", "", "", ""],
             correctAnswer: null,
             higherOptions: ["", "", "", "", "", "", ""],
-            higherCorrectAnswer: null
+            higherCorrectAnswer: null,
+            image: null
         }]);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+
+        const formData = new FormData();
+        formData.append("classNumber", selectedClass);
+        formData.append("subject", selectedSubject);
+        formData.append("subjectPart", selectedSubjectPart || "");
+        formData.append("chapterNumber", selectedChapter);
+        formData.append("chapterName", selectedChapterName);
+        formData.append("questionType", questionType);
+        formData.append("teacherEmail", "admin");
+
+        questions.forEach((q, index) => {
+            formData.append(`questions[${index}][question]`, q.question);
+            formData.append(`questions[${index}][options]`, JSON.stringify(questionType === "general" ? q.options : q.higherOptions));
+            formData.append(`questions[${index}][correctAnswer]`, questionType === "general" ? q.correctAnswer : q.higherCorrectAnswer);
+            if (q.image) {
+                formData.append(`questions[${index}][image]`, q.image);
+            }
+        });
+
+        try {
+            const response = await fetch("/api/mcq/import", {
+                method: "POST",
+                body: formData,
+            });
+
+            const responseData = await response.json();
+            if (response.ok) {
+                toast.success(`✅ ${questions.length}টি এমসিকিউ সফলভাবে যোগ করা হয়েছে!`, { position: "top-right" });
+                resetForm();
+            } else {
+                toast.error(`❌ ${responseData.error || "কিছু সমস্যা হয়েছে!"}`, { position: "top-right" });
+            }
+        } catch (error) {
+            console.error("Submission error:", error);
+            toast.error("❌ সার্ভারের সাথে সংযোগে সমস্যা!", { position: "top-right" });
+        }
     };
 
     return (
@@ -323,9 +317,7 @@ export default function CreateMCQAdmin() {
                     >
                         <option value="">অধ্যায় নির্বাচন করুন</option>
                         {chapters.map((chapter) => (
-                            <option key={chapter.number} value={chapter.number}>
-                                {chapter.name}
-                            </option>
+                            <option key={chapter.number} value={chapter.number}>{chapter.name}</option>
                         ))}
                     </select>
                 )}
@@ -341,6 +333,18 @@ export default function CreateMCQAdmin() {
                             onChange={(e) => handleQuestionChange(qIndex, e.target.value)}
                             required
                         />
+
+                        <div className="mb-4">
+                            <label className="block text-gray-700 mb-2" style={{ fontWeight: "bold" }}>
+                                প্রশ্নের সাথে ছবি যুক্ত করুন (ঐচ্ছিক)
+                            </label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={(e) => handleImageChange(qIndex, e)}
+                                className="w-full p-2 border rounded"
+                            />
+                        </div>
 
                         {questionType === "general" && q.options.map((option, i) => (
                             <div key={i} className="flex items-center mb-2">
