@@ -35,6 +35,7 @@ export async function POST(req) {
             const options = JSON.parse(formData.get(`questions[${index}][options]`));
             const correctAnswer = formData.get(`questions[${index}][correctAnswer]`);
             const image = formData.get(`questions[${index}][image]`);
+            const imageAlignment = formData.get(`questions[${index}][imageAlignment]`) || "center"; // Add imageAlignment
 
             if (!question || !options || !Array.isArray(options) || correctAnswer === null) {
                 return NextResponse.json(
@@ -75,6 +76,7 @@ export async function POST(req) {
                 questionType,
                 teacherEmail,
                 imageId,
+                imageAlignment, // Store imageAlignment
                 createdAt: new Date()
             });
 

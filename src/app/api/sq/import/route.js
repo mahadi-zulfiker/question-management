@@ -34,6 +34,7 @@ export async function POST(req) {
             const question = formData.get(`sqs[${index}][question]`);
             const answer = formData.get(`sqs[${index}][answer]`) || "";
             const image = formData.get(`sqs[${index}][image]`);
+            const imageAlignment = formData.get(`sqs[${index}][imageAlignment]`) || "center"; // Add imageAlignment
 
             if (!type || !question) {
                 return NextResponse.json(
@@ -73,6 +74,7 @@ export async function POST(req) {
                 chapterName,
                 teacherEmail,
                 imageId,
+                imageAlignment, // Store imageAlignment
                 createdAt: new Date()
             });
 

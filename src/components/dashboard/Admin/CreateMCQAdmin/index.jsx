@@ -25,7 +25,8 @@ export default function CreateMCQAdmin() {
         correctAnswer: null,
         higherOptions: ["", "", "", "", "", "", ""],
         higherCorrectAnswer: null,
-        image: null // Added image field
+        image: null,
+        imageAlignment: "center", // Added image alignment field
     }]);
 
     useEffect(() => {
@@ -66,7 +67,8 @@ export default function CreateMCQAdmin() {
             correctAnswer: null,
             higherOptions: ["", "", "", "", "", "", ""],
             higherCorrectAnswer: null,
-            image: null
+            image: null,
+            imageAlignment: "center",
         }]);
     };
 
@@ -99,6 +101,12 @@ export default function CreateMCQAdmin() {
     const handleImageChange = (index, e) => {
         const newQuestions = [...questions];
         newQuestions[index].image = e.target.files[0];
+        setQuestions(newQuestions);
+    };
+
+    const handleImageAlignmentChange = (index, value) => {
+        const newQuestions = [...questions];
+        newQuestions[index].imageAlignment = value;
         setQuestions(newQuestions);
     };
 
@@ -140,6 +148,7 @@ export default function CreateMCQAdmin() {
                                 row["Option 7"] || ""
                             ],
                         correctAnswer: row["Correct Answer"] || null,
+                        imageAlignment: row["Image Alignment"] || "center", // Add support for Excel
                     }));
 
                     const response = await fetch("/api/mcq/import", {
@@ -175,7 +184,8 @@ export default function CreateMCQAdmin() {
             correctAnswer: null,
             higherOptions: ["", "", "", "", "", "", ""],
             higherCorrectAnswer: null,
-            image: null
+            image: null,
+            imageAlignment: "center",
         }]);
     };
 
@@ -198,6 +208,7 @@ export default function CreateMCQAdmin() {
             if (q.image) {
                 formData.append(`questions[${index}][image]`, q.image);
             }
+            formData.append(`questions[${index}][imageAlignment]`, q.imageAlignment);
         });
 
         try {
@@ -220,209 +231,284 @@ export default function CreateMCQAdmin() {
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-lg border border-gray-200 mt-6"
-        >
-            <h2 className="text-2xl font-bold mb-4 text-center text-blue-600">📝 এমসিকিউ তৈরি করুন</h2>
-            <form onSubmit={handleSubmit}>
-                <div className="mb-4">
-                    <label className="block text-gray-700 mb-2" style={{ fontWeight: "bold" }}>
-                        এক্সেল ফাইল থেকে প্রশ্ন আমদানি করুন
-                    </label>
-                    <input
-                        type="file"
-                        accept=".xlsx, .xls"
-                        onChange={handleFileUpload}
-                        className="w-full p-2 border rounded"
-                    />
-                </div>
-                <p>অথবা</p>
-                <hr />
-                <br />
+        <div className="p-6 max-w-5xl mx-auto bg-gray-50 min-h-screen">
+            <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
+            <h1 className="text-3xl font-bold mb-6 text-center text-blue-600">📝 এমসিকিউ তৈরি করুন</h1>
 
-                <select 
-                    value={questionType} 
-                    onChange={(e) => setQuestionType(e.target.value)}
-                    className="w-full p-2 border rounded mb-3" 
-                    required
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Form Section */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="bg-white rounded-lg shadow-lg border border-gray-200 p-6"
                 >
-                    <option value="general">সাধারণ এমসিকিউ</option>
-                    <option value="higher">উচ্চতর দক্ষতা এমসিকিউ</option>
-                </select>
-
-                <div className="flex items-center mb-3">
-                    <input
-                        type="checkbox"
-                        checked={isMultipleQuestions}
-                        onChange={(e) => setIsMultipleQuestions(e.target.checked)}
-                        className="mr-2"
-                    />
-                    <label>একাধিক প্রশ্ন যোগ করুন</label>
-                </div>
-
-                <select 
-                    value={selectedClass} 
-                    onChange={(e) => setSelectedClass(e.target.value)}
-                    className="w-full p-2 border rounded mb-3" 
-                    required
-                >
-                    <option value="">ক্লাস নির্বাচন করুন</option>
-                    {classes.map((cls) => (
-                        <option key={cls.classNumber} value={cls.classNumber}>
-                            ক্লাস {cls.classNumber}
-                        </option>
-                    ))}
-                </select>
-
-                {selectedClass && subjects.length > 0 && (
-                    <select 
-                        value={selectedSubject} 
-                        onChange={(e) => setSelectedSubject(e.target.value)}
-                        className="w-full p-2 border rounded mb-3" 
-                        required
-                    >
-                        <option value="">বিষয় নির্বাচন করুন</option>
-                        {subjects.map((subject) => (
-                            <option key={subject} value={subject}>{subject}</option>
-                        ))}
-                    </select>
-                )}
-
-                {selectedSubject && subjectParts.length > 0 && (
-                    <select 
-                        value={selectedSubjectPart} 
-                        onChange={(e) => setSelectedSubjectPart(e.target.value)}
-                        className="w-full p-2 border rounded mb-3"
-                    >
-                        <option value="">বিষয়ের অংশ (যদি থাকে)</option>
-                        {subjectParts.map((part) => (
-                            <option key={part} value={part}>{part}</option>
-                        ))}
-                    </select>
-                )}
-
-                {selectedSubject && chapters.length > 0 && (
-                    <select 
-                        value={selectedChapter} 
-                        onChange={(e) => {
-                            const selected = chapters.find(chap => chap.number === parseInt(e.target.value));
-                            setSelectedChapter(e.target.value);
-                            setSelectedChapterName(selected?.name || "");
-                        }}
-                        className="w-full p-2 border rounded mb-3" 
-                        required
-                    >
-                        <option value="">অধ্যায় নির্বাচন করুন</option>
-                        {chapters.map((chapter) => (
-                            <option key={chapter.number} value={chapter.number}>{chapter.name}</option>
-                        ))}
-                    </select>
-                )}
-
-                {questions.map((q, qIndex) => (
-                    <div key={qIndex} className="mb-6 p-4 border rounded bg-gray-50">
-                        <h3 className="text-lg font-semibold mb-2">প্রশ্ন {qIndex + 1}</h3>
-                        <input
-                            type="text"
-                            placeholder="প্রশ্ন লিখুন"
-                            className="w-full p-2 border rounded mb-3"
-                            value={q.question}
-                            onChange={(e) => handleQuestionChange(qIndex, e.target.value)}
-                            required
-                        />
-
+                    <form onSubmit={handleSubmit}>
                         <div className="mb-4">
-                            <label className="block text-gray-700 mb-2" style={{ fontWeight: "bold" }}>
-                                প্রশ্নের সাথে ছবি যুক্ত করুন (ঐচ্ছিক)
-                            </label>
+                            <label className="block text-gray-700 mb-2 font-bold">এক্সেল ফাইল থেকে প্রশ্ন আমদানি করুন</label>
                             <input
                                 type="file"
-                                accept="image/*"
-                                onChange={(e) => handleImageChange(qIndex, e)}
+                                accept=".xlsx, .xls"
+                                onChange={handleFileUpload}
                                 className="w-full p-2 border rounded"
                             />
                         </div>
+                        <p className="text-center">অথবা</p>
+                        <hr className="mb-4" />
 
-                        {questionType === "general" && q.options.map((option, i) => (
-                            <div key={i} className="flex items-center mb-2">
+                        <select
+                            value={questionType}
+                            onChange={(e) => setQuestionType(e.target.value)}
+                            className="w-full p-2 border rounded mb-3"
+                            required
+                        >
+                            <option value="general">সাধারণ এমসিকিউ</option>
+                            <option value="higher">উচ্চতর দক্ষতা এমসিকিউ</option>
+                        </select>
+
+                        <div className="flex items-center mb-3">
+                            <input
+                                type="checkbox"
+                                checked={isMultipleQuestions}
+                                onChange={(e) => setIsMultipleQuestions(e.target.checked)}
+                                className="mr-2"
+                            />
+                            <label>একাধিক প্রশ্ন যোগ করুন</label>
+                        </div>
+
+                        <select
+                            value={selectedClass}
+                            onChange={(e) => setSelectedClass(e.target.value)}
+                            className="w-full p-2 border rounded mb-3"
+                            required
+                        >
+                            <option value="">ক্লাস নির্বাচন করুন</option>
+                            {classes.map((cls) => (
+                                <option key={cls.classNumber} value={cls.classNumber}>
+                                    ক্লাস {cls.classNumber}
+                                </option>
+                            ))}
+                        </select>
+
+                        {selectedClass && subjects.length > 0 && (
+                            <select
+                                value={selectedSubject}
+                                onChange={(e) => setSelectedSubject(e.target.value)}
+                                className="w-full p-2 border rounded mb-3"
+                                required
+                            >
+                                <option value="">বিষয় নির্বাচন করুন</option>
+                                {subjects.map((subject) => (
+                                    <option key={subject} value={subject}>{subject}</option>
+                                ))}
+                            </select>
+                        )}
+
+                        {selectedSubject && subjectParts.length > 0 && (
+                            <select
+                                value={selectedSubjectPart}
+                                onChange={(e) => setSelectedSubjectPart(e.target.value)}
+                                className="w-full p-2 border rounded mb-3"
+                            >
+                                <option value="">বিষয়ের অংশ (যদি থাকে)</option>
+                                {subjectParts.map((part) => (
+                                    <option key={part} value={part}>{part}</option>
+                                ))}
+                            </select>
+                        )}
+
+                        {selectedSubject && chapters.length > 0 && (
+                            <select
+                                value={selectedChapter}
+                                onChange={(e) => {
+                                    const selected = chapters.find(chap => chap.number === parseInt(e.target.value));
+                                    setSelectedChapter(e.target.value);
+                                    setSelectedChapterName(selected?.name || "");
+                                }}
+                                className="w-full p-2 border rounded mb-3"
+                                required
+                            >
+                                <option value="">অধ্যায় নির্বাচন করুন</option>
+                                {chapters.map((chapter) => (
+                                    <option key={chapter.number} value={chapter.number}>{chapter.name}</option>
+                                ))}
+                            </select>
+                        )}
+
+                        {questions.map((q, qIndex) => (
+                            <div key={qIndex} className="mb-6 p-4 border rounded bg-gray-50">
+                                <h3 className="text-lg font-semibold mb-2">প্রশ্ন {qIndex + 1}</h3>
                                 <input
                                     type="text"
-                                    placeholder={`বিকল্প ${i + 1}`}
-                                    className="flex-1 p-2 border rounded"
-                                    value={option}
-                                    onChange={(e) => handleOptionChange(qIndex, i, e.target.value)}
+                                    placeholder="প্রশ্ন লিখুন"
+                                    className="w-full p-2 border rounded mb-3"
+                                    value={q.question}
+                                    onChange={(e) => handleQuestionChange(qIndex, e.target.value)}
                                     required
                                 />
-                                <input
-                                    type="radio"
-                                    name={`correct-${qIndex}`}
-                                    className="ml-2"
-                                    onChange={() => handleCorrectAnswerChange(qIndex, i)}
-                                    checked={q.correctAnswer === i}
-                                />
-                            </div>
-                        ))}
 
-                        {questionType === "higher" && (
-                            <>
-                                {q.higherOptions.slice(0, 3).map((option, i) => (
+                                <div className="mb-4">
+                                    <label className="block text-gray-700 mb-2 font-bold">প্রশ্নের সাথে ছবি যুক্ত করুন (ঐচ্ছিক)</label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={(e) => handleImageChange(qIndex, e)}
+                                        className="w-full p-2 border rounded"
+                                    />
+                                </div>
+
+                                {q.image && (
+                                    <div className="mb-4">
+                                        <label className="block text-gray-700 mb-2 font-bold">ছবির অ্যালাইনমেন্ট</label>
+                                        <select
+                                            value={q.imageAlignment}
+                                            onChange={(e) => handleImageAlignmentChange(qIndex, e.target.value)}
+                                            className="w-full p-2 border rounded"
+                                        >
+                                            <option value="left">বামে</option>
+                                            <option value="center">মাঝে</option>
+                                            <option value="right">ডানে</option>
+                                        </select>
+                                    </div>
+                                )}
+
+                                {questionType === "general" && q.options.map((option, i) => (
                                     <div key={i} className="flex items-center mb-2">
                                         <input
                                             type="text"
                                             placeholder={`বিকল্প ${i + 1}`}
                                             className="flex-1 p-2 border rounded"
                                             value={option}
-                                            onChange={(e) => handleOptionChange(qIndex, i, e.target.value, "higher")}
-                                            required
-                                        />
-                                    </div>
-                                ))}
-                                <h3 className="mt-4 mb-2 text-lg font-bold text-gray-700">নিচের কোনটি সঠিক?</h3>
-                                {q.higherOptions.slice(3, 7).map((option, i) => (
-                                    <div key={i} className="flex items-center mb-2">
-                                        <input
-                                            type="text"
-                                            placeholder={`অপশন ${i + 1}`}
-                                            className="flex-1 p-2 border rounded"
-                                            value={option}
-                                            onChange={(e) => handleOptionChange(qIndex, i + 3, e.target.value, "higher")}
+                                            onChange={(e) => handleOptionChange(qIndex, i, e.target.value)}
                                             required
                                         />
                                         <input
                                             type="radio"
-                                            name={`higherCorrect-${qIndex}`}
+                                            name={`correct-${qIndex}`}
                                             className="ml-2"
-                                            onChange={() => handleCorrectAnswerChange(qIndex, i + 3, "higher")}
-                                            checked={q.higherCorrectAnswer === i + 3}
+                                            onChange={() => handleCorrectAnswerChange(qIndex, i)}
+                                            checked={q.correctAnswer === i}
                                         />
                                     </div>
                                 ))}
-                            </>
+
+                                {questionType === "higher" && (
+                                    <>
+                                        {q.higherOptions.slice(0, 3).map((option, i) => (
+                                            <div key={i} className="flex items-center mb-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder={`বিকল্প ${i + 1}`}
+                                                    className="flex-1 p-2 border rounded"
+                                                    value={option}
+                                                    onChange={(e) => handleOptionChange(qIndex, i, e.target.value, "higher")}
+                                                    required
+                                                />
+                                            </div>
+                                        ))}
+                                        <h3 className="mt-4 mb-2 text-lg font-bold text-gray-700">নিচের কোনটি সঠিক?</h3>
+                                        {q.higherOptions.slice(3, 7).map((option, i) => (
+                                            <div key={i} className="flex items-center mb-2">
+                                                <input
+                                                    type="text"
+                                                    placeholder={`অপশন ${i + 1}`}
+                                                    className="flex-1 p-2 border rounded"
+                                                    value={option}
+                                                    onChange={(e) => handleOptionChange(qIndex, i + 3, e.target.value, "higher")}
+                                                    required
+                                                />
+                                                <input
+                                                    type="radio"
+                                                    name={`higherCorrect-${qIndex}`}
+                                                    className="ml-2"
+                                                    onChange={() => handleCorrectAnswerChange(qIndex, i + 3, "higher")}
+                                                    checked={q.higherCorrectAnswer === i + 3}
+                                                />
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+                            </div>
+                        ))}
+
+                        {isMultipleQuestions && (
+                            <button
+                                type="button"
+                                onClick={addNewQuestion}
+                                className="w-full bg-green-500 text-white py-2 mt-3 rounded hover:bg-green-600 transition flex items-center justify-center"
+                            >
+                                <span className="text-xl mr-2">+</span> নতুন প্রশ্ন যোগ করুন
+                            </button>
                         )}
-                    </div>
-                ))}
 
-                {isMultipleQuestions && (
-                    <button
-                        type="button"
-                        onClick={addNewQuestion}
-                        className="w-full bg-green-500 text-white py-2 mt-3 rounded hover:bg-green-600 transition flex items-center justify-center"
-                    >
-                        <span className="text-xl mr-2">+</span> নতুন প্রশ্ন যোগ করুন
-                    </button>
-                )}
+                        <button
+                            type="submit"
+                            className="w-full bg-blue-500 text-white py-2 mt-3 rounded hover:bg-blue-600 transition"
+                        >
+                            ✅ সাবমিট করুন
+                        </button>
+                    </form>
+                </motion.div>
 
-                <button
-                    type="submit"
-                    className="w-full bg-blue-500 text-white py-2 mt-3 rounded hover:bg-blue-600 transition"
+                {/* Preview Section */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                    className="bg-white rounded-lg shadow-lg border border-gray-200 p-6"
                 >
-                    ✅ সাবমিট করুন
-                </button>
-            </form>
-            <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
-        </motion.div>
+                    <h2 className="text-xl font-bold mb-4 text-blue-600">প্রিভিউ</h2>
+                    {questions.map((q, qIndex) => (
+                        <div key={qIndex} className="mb-6">
+                            <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-2">MCQ</p>
+                            <p className="text-lg font-semibold text-gray-900 mb-2">{q.question || "প্রশ্ন লিখুন"}</p>
+                            {q.image && (
+                                <div className={`mb-4 ${q.imageAlignment === "left" ? "text-left" : q.imageAlignment === "right" ? "text-right" : "text-center"}`}>
+                                    <img
+                                        src={URL.createObjectURL(q.image)}
+                                        alt={`MCQ preview ${qIndex + 1}`}
+                                        className="rounded shadow-md max-h-48 inline-block"
+                                    />
+                                </div>
+                            )}
+                            {questionType === "general" ? (
+                                <div className="grid grid-cols-2 gap-4 text-gray-700">
+                                    {q.options.map((opt, i) => (
+                                        <p
+                                            key={i}
+                                            className={q.correctAnswer === i ? "bg-green-100 font-bold p-2 rounded" : "p-2"}
+                                        >
+                                            {String.fromCharCode(2453 + i)}. {opt || "বিকল্প লিখুন"}
+                                        </p>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div>
+                                    <div className="mb-3 text-gray-700">
+                                        {q.higherOptions.slice(0, 3).map((opt, i) => (
+                                            <p key={i}>{String.fromCharCode(2453 + i)}. {opt || "বিকল্প লিখুন"}</p>
+                                        ))}
+                                    </div>
+                                    <p className="font-bold mb-2">নিচের কোনটি সঠিক?</p>
+                                    <div className="grid grid-cols-2 gap-4 text-gray-700">
+                                        {q.higherOptions.slice(3, 7).map((opt, i) => (
+                                            <p
+                                                key={i + 3}
+                                                className={q.higherCorrectAnswer === i + 3 ? "bg-green-100 font-bold p-2 rounded" : "p-2"}
+                                            >
+                                                {String.fromCharCode(2453 + i)}. {opt || "অপশন লিখুন"}
+                                            </p>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            <p className="text-sm text-gray-500 mt-2">
+                                Class: {selectedClass || "N/A"} | Subject: {selectedSubject || "N/A"} | Chapter: {selectedChapterName || "N/A"} | Type: {questionType}
+                            </p>
+                        </div>
+                    ))}
+                </motion.div>
+            </div>
+        </div>
     );
 }

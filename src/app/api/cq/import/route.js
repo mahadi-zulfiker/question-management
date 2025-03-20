@@ -34,6 +34,7 @@ export async function POST(req) {
             const passage = formData.get(`cqs[${index}][passage]`);
             const questions = JSON.parse(formData.get(`cqs[${index}][questions]`));
             const image = formData.get(`cqs[${index}][image]`);
+            const imageAlignment = formData.get(`cqs[${index}][imageAlignment]`) || "center"; // Add imageAlignment
 
             if (!passage || !questions || !Array.isArray(questions)) {
                 return NextResponse.json(
@@ -43,7 +44,7 @@ export async function POST(req) {
             }
 
             let imageId = null;
-            if (image && image.size > 0) {  // Check if image exists and has content
+            if (image && image.size > 0) {
                 const readableImageStream = new Readable();
                 readableImageStream.push(Buffer.from(await image.arrayBuffer()));
                 readableImageStream.push(null);
@@ -73,6 +74,7 @@ export async function POST(req) {
                 chapterName,
                 teacherEmail,
                 imageId,
+                imageAlignment, // Store imageAlignment
                 createdAt: new Date(),
                 cqType
             });
