@@ -389,12 +389,14 @@ export default function ViewQuestionsAdmin() {
                                     <div>
                                         <p className="text-lg font-semibold text-gray-900 mb-2">{q.question || "No question provided"}</p>
                                         {q.imageId && (
-                                            <img
-                                                src={`/api/image/${q.imageId}`}
-                                                alt="MCQ related visual"
-                                                className="rounded shadow-md max-h-48 mb-4"
-                                                onError={(e) => (e.target.style.display = "none")}
-                                            />
+                                            <div className={`mb-4 ${q.imageAlignment === "left" ? "text-left" : q.imageAlignment === "right" ? "text-right" : "text-center"}`}>
+                                                <img
+                                                    src={`/api/image/${q.imageId}?type=mcq`}
+                                                    alt="MCQ related visual"
+                                                    className="rounded shadow-md max-h-48 inline-block"
+                                                    onError={(e) => (e.target.style.display = "none")}
+                                                />
+                                            </div>
                                         )}
                                         {(q.options || []).length === 4 ? (
                                             <div className="grid grid-cols-2 gap-4 text-gray-700">
@@ -439,12 +441,14 @@ export default function ViewQuestionsAdmin() {
                                         <p className="text-lg font-semibold text-gray-900 mb-2">উদ্দীপক:</p>
                                         <p className="text-gray-700 mb-4">{q.passage || "No passage provided"}</p>
                                         {q.imageId && (
-                                            <img
-                                                src={`/api/image/${q.imageId}`}
-                                                alt="CQ related visual"
-                                                className="rounded shadow-md max-h-64 mb-4"
-                                                onError={(e) => (e.target.style.display = "none")}
-                                            />
+                                            <div className={`mb-4 ${q.imageAlignment === "left" ? "text-left" : q.imageAlignment === "right" ? "text-right" : "text-center"}`}>
+                                                <img
+                                                    src={`/api/image/${q.imageId}?type=cq`}
+                                                    alt="CQ related visual"
+                                                    className="rounded shadow-md max-h-64 inline-block"
+                                                    onError={(e) => (e.target.style.display = "none")}
+                                                />
+                                            </div>
                                         )}
                                         <div className="text-gray-900">
                                             {(q.questions || []).map((ques, i) => (
@@ -466,12 +470,14 @@ export default function ViewQuestionsAdmin() {
                                             {q.type ? `${q.type}: ` : ""}{q.question || "No question provided"}
                                         </p>
                                         {q.imageId && (
-                                            <img
-                                                src={`/api/image/${q.imageId}`}
-                                                alt="SQ related visual"
-                                                className="rounded shadow-md max-h-48 mb-4"
-                                                onError={(e) => (e.target.style.display = "none")}
-                                            />
+                                            <div className={`mb-4 ${q.imageAlignment === "left" ? "text-left" : q.imageAlignment === "right" ? "text-right" : "text-center"}`}>
+                                                <img
+                                                    src={`/api/image/${q.imageId}?type=sq`}
+                                                    alt="SQ related visual"
+                                                    className="rounded shadow-md max-h-48 inline-block"
+                                                    onError={(e) => (e.target.style.display = "none")}
+                                                />
+                                            </div>
                                         )}
                                         {q.answer && (
                                             <p className="text-gray-700 mb-4"><span className="font-semibold">উত্তর:</span> {q.answer}</p>
