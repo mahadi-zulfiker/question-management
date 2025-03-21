@@ -301,6 +301,12 @@ export default function CreateQuestionBank() {
 }
 
 function QuestionCard({ question, type, isSelected, onSelect }) {
+  // Fallback text if the expected property is missing
+  const displayText = 
+    type === 'mcq' ? (question.question || 'No question text available') :
+    type === 'cq' ? (question.passage ? question.passage.slice(0, 30) + '...' : 'No passage available') :
+    (question.question || 'No question text available');
+
   return (
     <div
       className={`p-4 border border-gray-200 rounded-lg cursor-pointer transition-all ${
@@ -311,12 +317,10 @@ function QuestionCard({ question, type, isSelected, onSelect }) {
       <div className="flex justify-between items-center">
         <div>
           <p className="text-sm font-medium text-gray-800">
-            {type === 'mcq' ? question.question : 
-             type === 'cq' ? question.passage.slice(0, 30) + '...' : 
-             question.question}
+            {displayText}
           </p>
           <p className="text-xs text-gray-500 mt-1">
-            {type.toUpperCase()} • Chapter {question.chapterNumber}
+            {type.toUpperCase()} • Chapter {question.chapterNumber || 'N/A'}
           </p>
         </div>
         <input
