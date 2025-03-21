@@ -174,6 +174,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
             { href: "/dashboard/admin/createModelTest", icon: <BiBook className="text-xl mr-2" />, label: "Create Model Test" },
             { href: "/dashboard/admin/createAdmissionTest", icon: <FaRegIdBadge className="text-xl mr-2" />, label: "Create Admission Test" },
             { href: "/dashboard/admin/createQuestionBank", icon: <GiNotebook className="text-xl mr-2" />, label: "Create Question Bank" },
+            { href: "/dashboard/admin/onlineExamAdmin", icon: <BiBook className="text-xl mr-2" />, label: "Model Test" },
           ],
         },
         {
