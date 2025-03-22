@@ -22,7 +22,9 @@ export default function CreateCQAdmin() {
     const [cqs, setCQs] = useState([{
         passage: "",
         questions: ["", "", "", ""],
+        answers: ["", "", "", ""], // Answers for generalCQ
         mathQuestions: ["", "", ""],
+        mathAnswers: ["", "", ""], // Answers for mathCQ
         image: null,
         imageAlignment: "center",
     }]);
@@ -65,7 +67,9 @@ export default function CreateCQAdmin() {
         setCQs([...cqs, {
             passage: "",
             questions: ["", "", "", ""],
+            answers: ["", "", "", ""],
             mathQuestions: ["", "", ""],
+            mathAnswers: ["", "", ""],
             image: null,
             imageAlignment: "center",
         }]);
@@ -83,9 +87,21 @@ export default function CreateCQAdmin() {
         setCQs(newCQs);
     };
 
+    const handleAnswerChange = (cqIndex, qIndex, value) => {
+        const newCQs = [...cqs];
+        newCQs[cqIndex].answers[qIndex] = value;
+        setCQs(newCQs);
+    };
+
     const handleMathQuestionChange = (cqIndex, qIndex, value) => {
         const newCQs = [...cqs];
         newCQs[cqIndex].mathQuestions[qIndex] = value;
+        setCQs(newCQs);
+    };
+
+    const handleMathAnswerChange = (cqIndex, qIndex, value) => {
+        const newCQs = [...cqs];
+        newCQs[cqIndex].mathAnswers[qIndex] = value;
         setCQs(newCQs);
     };
 
@@ -134,6 +150,18 @@ export default function CreateCQAdmin() {
                                 row["Application Question"] || "",
                                 row["Higher Skills Question"] || ""
                             ],
+                        answers: row["CQ Type"] === "generalCQ"
+                            ? [
+                                row["Knowledge Answer"] || "",
+                                row["Comprehension Answer"] || "",
+                                row["Application Answer"] || "",
+                                row["Higher Skills Answer"] || ""
+                            ]
+                            : [
+                                row["Knowledge Answer"] || "",
+                                row["Application Answer"] || "",
+                                row["Higher Skills Answer"] || ""
+                            ],
                         imageAlignment: row["Image Alignment"] || "center",
                     }));
 
@@ -146,12 +174,14 @@ export default function CreateCQAdmin() {
                     if (response.ok) {
                         toast.success("প্রশ্ন সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!");
                     } else {
-                        toast.error("❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ হয়েছে!");
+                        const errorData = await response.json();
+                        toast.error(`❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ হয়েছে: ${errorData.error}`);
                     }
                 } else {
                     toast.error("❌ এক্সেল ফাইল খালি বা ভুল ফরম্যাটে আছে!");
                 }
             } catch (error) {
+                console.error("Excel processing error:", error);
                 toast.error("❌ ফাইল প্রসেসিংয়ে ত্রুটি!");
             }
         };
@@ -168,7 +198,15 @@ export default function CreateCQAdmin() {
         setSubjectParts([]);
         setSelectedSubjectPart("");
         setCQType("");
-        setCQs([{ passage: "", questions: ["", "", "", ""], mathQuestions: ["", "", ""], image: null, imageAlignment: "center" }]);
+        setCQs([{
+            passage: "",
+            questions: ["", "", "", ""],
+            answers: ["", "", "", ""],
+            mathQuestions: ["", "", ""],
+            mathAnswers: ["", "", ""],
+            image: null,
+            imageAlignment: "center",
+        }]);
     };
 
     const handleSubmit = async (e) => {
@@ -186,6 +224,7 @@ export default function CreateCQAdmin() {
         cqs.forEach((cq, index) => {
             formData.append(`cqs[${index}][passage]`, cq.passage);
             formData.append(`cqs[${index}][questions]`, JSON.stringify(cqType === "generalCQ" ? cq.questions : cq.mathQuestions));
+            formData.append(`cqs[${index}][answers]`, JSON.stringify(cqType === "generalCQ" ? cq.answers : cq.mathAnswers));
             if (cq.image) {
                 formData.append(`cqs[${index}][image]`, cq.image);
             }
@@ -399,10 +438,16 @@ export default function CreateCQAdmin() {
                                                 i === 2 ? "প্রয়োগ প্রশ্ন" :
                                                 "উচ্চতর দক্ষতা"
                                             }
-                                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+                                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-2"
                                             value={question}
                                             onChange={(e) => handleQuestionChange(cqIndex, i, e.target.value)}
                                             required
+                                        />
+                                        <textarea
+                                            placeholder="উত্তর লিখুন (ঐচ্ছিক)"
+                                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm h-20"
+                                            value={cq.answers[i]}
+                                            onChange={(e) => handleAnswerChange(cqIndex, i, e.target.value)}
                                         />
                                     </div>
                                 ))}
@@ -416,10 +461,16 @@ export default function CreateCQAdmin() {
                                                 i === 1 ? "প্রয়োগ প্রশ্ন" :
                                                 "উচ্চতর দক্ষতা"
                                             }
-                                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm"
+                                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-2"
                                             value={question}
                                             onChange={(e) => handleMathQuestionChange(cqIndex, i, e.target.value)}
                                             required
+                                        />
+                                        <textarea
+                                            placeholder="উত্তর লিখুন (ঐচ্ছিক)"
+                                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm h-20"
+                                            value={cq.mathAnswers[i]}
+                                            onChange={(e) => handleMathAnswerChange(cqIndex, i, e.target.value)}
                                         />
                                     </div>
                                 ))}
@@ -479,9 +530,14 @@ export default function CreateCQAdmin() {
                             )}
                             <div className="text-gray-700">
                                 {(cqType === "generalCQ" ? cq.questions : cq.mathQuestions).map((ques, i) => (
-                                    <p key={i} className="mb-2">
-                                        {String.fromCharCode(2453 + i)}) {ques || "প্রশ্ন লিখুন"} {cqType === "generalCQ" ? `(${[1, 2, 3, 4][i]} নম্বর)` : `(${[2, 3, 4][i]} নম্বর)`}
-                                    </p>
+                                    <div key={i} className="mb-2">
+                                        <p>
+                                            {String.fromCharCode(2453 + i)}) {ques || "প্রশ্ন লিখুন"} {cqType === "generalCQ" ? `(${[1, 2, 3, 4][i]} নম্বর)` : `(${[3, 3, 4][i]} নম্বর)`}
+                                        </p>
+                                        {(cqType === "generalCQ" ? cq.answers[i] : cq.mathAnswers[i]) && (
+                                            <p className="text-gray-600 ml-4"><span className="font-semibold">উত্তর:</span> {(cqType === "generalCQ" ? cq.answers[i] : cq.mathAnswers[i])}</p>
+                                        )}
+                                    </div>
                                 ))}
                             </div>
                             <p className="text-sm text-gray-500 mt-3">
