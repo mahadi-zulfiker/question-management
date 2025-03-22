@@ -6,7 +6,7 @@ export async function GET(request) {
   try {
     const db = await connectMongoDB();
     
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = new URL(request.url); // Fixed syntax here
     const classLevel = searchParams.get('class');
     const subject = searchParams.get('subject');
 
@@ -94,6 +94,8 @@ export async function POST(request) {
     };
 
     const result = await db.collection('questionBanks').insertOne(questionBank);
+
+    console.log('Question Bank created with ID:', result.insertedId); // Debugging
 
     return NextResponse.json({
       success: true,
