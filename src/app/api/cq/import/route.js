@@ -32,15 +32,45 @@ export async function POST(req) {
         let index = 0;
         while (formData.get(`cqs[${index}][passage]`)) {
             const passage = formData.get(`cqs[${index}][passage]`);
-            const questions = JSON.parse(formData.get(`cqs[${index}][questions]`));
+            const questionsStr = formData.get(`cqs[${index}][questions]`);
+            const answersStr = formData.get(`cqs[${index}][answers]`);
             const image = formData.get(`cqs[${index}][image]`);
-            const imageAlignment = formData.get(`cqs[${index}][imageAlignment]`) || "center"; // Add imageAlignment
+            const imageAlignment = formData.get(`cqs[${index}][imageAlignment]`) || "center";
 
-            if (!passage || !questions || !Array.isArray(questions)) {
+            if (!passage || !questionsStr) {
                 return NextResponse.json(
-                    { error: `Invalid data for CQ ${index + 1}` },
+                    { error: `Invalid data for CQ ${index + 1}: missing passage or questions` },
                     { status: 400 }
                 );
+            }
+
+            let questions;
+            let answers = [];
+            try {
+                questions = JSON.parse(questionsStr);
+                if (answersStr) {
+                    answers = JSON.parse(answersStr);
+                }
+            } catch (error) {
+                return NextResponse.json(
+                    { error: `Invalid JSON for CQ ${index + 1}: ${error.message}` },
+                    { status: 400 }
+                );
+            }
+
+            if (!Array.isArray(questions) || questions.length === 0) {
+                return NextResponse.json(
+                    { error: `Questions must be a non-empty array for CQ ${index + 1}` },
+                    { status: 400 }
+                );
+            }
+
+            // Pad answers array to match questions length, filling with empty strings if necessary
+            const paddedAnswers = Array(questions.length).fill("");
+            if (Array.isArray(answers)) {
+                answers.forEach((answer, i) => {
+                    if (i < questions.length) paddedAnswers[i] = answer || "";
+                });
             }
 
             let imageId = null;
@@ -66,7 +96,8 @@ export async function POST(req) {
             cqs.push({
                 passage,
                 questions,
-                marks: cqType === "generalCQ" ? [1, 2, 3, 4] : [2, 3, 4],
+                answers: paddedAnswers,
+                marks: cqType === "generalCQ" ? [1, 2, 3, 4] : [3, 3, 4],
                 classNumber: parseInt(classNumber, 10),
                 subject,
                 subjectPart,
@@ -74,9 +105,9 @@ export async function POST(req) {
                 chapterName,
                 teacherEmail,
                 imageId,
-                imageAlignment, // Store imageAlignment
+                imageAlignment,
                 createdAt: new Date(),
-                cqType
+                cqType,
             });
 
             index++;
