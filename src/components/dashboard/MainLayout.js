@@ -50,6 +50,7 @@ import TeacherRequests from "./Teacher/TeacherRequests";
 import UserAccessControl from "./Admin/UserAccessControl";
 import AffiliateShareView from "./Admin/AffiliateShareView";
 import AffiliateShareTeacher from "./Teacher/AffiliateShareTeacher";
+import OnlineExamAdmin from "./Admin/OnlineExamAdmin";
 
 const MainLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -121,6 +122,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/priceSetQuestions" && <PriceSetQuestion />}
             {pathname === "/dashboard/admin/userAccessControl" && <UserAccessControl />}
             {pathname === "/dashboard/admin/affiliateShareView" && <AffiliateShareView />}
+            {pathname === "/dashboard/admin/onlineExamAdmin" && <OnlineExamAdmin />}
           </div>
         </main>
       </div>
