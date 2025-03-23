@@ -22,9 +22,9 @@ export default function CreateCQAdmin() {
     const [cqs, setCQs] = useState([{
         passage: "",
         questions: ["", "", "", ""],
-        answers: ["", "", "", ""], // Answers for generalCQ
+        answers: ["", "", "", ""],
         mathQuestions: ["", "", ""],
-        mathAnswers: ["", "", ""], // Answers for mathCQ
+        mathAnswers: ["", "", ""],
         image: null,
         imageAlignment: "center",
     }]);
