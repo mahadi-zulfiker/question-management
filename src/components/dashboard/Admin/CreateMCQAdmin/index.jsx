@@ -126,18 +126,18 @@ export default function CreateMCQAdmin() {
                 "Subject": "",
                 "Chapter Number": "",
                 "Chapter Name": "",
-                "MCQ Type": "general", // general or higher
+                "MCQ Type": "general",
                 "Question": "",
                 "Option 1": "",
                 "Option 2": "",
                 "Option 3": "",
                 "Option 4": "",
-                "Option 5": "", // For higher MCQ type
-                "Option 6": "", // For higher MCQ type
-                "Option 7": "", // For higher MCQ type
-                "Correct Answer": "", // Index of the correct option (0-based)
-                "Image Alignment": "center", // Optional: left, center, right
-                "Video Link": "", // Optional: Google Drive or other video link
+                "Option 5": "",
+                "Option 6": "",
+                "Option 7": "",
+                "Correct Answer": "",
+                "Image Alignment": "center",
+                "Video Link": "",
             },
             {
                 "Class": 9,

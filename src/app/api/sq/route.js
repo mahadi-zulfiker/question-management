@@ -14,7 +14,7 @@ export async function POST(req) {
         const newSQ = {
             type,
             question,
-            classLevel: parseInt(classLevel, 10), // Keep as classLevel for SQ consistency
+            classLevel: parseInt(classLevel, 10),
             subjectName,
             subjectPart: subjectPart || null,
             chapterNumber: parseInt(chapterNumber, 10),

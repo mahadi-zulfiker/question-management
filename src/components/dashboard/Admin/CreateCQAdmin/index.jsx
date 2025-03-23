@@ -222,7 +222,6 @@ const serializeToHtml = (nodes) => {
     .join("");
 };
 
-// Deserialize HTML to Slate content (basic implementation)
 const deserializeFromHtml = (html) => {
   if (!html) return [{ type: "paragraph", children: [{ text: "" }] }];
 
@@ -335,7 +334,6 @@ export default function CreateCQAdmin() {
           setSubjectParts([
             ...new Set(data.map((item) => item.subjectPart).filter((part) => part)),
           ]);
-          // Ensure unique chapters by creating a Map and converting back to array
           const chapterMap = new Map();
           data.forEach((item) => {
             const key = `${item.chapterNumber}-${item.chapterName}`;
@@ -427,18 +425,18 @@ export default function CreateCQAdmin() {
         Subject: "",
         "Chapter Number": "",
         "Chapter Name": "",
-        "CQ Type": "", // generalCQ or mathCQ
+        "CQ Type": "",
         Passage: "",
         "Knowledge Question": "",
         "Knowledge Answer": "",
-        "Comprehension Question": "", // Only for generalCQ
-        "Comprehension Answer": "", // Only for generalCQ
+        "Comprehension Question": "",
+        "Comprehension Answer": "",
         "Application Question": "",
         "Application Answer": "",
         "Higher Skills Question": "",
         "Higher Skills Answer": "",
-        "Image Alignment": "center", // Optional: left, center, right
-        "Video Link": "", // Optional: Google Drive or other video link
+        "Image Alignment": "center",
+        "Video Link": "",
       },
       {
         Class: 9,
