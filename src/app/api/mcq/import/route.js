@@ -12,7 +12,6 @@ export async function POST(req) {
         const mcqCollection = db.collection("mcqs");
         const gfs = new GridFSBucket(db, { bucketName: "mcqImages" });
 
-        // Common fields
         const classNumber = formData.get("classNumber");
         const subject = formData.get("subject");
         const subjectPart = formData.get("subjectPart") || null;
@@ -35,7 +34,8 @@ export async function POST(req) {
             const options = JSON.parse(formData.get(`questions[${index}][options]`));
             const correctAnswer = formData.get(`questions[${index}][correctAnswer]`);
             const image = formData.get(`questions[${index}][image]`);
-            const imageAlignment = formData.get(`questions[${index}][imageAlignment]`) || "center"; // Add imageAlignment
+            const imageAlignment = formData.get(`questions[${index}][imageAlignment]`) || "center";
+            const videoLink = formData.get(`questions[${index}][videoLink]`) || ""; // Add video link
 
             if (!question || !options || !Array.isArray(options) || correctAnswer === null) {
                 return NextResponse.json(
@@ -76,7 +76,8 @@ export async function POST(req) {
                 questionType,
                 teacherEmail,
                 imageId,
-                imageAlignment, // Store imageAlignment
+                imageAlignment,
+                videoLink, // Store video link
                 createdAt: new Date()
             });
 
