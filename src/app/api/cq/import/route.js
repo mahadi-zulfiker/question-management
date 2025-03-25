@@ -12,7 +12,6 @@ export async function POST(req) {
         const cqCollection = db.collection("cqs");
         const gfs = new GridFSBucket(db, { bucketName: "cqImages" });
 
-        // Common fields
         const classNumber = formData.get("classNumber");
         const subject = formData.get("subject");
         const subjectPart = formData.get("subjectPart") || null;
@@ -36,6 +35,7 @@ export async function POST(req) {
             const answersStr = formData.get(`cqs[${index}][answers]`);
             const image = formData.get(`cqs[${index}][image]`);
             const imageAlignment = formData.get(`cqs[${index}][imageAlignment]`) || "center";
+            const videoLink = formData.get(`cqs[${index}][videoLink]`) || ""; // Add video link
 
             if (!passage || !questionsStr) {
                 return NextResponse.json(
@@ -65,7 +65,6 @@ export async function POST(req) {
                 );
             }
 
-            // Pad answers array to match questions length, filling with empty strings if necessary
             const paddedAnswers = Array(questions.length).fill("");
             if (Array.isArray(answers)) {
                 answers.forEach((answer, i) => {
@@ -106,6 +105,7 @@ export async function POST(req) {
                 teacherEmail,
                 imageId,
                 imageAlignment,
+                videoLink, // Store video link
                 createdAt: new Date(),
                 cqType,
             });
