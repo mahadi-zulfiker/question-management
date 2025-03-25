@@ -92,6 +92,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
           items: [
             { href: "/dashboard/student/viewExams", icon: <TbListDetails className="text-xl mr-2" />, label: "View Exams" },
             { href: "/dashboard/student/attendedExams", icon: <RiBookReadLine className="text-xl mr-2" />, label: "Attended Exams" },
+            { href: "/dashboard/student/seeQuestions", icon: <RiBookReadLine className="text-xl mr-2" />, label: "See Questions" },
           ],
         },
         {

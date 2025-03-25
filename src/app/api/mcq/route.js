@@ -20,7 +20,6 @@ export async function GET(req) {
     }
 }
 
-
 export async function POST(req) {
     try {
         const db = await connectMongoDB();
@@ -39,7 +38,8 @@ export async function POST(req) {
             !classNumber ||
             !subject ||
             !chapterNumber ||
-            !chapterName
+            !chapterName ||
+            !teacherEmail // Ensure teacherEmail is provided
         ) {
             return NextResponse.json({ error: "Invalid Data", details: body }, { status: 400 });
         }
@@ -55,7 +55,7 @@ export async function POST(req) {
             chapterNumber: parseInt(chapterNumber, 10),
             chapterName,
             subjectPart: subjectPart || null,
-            teacherEmail: teacherEmail || "admin",
+            teacherEmail, // Use the provided teacherEmail
             createdAt: new Date(),
         };
 
@@ -71,5 +71,3 @@ export async function POST(req) {
         return NextResponse.json({ error: "Server Error", details: error.message }, { status: 500 });
     }
 }
-
-
