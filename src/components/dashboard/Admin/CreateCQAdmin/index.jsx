@@ -10,13 +10,21 @@ import { createEditor, Editor, Transforms, Text } from "slate";
 import { Slate, Editable, withReact, useSlate } from "slate-react";
 import { withHistory } from "slate-history";
 
-// Custom Leaf component to render text with formatting
+// Normalize text to Unicode NFC
+const normalizeText = (text) => {
+  return text.normalize("NFC");
+};
+
+// Custom Leaf component
 const Leaf = ({ attributes, children, leaf }) => {
   let styledChildren = children;
   if (leaf.math) {
-    // Render math content with MathJax
     return (
-      <span {...attributes} className="mathjax" dangerouslySetInnerHTML={{ __html: `\\(${leaf.text}\\)` }} />
+      <span
+        {...attributes}
+        className="mathjax"
+        dangerouslySetInnerHTML={{ __html: `\\(${leaf.text}\\)` }}
+      />
     );
   }
   if (leaf.bold) {
@@ -31,24 +39,44 @@ const Leaf = ({ attributes, children, leaf }) => {
   if (leaf.strikethrough) {
     styledChildren = <del>{styledChildren}</del>;
   }
-  return <span {...attributes}>{styledChildren}</span>;
+  return <span {...attributes} className="bangla-text">{styledChildren}</span>;
 };
 
-// Custom Element component to render block-level elements
+// Custom Element component
 const Element = ({ attributes, children, element }) => {
   switch (element.type) {
     case "bulleted-list":
-      return <ul {...attributes} className="list-disc pl-5">{children}</ul>;
+      return (
+        <ul {...attributes} className="list-disc pl-5">
+          {children}
+        </ul>
+      );
     case "numbered-list":
-      return <ol {...attributes} className="list-decimal pl-5">{children}</ol>;
+      return (
+        <ol {...attributes} className="list-decimal pl-5">
+          {children}
+        </ol>
+      );
     case "list-item":
       return <li {...attributes}>{children}</li>;
     case "heading-one":
-      return <h1 {...attributes} className="text-2xl font-bold">{children}</h1>;
+      return (
+        <h1 {...attributes} className="text-2xl font-bold">
+          {children}
+        </h1>
+      );
     case "heading-two":
-      return <h2 {...attributes} className="text-xl font-semibold">{children}</h2>;
+      return (
+        <h2 {...attributes} className="text-xl font-semibold">
+          {children}
+        </h2>
+      );
     case "heading-three":
-      return <h3 {...attributes} className="text-lg font-medium">{children}</h3>;
+      return (
+        <h3 {...attributes} className="text-lg font-medium">
+          {children}
+        </h3>
+      );
     default:
       return <p {...attributes}>{children}</p>;
   }
@@ -84,13 +112,13 @@ const ToolbarButton = ({ format, icon, label, tooltip }) => {
   );
 };
 
-// Check if a mark (e.g., bold, italic) is active
+// Check if a mark is active
 const isMarkActive = (editor, format) => {
   const marks = Editor.marks(editor);
   return marks ? marks[format] === true : false;
 };
 
-// Check if a block (e.g., heading, list) is active
+// Check if a block is active
 const isBlockActive = (editor, format) => {
   const [match] = Editor.nodes(editor, {
     match: (n) => n.type === format,
@@ -98,7 +126,7 @@ const isBlockActive = (editor, format) => {
   return !!match;
 };
 
-// Toggle a mark (e.g., bold, italic)
+// Toggle a mark
 const toggleMark = (editor, format) => {
   const isActive = isMarkActive(editor, format);
   if (isActive) {
@@ -108,7 +136,7 @@ const toggleMark = (editor, format) => {
   }
 };
 
-// Toggle a block (e.g., heading, list)
+// Toggle a block
 const toggleBlock = (editor, format) => {
   const isActive = isBlockActive(editor, format);
   const isList = ["bulleted-list", "numbered-list"].includes(format);
@@ -137,8 +165,19 @@ const CustomEditor = ({ value, onChange, placeholder }) => {
   const renderElement = useCallback((props) => <Element {...props} />, []);
   const renderLeaf = useCallback((props) => <Leaf {...props} />, []);
 
+  // Handle paste to normalize text and remove unwanted formatting
+  const handlePaste = (event) => {
+    event.preventDefault();
+    const pastedText = event.clipboardData.getData("text/plain");
+    const normalizedText = normalizeText(pastedText);
+
+    Transforms.insertText(editor, normalizedText, {
+      at: editor.selection || { anchor: { path: [0, 0], offset: 0 }, focus: { path: [0, 0], offset: 0 } },
+    });
+  };
+
   return (
-    <div className="slate-editor border rounded-lg mb-4">
+    <div className="slate-editor border rounded-lg mb-4 bangla-text">
       <Slate editor={editor} initialValue={value} onChange={onChange}>
         <div className="toolbar p-2 border-b bg-gray-100 rounded-t-lg flex flex-wrap gap-1">
           <ToolbarButton format="bold" icon="B" tooltip="Bold (Ctrl+B)" />
@@ -157,6 +196,7 @@ const CustomEditor = ({ value, onChange, placeholder }) => {
           renderLeaf={renderLeaf}
           placeholder={placeholder}
           className="p-3 min-h-[100px] max-h-[200px] overflow-y-auto bangla-text"
+          onPaste={handlePaste}
           onKeyDown={(event) => {
             if (event.ctrlKey || event.metaKey) {
               switch (event.key) {
@@ -192,7 +232,7 @@ const serializeToHtml = (nodes) => {
   return nodes
     .map((node) => {
       if (Text.isText(node)) {
-        let text = node.text;
+        let text = normalizeText(node.text);
         if (node.math) return `<span class="mathjax">\\(${text}\\)</span>`;
         if (node.bold) text = `<strong>${text}</strong>`;
         if (node.italic) text = `<em>${text}</em>`;
@@ -222,6 +262,7 @@ const serializeToHtml = (nodes) => {
     .join("");
 };
 
+// Deserialize HTML to Slate content
 const deserializeFromHtml = (html) => {
   if (!html) return [{ type: "paragraph", children: [{ text: "" }] }];
 
@@ -231,8 +272,7 @@ const deserializeFromHtml = (html) => {
 
   const deserializeNode = (node) => {
     if (node.nodeType === 3) {
-      // Text node
-      return { text: node.textContent };
+      return { text: normalizeText(node.textContent) };
     }
 
     const children = Array.from(node.childNodes).map(deserializeNode).filter(Boolean);
@@ -259,20 +299,20 @@ const deserializeFromHtml = (html) => {
       return { type: "list-item", children: children.length ? children : [{ text: "" }] };
     }
     if (node.nodeName === "SPAN" && node.className === "mathjax") {
-      const text = node.textContent.replace(/\\\(|\\/g, "");
+      const text = normalizeText(node.textContent.replace(/\\\(|\\/g, ""));
       return { math: true, text };
     }
     if (node.nodeName === "STRONG") {
-      return { bold: true, text: node.textContent };
+      return { bold: true, text: normalizeText(node.textContent) };
     }
     if (node.nodeName === "EM") {
-      return { italic: true, text: node.textContent };
+      return { italic: true, text: normalizeText(node.textContent) };
     }
     if (node.nodeName === "U") {
-      return { underline: true, text: node.textContent };
+      return { underline: true, text: normalizeText(node.textContent) };
     }
     if (node.nodeName === "DEL") {
-      return { strikethrough: true, text: node.textContent };
+      return { strikethrough: true, text: normalizeText(node.textContent) };
     }
 
     return children.length ? children : [{ text: "" }];
@@ -465,8 +505,8 @@ export default function CreateCQAdmin() {
         Passage: "This is a sample passage for a math CQ.",
         "Knowledge Question": "What is the formula for the area of a circle?",
         "Knowledge Answer": "πr^2",
-        "Comprehension Question": "", // Not applicable for mathCQ
-        "Comprehension Answer": "", // Not applicable for mathCQ
+        "Comprehension Question": "",
+        "Comprehension Answer": "",
         "Application Question": "Calculate the area of a circle with radius 5 cm.",
         "Application Answer": "78.54 cm^2",
         "Higher Skills Question": "Derive the formula for the area of a circle.",
@@ -497,7 +537,7 @@ export default function CreateCQAdmin() {
 
         if (data.length > 0) {
           const extractedQuestions = data.map((row) => ({
-            passage: row.Passage || "",
+            passage: normalizeText(row.Passage || ""),
             classNumber: row.Class || selectedClass,
             subject: row.Subject || selectedSubject,
             chapterNumber: row["Chapter Number"] || selectedChapter,
@@ -506,28 +546,28 @@ export default function CreateCQAdmin() {
             questions:
               row["CQ Type"] === "generalCQ"
                 ? [
-                    row["Knowledge Question"] || "",
-                    row["Comprehension Question"] || "",
-                    row["Application Question"] || "",
-                    row["Higher Skills Question"] || "",
+                    normalizeText(row["Knowledge Question"] || ""),
+                    normalizeText(row["Comprehension Question"] || ""),
+                    normalizeText(row["Application Question"] || ""),
+                    normalizeText(row["Higher Skills Question"] || ""),
                   ]
                 : [
-                    row["Knowledge Question"] || "",
-                    row["Application Question"] || "",
-                    row["Higher Skills Question"] || "",
+                    normalizeText(row["Knowledge Question"] || ""),
+                    normalizeText(row["Application Question"] || ""),
+                    normalizeText(row["Higher Skills Question"] || ""),
                   ],
             answers:
               row["CQ Type"] === "generalCQ"
                 ? [
-                    row["Knowledge Answer"] || "",
-                    row["Comprehension Answer"] || "",
-                    row["Application Answer"] || "",
-                    row["Higher Skills Answer"] || "",
+                    normalizeText(row["Knowledge Answer"] || ""),
+                    normalizeText(row["Comprehension Answer"] || ""),
+                    normalizeText(row["Application Answer"] || ""),
+                    normalizeText(row["Higher Skills Answer"] || ""),
                   ]
                 : [
-                    row["Knowledge Answer"] || "",
-                    row["Application Answer"] || "",
-                    row["Higher Skills Answer"] || "",
+                    normalizeText(row["Knowledge Answer"] || ""),
+                    normalizeText(row["Application Answer"] || ""),
+                    normalizeText(row["Higher Skills Answer"] || ""),
                   ],
             imageAlignment: row["Image Alignment"] || "center",
             videoLink: row["Video Link"] || "",
@@ -594,8 +634,8 @@ export default function CreateCQAdmin() {
 
     cqs.forEach((cq, index) => {
       const passageHtml = serializeToHtml(cq.passage);
-      const questionsHtml = (cqType === "generalCQ" ? cq.questions : cq.mathQuestions).map(
-        (q) => serializeToHtml(q)
+      const questionsHtml = (cqType === "generalCQ" ? cq.questions : cq.mathQuestions).map((q) =>
+        serializeToHtml(q)
       );
       const answersHtml = (cqType === "generalCQ" ? cq.answers : cq.mathAnswers).map((a) =>
         serializeToHtml(a)
@@ -638,7 +678,7 @@ export default function CreateCQAdmin() {
     <>
       <Head>
         <link
-          href="https://fonts.googleapis.com/css2?family=Siyam+Rupali&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap"
           rel="stylesheet"
         />
         <script
@@ -646,16 +686,125 @@ export default function CreateCQAdmin() {
           async
         ></script>
         <style>{`
-          .bangla-text {
-            font-family: 'Siyam Rupali', sans-serif;
+          @tailwind base;
+          @tailwind components;
+          @tailwind utilities;
+
+          * {
+            box-sizing: border-box;
           }
-          input.bangla-text,
-          textarea.bangla-text {
-            font-family: 'Siyam Rupali', sans-serif;
+
+          body {
+            font-family: var(--font-noto-bengali), sans-serif !important;
           }
+
+          .slate-editor, .bangla-text, input.bangla-text, textarea.bangla-text {
+            font-family: var(--font-noto-bengali), sans-serif !important;
+          }
+
           .bangla-text::placeholder {
-            font-family: 'Siyam Rupali', sans-serif;
+            font-family: var(--font-noto-bengali), sans-serif !important;
           }
+
+          @layer base {
+            :root {
+              --background: 0 0% 100%;
+              --foreground: 0 0% 3.9%;
+              --card: 0 0% 100%;
+              --card-foreground: 0 0% 3.9%;
+              --popover: 0 0% 100%;
+              --popover-foreground: 0 0% 3.9%;
+              --primary: 0 0% 9%;
+              --primary-foreground: 0 0% 98%;
+              --secondary: 0 0% 96.1%;
+              --secondary-foreground: 0 0% 9%;
+              --muted: 0 0% 96.1%;
+              --muted-foreground: 0 0% 45.1%;
+              --accent: 0 0% 96.1%;
+              --accent-foreground: 0 0% 9%;
+              --destructive: 0 84.2% 60.2%;
+              --destructive-foreground: 0 0% 98%;
+              --border: 0 0% 89.8%;
+              --input: 0 0% 89.8%;
+              --ring: 0 0% 3.9%;
+              --chart-1: 12 76% 61%;
+              --chart-2: 173 58% 39%;
+              --chart-3: 197 37% 24%;
+              --chart-4: 43 74% 66%;
+              --chart-5: 27 87% 67%;
+              --radius: 0.5rem;
+            }
+
+            .dark {
+              --background: 0 0% 3.9%;
+              --foreground: 0 0% 98%;
+              --card: 0 0% 3.9%;
+              --card-foreground: 0 0% 98%;
+              --popover: 0 0% 3.9%;
+              --popover-foreground: 0 0% 98%;
+              --primary: 0 0% 98%;
+              --primary-foreground: 0 0% 9%;
+              --secondary: 0 0% 14.9%;
+              --secondary-foreground: 0 0% 98%;
+              --muted: 0 0% 14.9%;
+              --muted-foreground: 0 0% 63.9%;
+              --accent: 0 0% 14.9%;
+              --accent-foreground: 0 0% 98%;
+              --destructive: 0 62.8% 30.6%;
+              --destructive-foreground: 0 0% 98%;
+              --border: 0 0% 14.9%;
+              --input: 0 0% 14.9%;
+              --ring: 0 0% 83.1%;
+              --chart-1: 220 70% 50%;
+              --chart-2: 160 60% 45%;
+              --chart-3: 30 80% 55%;
+              --chart-4: 280 65% 60%;
+              --chart-5: 340 75% 55%;
+            }
+          }
+
+          @layer base {
+            * {
+              @apply border-border;
+            }
+            body {
+              @apply bg-background text-foreground;
+            }
+          }
+
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+          }
+
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+          }
+
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #a1a1aa;
+            border-radius: 4px;
+          }
+
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #78788a;
+          }
+
+          @keyframes slideDown {
+            0% {
+              transform: translateY(-20px);
+              opacity: 0;
+            }
+            100% {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+
+          .animate-slideDown {
+            animation: slideDown 0.3s ease-out forwards;
+          }
+
           .video-link {
             color: #1a73e8;
             text-decoration: underline;
@@ -667,14 +816,17 @@ export default function CreateCQAdmin() {
             border-radius: 0.375rem;
             transition: background-color 0.2s;
           }
+
           .video-link:hover {
             background-color: #e8f0fe;
           }
+
           .slate-editor {
             border: 1px solid #d1d5db;
             border-radius: 0.375rem;
             margin-bottom: 1rem;
           }
+
           .slate-editor .toolbar {
             border-bottom: 1px solid #d1d5db;
             background-color: #f7fafc;
@@ -810,10 +962,7 @@ export default function CreateCQAdmin() {
                     >
                       <option value="">অধ্যায় নির্বাচন করুন</option>
                       {chapters.map((chapter) => (
-                        <option
-                          key={`${chapter.number}-${chapter.name}`} // Ensure unique key
-                          value={chapter.number}
-                        >
+                        <option key={`${chapter.number}-${chapter.name}`} value={chapter.number}>
                           {chapter.name}
                         </option>
                       ))}
