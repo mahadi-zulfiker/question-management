@@ -1,6 +1,7 @@
 import { ObjectId } from "mongodb";
 import { connectMongoDB } from "@/lib/mongodb";
 import { NextResponse } from "next/server";
+
 export async function PUT(req, { params }) {
     try {
         console.log("🔧 PUT request received with params:", params);
@@ -48,14 +49,14 @@ export async function DELETE(req, context) {
         const objectId = new ObjectId(id);
         const found = await sqCollection.findOne({ _id: objectId });
         if (!found) {
-            return NextResponse.json({ error: "MCQ not found in database" }, { status: 404 });
+            return NextResponse.json({ error: "SQ not found in database" }, { status: 404 });
         }
         const result = await sqCollection.deleteOne({ _id: objectId });
         if (result.deletedCount === 0) {
-            return NextResponse.json({ error: "MCQ not found" }, { status: 404 });
+            return NextResponse.json({ error: "SQ not found" }, { status: 404 });
         }
-        return NextResponse.json({ message: "MCQ deleted successfully!" }, { status: 200 });
+        return NextResponse.json({ message: "SQ deleted successfully!" }, { status: 200 });
     } catch (error) {
-        return NextResponse.json({ error: "Failed to delete MCQ" }, { status: 500 });
+        return NextResponse.json({ error: "Failed to delete SQ" }, { status: 500 });
     }
 }

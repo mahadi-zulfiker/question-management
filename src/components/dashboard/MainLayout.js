@@ -51,6 +51,7 @@ import UserAccessControl from "./Admin/UserAccessControl";
 import AffiliateShareView from "./Admin/AffiliateShareView";
 import AffiliateShareTeacher from "./Teacher/AffiliateShareTeacher";
 import OnlineExamAdmin from "./Admin/OnlineExamAdmin";
+import SeeQuestions from "./Student/SeeQuestions";
 
 const MainLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -82,6 +83,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/student/paymentHistoryStudent" && <PaymentHistoryStudent />}
             {pathname === "/dashboard/student/studentRequest" && <StudentRequest />}
             {pathname === "/dashboard/student/studentGurdian" && <StudentGurdian />}
+            {pathname === "/dashboard/student/seeQuestions" && <SeeQuestions />}
 
             {pathname === "/dashboard/teacher" && <Teacher />}
             {pathname === "/dashboard/teacher/teacherProfile" && <TeacherProfile />}
