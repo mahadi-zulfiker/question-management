@@ -52,6 +52,7 @@ import AffiliateShareView from "./Admin/AffiliateShareView";
 import AffiliateShareTeacher from "./Teacher/AffiliateShareTeacher";
 import OnlineExamAdmin from "./Admin/OnlineExamAdmin";
 import SeeQuestions from "./Student/SeeQuestions";
+import ActivityChecker from "./Admin/ActivityChecker";
 
 const MainLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -125,6 +126,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/userAccessControl" && <UserAccessControl />}
             {pathname === "/dashboard/admin/affiliateShareView" && <AffiliateShareView />}
             {pathname === "/dashboard/admin/onlineExamAdmin" && <OnlineExamAdmin />}
+            {pathname === "/dashboard/admin/activityChecker" && <ActivityChecker />}
           </div>
         </main>
       </div>
