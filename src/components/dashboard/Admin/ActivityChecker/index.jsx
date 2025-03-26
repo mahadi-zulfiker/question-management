@@ -11,7 +11,7 @@ export default function ActivityChecker() {
   const [userEmails, setUserEmails] = useState([]);
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [loading, setLoading] = useState(false);
-  const [recommendations, setRecommendations] = useState([]); // New state for recommendations
+  const [recommendations, setRecommendations] = useState([]);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -46,7 +46,7 @@ export default function ActivityChecker() {
     setError(null);
     try {
       const query = new URLSearchParams({
-        ...(emailFilter && { email: emailFilter }),
+        ...(emailFilter && { email: emailFilter }), // Only include email if filter is set
         page: currentPage,
         limit: activitiesPerPage,
         ...(dateRange.start && { start: dateRange.start }),
@@ -67,7 +67,12 @@ export default function ActivityChecker() {
         throw new Error("অ্যাক্টিভিটি ডেটা সঠিক ফরম্যাটে নেই।");
       }
 
-      setActivities(data.activities);
+      // Ensure activities match the email filter (client-side check as a fallback)
+      const filteredActivities = emailFilter
+        ? data.activities.filter((activity) => activity.userEmail === emailFilter)
+        : data.activities;
+
+      setActivities(filteredActivities);
       setTotalPages(data.totalPages || 1);
     } catch (error) {
       console.error("Error fetching activities:", error);
@@ -79,38 +84,36 @@ export default function ActivityChecker() {
     }
   }, [emailFilter, dateRange, activitiesPerPage]);
 
-  // Fetch activities and recommendations when dependencies change
+  // Fetch activities when dependencies change
   useEffect(() => {
     fetchActivities(page);
   }, [emailFilter, dateRange, page, fetchActivities]);
 
-  // Generate recommendations based on activities
+  // Generate personalized recommendations
   const generateRecommendations = useCallback((activities) => {
+    if (!emailFilter || activities.length === 0) return []; // No recommendations if no filter or activities
+
     const formSubmissions = activities.filter((activity) => activity.action === "form_submission").length;
     const editorInteractions = activities.filter((activity) => activity.action === "editor_interaction").length;
     const lastVisit = activities.find((activity) => activity.action === "page_visit")?.timestamp;
 
     const recs = [];
     if (formSubmissions > 5) {
-      recs.push("এই ইউজার প্রায়ই ফর্ম জমা দেন। তাদের একটি প্রিমিয়াম প্যাকেজ অফার করুন।");
+      recs.push(`ইউজার ${emailFilter} প্রায়ই ফর্ম জমা দেন। তাদের একটি প্রিমিয়াম প্যাকেজ অফার করুন।`);
     }
     if (editorInteractions > 10) {
-      recs.push("এই ইউজার এডিটরে অনেক সময় ব্যয় করেন। এডিটর উন্নতকরণ প্যাকেজ অফার করুন।");
+      recs.push(`ইউজার ${emailFilter} এডিটরে অনেক সময় ব্যয় করেন। এডিটর উন্নতকরণ প্যাকেজ অফার করুন।`);
     }
     if (lastVisit && new Date() - new Date(lastVisit) > 7 * 24 * 60 * 60 * 1000) {
-      recs.push("এই ইউজার সম্প্রতি ভিজিট করেননি। তাদের একটি ডিসকাউন্ট অফার পাঠান।");
+      recs.push(`ইউজার ${emailFilter} সম্প্রতি ভিজিট করেননি। তাদের একটি ডিসকাউন্ট অফার পাঠান।`);
     }
-    return recs;
-  }, []);
+    return recs.length > 0 ? recs : [`ইউজার ${emailFilter} এর জন্য পর্যাপ্ত ডেটা নেই।`];
+  }, [emailFilter]);
 
-  // Update recommendations when activities change
+  // Update recommendations when activities or emailFilter change
   useEffect(() => {
-    if (activities.length > 0 && emailFilter) {
-      setRecommendations(generateRecommendations(activities));
-    } else {
-      setRecommendations([]);
-    }
-  }, [activities, emailFilter, generateRecommendations]);
+    setRecommendations(generateRecommendations(activities));
+  }, [activities, generateRecommendations]);
 
   // Handle email filter change
   const handleEmailFilterChange = (newEmail) => {
@@ -130,7 +133,7 @@ export default function ActivityChecker() {
 
   // Calculate summary stats
   const totalActivities = activities.length;
-  const uniqueUsers = [...new Set(activities.map((activity) => activity.userEmail))].length;
+  const uniqueUsers = emailFilter ? 1 : [...new Set(activities.map((activity) => activity.userEmail))].length;
 
   // Format metadata
   const formatMetadata = (metadata) =>
@@ -346,9 +349,9 @@ export default function ActivityChecker() {
             {emailFilter && (
               <button
                 onClick={exportRecommendationsToCSV}
-                disabled={activities.length === 0}
+                disabled={recommendations.length === 0}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 bangla-text shadow-md ${
-                  activities.length === 0 ? "bg-gray-300 cursor-not-allowed text-gray-500" : "bg-teal-600 text-white hover:bg-teal-700 hover:scale-105"
+                  recommendations.length === 0 ? "bg-gray-300 cursor-not-allowed text-gray-500" : "bg-teal-600 text-white hover:bg-teal-700 hover:scale-105"
                 }`}
               >
                 <FaFileAlt /> সুপারিশ এক্সপোর্ট (CSV)
@@ -362,7 +365,9 @@ export default function ActivityChecker() {
           </div>
         ) : activities.length === 0 ? (
           <p className="text-gray-500 text-center py-8 bangla-text">
-            কোনো অ্যাক্টিভিটি পাওয়া যায়নি। দয়া করে ফিল্টার চেক করুন অথবা নতুন অ্যাক্টিভিটি তৈরি করুন।
+            {emailFilter
+              ? `${emailFilter} এর জন্য কোনো অ্যাক্টিভিটি পাওয়া যায়নি।`
+              : "কোনো অ্যাক্টিভিটি পাওয়া যায়নি। দয়া করে ফিল্টার চেক করুন অথবা নতুন অ্যাক্টিভিটি তৈরি করুন।"}
           </p>
         ) : (
           <>
@@ -425,9 +430,13 @@ export default function ActivityChecker() {
         <h2 className="text-xl font-semibold text-gray-700 mb-4 bangla-text">সুপারিশ</h2>
         {!emailFilter ? (
           <p className="text-gray-500 bangla-text text-center py-4">সুপারিশ দেখতে একটি ইউজার ইমেইল নির্বাচন করুন।</p>
+        ) : loading ? (
+          <div className="flex justify-center items-center py-4">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-4 border-teal-500"></div>
+          </div>
         ) : activities.length === 0 ? (
-          <p className="text-gray-500 bangla-text text-center py-4">এই ইউজারের জন্য কোনো অ্যাক্টিভিটি পাওয়া যায়নি।</p>
-        ) : recommendations.length > 0 ? (
+          <p className="text-gray-500 bangla-text text-center py-4">{`${emailFilter} এর জন্য কোনো অ্যাক্টিভিটি পাওয়া যায়নি।`}</p>
+        ) : (
           <ul className="space-y-3">
             {recommendations.map((rec, index) => (
               <li key={index} className="flex items-start gap-3 p-3 bg-teal-50 rounded-lg shadow-sm bangla-text text-gray-800">
@@ -436,8 +445,6 @@ export default function ActivityChecker() {
               </li>
             ))}
           </ul>
-        ) : (
-          <p className="text-gray-500 bangla-text text-center py-4">সুপারিশ তৈরি করার জন্য পর্যাপ্ত অ্যাক্টিভিটি নেই।</p>
         )}
       </div>
     </div>
