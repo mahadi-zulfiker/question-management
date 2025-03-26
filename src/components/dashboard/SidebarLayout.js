@@ -1,3 +1,4 @@
+// Sidebar.js
 "use client";
 
 import { useState } from "react";
@@ -15,6 +16,7 @@ import {
   BiBook,
   BiUser,
   BiHistory,
+  BiMoneyWithdraw,
 } from "react-icons/bi";
 import {
   FaUserGraduate,
@@ -24,32 +26,44 @@ import {
   FaUsers,
   FaMoneyCheckAlt,
   FaQuestion,
+  FaFileInvoiceDollar,
+  FaCertificate,
+  FaBook,
+  FaClipboardList,
 } from "react-icons/fa";
 import {
   HiOutlineReceiptRefund,
   HiOutlineDocumentReport,
+  HiOutlineDocumentText,
 } from "react-icons/hi";
-import { GiNotebook, GiGraduateCap } from "react-icons/gi";
+import { GiNotebook, GiGraduateCap, GiMoneyStack } from "react-icons/gi";
 import {
   TbCertificate,
   TbListDetails,
   TbPackage,
+  TbReportMoney,
 } from "react-icons/tb";
 import {
   AiOutlineFileAdd,
   AiOutlineProfile,
   AiOutlineEye,
   AiOutlineDollar,
+  AiOutlineQuestionCircle,
+  AiOutlineFileText,
+  AiOutlineFileSearch,
 } from "react-icons/ai";
 import {
   RiTeamLine,
   RiQuestionnaireLine,
   RiBookReadLine,
   RiMoneyDollarCircleLine,
+  RiFileList3Line,
+  RiFileEditLine,
 } from "react-icons/ri";
 import { IoMdCreate, IoMdSettings, IoMdEye } from "react-icons/io";
-import { BsQuestionSquare, BsCardChecklist } from "react-icons/bs";
-import { VscPackage, VscGraph } from "react-icons/vsc";
+import { BsQuestionSquare, BsCardChecklist, BsGraphUp } from "react-icons/bs";
+import { VscPackage, VscGraph, VscChecklist } from "react-icons/vsc";
+import { GrDocumentTest, GrDocumentVerified } from "react-icons/gr";
 
 const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
   const pathname = usePathname();
@@ -92,14 +106,14 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
           items: [
             { href: "/dashboard/student/viewExams", icon: <TbListDetails className="text-xl mr-2" />, label: "View Exams" },
             { href: "/dashboard/student/attendedExams", icon: <RiBookReadLine className="text-xl mr-2" />, label: "Attended Exams" },
-            { href: "/dashboard/student/seeQuestions", icon: <RiBookReadLine className="text-xl mr-2" />, label: "See Questions" },
+            { href: "/dashboard/student/seeQuestions", icon: <AiOutlineQuestionCircle className="text-xl mr-2" />, label: "See Questions" },
           ],
         },
         {
           section: "Achievements",
           items: [
-            { href: "/dashboard/student/certificates", icon: <TbCertificate className="text-xl mr-2" />, label: "Certificates" },
-            { href: "/dashboard/student/marksHistory", icon: <VscGraph className="text-xl mr-2" />, label: "Marks History" },
+            { href: "/dashboard/student/certificates", icon: <FaCertificate className="text-xl mr-2" />, label: "Certificates" },
+            { href: "/dashboard/student/marksHistory", icon: <BsGraphUp className="text-xl mr-2" />, label: "Marks History" },
           ],
         },
         {
@@ -122,9 +136,9 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
           section: "Content Creation",
           items: [
             { href: "/dashboard/teacher/createMCQTeacher", icon: <IoMdCreate className="text-xl mr-2" />, label: "Create MCQ" },
-            { href: "/dashboard/teacher/createCQTeacher", icon: <FaPlus className="text-xl mr-2" />, label: "Create CQ" },
+            { href: "/dashboard/teacher/createCQTeacher", icon: <RiFileEditLine className="text-xl mr-2" />, label: "Create CQ" },
             { href: "/dashboard/teacher/createSQTeacher", icon: <AiOutlineFileAdd className="text-xl mr-2" />, label: "Create SQ" },
-            { href: "/dashboard/teacher/createCertificate", icon: <TbCertificate className="text-xl mr-2" />, label: "Create Certificate" },
+            { href: "/dashboard/teacher/createCertificate", icon: <FaCertificate className="text-xl mr-2" />, label: "Create Certificate" },
           ],
         },
         {
@@ -161,21 +175,22 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
             { href: "/dashboard/admin/adminProfileManagement", icon: <MdAdminPanelSettings className="text-xl mr-2" />, label: "Profile Management" },
             { href: "/dashboard/admin/userManagement", icon: <FaUsers className="text-xl mr-2" />, label: "User Management" },
             { href: "/dashboard/admin/userAccessControl", icon: <IoMdSettings className="text-xl mr-2" />, label: "User Access Control" },
+            { href: "/dashboard/admin/activityChecker", icon: <VscChecklist className="text-xl mr-2" />, label: "Activity Checker" },
           ],
         },
         {
           section: "Question Creation",
           items: [
             { href: "/dashboard/admin/createMCQAdmin", icon: <IoMdCreate className="text-xl mr-2" />, label: "Create MCQ" },
-            { href: "/dashboard/admin/createCQAdmin", icon: <FaPlus className="text-xl mr-2" />, label: "Create CQ" },
+            { href: "/dashboard/admin/createCQAdmin", icon: <RiFileEditLine className="text-xl mr-2" />, label: "Create CQ" },
             { href: "/dashboard/admin/createSQAdmin", icon: <AiOutlineFileAdd className="text-xl mr-2" />, label: "Create SQ" },
             { href: "/dashboard/admin/createPackage", icon: <TbPackage className="text-xl mr-2" />, label: "Create Package" },
             { href: "/dashboard/admin/createClass", icon: <RiTeamLine className="text-xl mr-2" />, label: "Create Class" },
-            { href: "/dashboard/admin/createCertificateAdmin", icon: <TbCertificate className="text-xl mr-2" />, label: "Create Certificate" },
-            { href: "/dashboard/admin/createModelTest", icon: <BiBook className="text-xl mr-2" />, label: "Create Model Test" },
+            { href: "/dashboard/admin/createCertificateAdmin", icon: <FaCertificate className="text-xl mr-2" />, label: "Create Certificate" },
+            { href: "/dashboard/admin/createModelTest", icon: <GrDocumentTest className="text-xl mr-2" />, label: "Create Model Test" },
             { href: "/dashboard/admin/createAdmissionTest", icon: <FaRegIdBadge className="text-xl mr-2" />, label: "Create Admission Test" },
             { href: "/dashboard/admin/createQuestionBank", icon: <GiNotebook className="text-xl mr-2" />, label: "Create Question Bank" },
-            { href: "/dashboard/admin/onlineExamAdmin", icon: <BiBook className="text-xl mr-2" />, label: "Model Test" },
+            { href: "/dashboard/admin/onlineExamAdmin", icon: <FaBook className="text-xl mr-2" />, label: "Model Test" },
           ],
         },
         {
@@ -194,7 +209,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
           items: [
             { href: "/dashboard/admin/affiliateAdmin", icon: <HiOutlineReceiptRefund className="text-xl mr-2" />, label: "Discount Generator" },
             { href: "/dashboard/admin/priceSetQuestions", icon: <AiOutlineDollar className="text-xl mr-2" />, label: "Set Pricing" },
-            { href: "/dashboard/admin/paymentHistoryAll", icon: <BiHistory className="text-xl mr-2" />, label: "Payment History" },
+            { href: "/dashboard/admin/paymentHistoryAll", icon: <BiMoneyWithdraw className="text-xl mr-2" />, label: "Payment History" },
             { href: "/dashboard/admin/affiliateShareView", icon: <RiMoneyDollarCircleLine className="text-xl mr-2" />, label: "View Affiliate" },
           ],
         },
