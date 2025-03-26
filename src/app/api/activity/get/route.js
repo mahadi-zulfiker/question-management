@@ -22,6 +22,9 @@ export async function GET(req) {
       if (end) query.timestamp.$lte = new Date(new Date(end).setHours(23, 59, 59, 999)).toISOString();
     }
 
+    // Exclude admin activities in the query itself
+    query.userEmail = { $ne: "admin123@gmail.com" };
+
     const totalActivities = await db
       .collection("user_activities")
       .countDocuments(query);
@@ -35,6 +38,9 @@ export async function GET(req) {
       .toArray();
 
     const totalPages = Math.ceil(totalActivities / limit);
+
+    console.log(`Fetched activities for page ${page}:`, activities); // Log the fetched activities
+    console.log(`Total activities: ${totalActivities}, Total pages: ${totalPages}`);
 
     return new Response(
       JSON.stringify({

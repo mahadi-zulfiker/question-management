@@ -13,6 +13,14 @@ export async function POST(req) {
       );
     }
 
+    // Prevent logging activities for admin
+    if (activityData.userEmail === "admin123@gmail.com") {
+      return new Response(
+        JSON.stringify({ message: "Admin activities are not logged" }),
+        { status: 403 }
+      );
+    }
+
     const db = await connectMongoDB();
     await db.collection("user_activities").insertOne(activityData);
 
