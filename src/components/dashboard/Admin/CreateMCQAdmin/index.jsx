@@ -6,8 +6,19 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from "xlsx";
 import Head from "next/head";
+import dynamic from 'next/dynamic';
+
+const EditableMathField = dynamic(() => import('react-mathquill').then((mod) => mod.EditableMathField), { ssr: false });
+const StaticMathField = dynamic(() => import('react-mathquill').then((mod) => mod.StaticMathField), { ssr: false });
+
 
 export default function CreateMCQAdmin() {
+    useEffect(() => {
+        (async function applyMathquillStyles() {
+          const { addStyles } = await import('react-mathquill');
+          addStyles();
+        })();
+      }, []);
     const [classes, setClasses] = useState([]);
     const [selectedClass, setSelectedClass] = useState("");
     const [subjects, setSubjects] = useState([]);
@@ -487,13 +498,10 @@ export default function CreateMCQAdmin() {
                                     className="mt-6 p-5 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
                                 >
                                     <h3 className="text-lg font-semibold text-gray-800 mb-3 bangla-text">প্রশ্ন {qIndex + 1}</h3>
-                                    <input
-                                        type="text"
-                                        placeholder="প্রশ্ন লিখুন"
+                                    <EditableMathField
+                                        latex={""} // Set initial value or empty string
+                                        onChange={(mathField) => handleQuestionChange(qIndex, mathField.latex())}
                                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-4 bangla-text"
-                                        value={q.question}
-                                        onChange={(e) => handleQuestionChange(qIndex, e.target.value)}
-                                        required
                                     />
 
                                     <div className="mb-4">
@@ -539,13 +547,10 @@ export default function CreateMCQAdmin() {
 
                                     {questionType === "general" && q.options.map((option, i) => (
                                         <div key={i} className="flex items-center mb-3">
-                                            <input
-                                                type="text"
-                                                placeholder={`বিকল্প ${i + 1}`}
-                                                className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                                                value={option}
-                                                onChange={(e) => handleOptionChange(qIndex, i, e.target.value)}
-                                                required
+                                            <EditableMathField
+                                                latex={""} // Set initial value or empty string
+                                                onChange={(mathField) => handleOptionChange(qIndex, i, mathField.latex())}
+                                                className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-4 bangla-text"
                                             />
                                             <input
                                                 type="radio"
@@ -561,13 +566,10 @@ export default function CreateMCQAdmin() {
                                         <>
                                             {q.higherOptions.slice(0, 3).map((option, i) => (
                                                 <div key={i} className="mb-3">
-                                                    <input
-                                                        type="text"
-                                                        placeholder={`বিকল্প ${i + 1}`}
-                                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                                                        value={option}
-                                                        onChange={(e) => handleOptionChange(qIndex, i, e.target.value, "higher")}
-                                                        required
+                                                    <EditableMathField
+                                                        latex={""} // Set initial value or empty string
+                                                        onChange={(mathField) => handleOptionChange(qIndex, i, mathField.latex())}
+                                                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-4 bangla-text"
                                                     />
                                                 </div>
                                             ))}

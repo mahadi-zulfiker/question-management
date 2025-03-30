@@ -20,13 +20,13 @@ export default function RootLayout({ children }) {
       <html lang="bn">
         <body className={`${notoBengali.variable} antialiased`}>
           {children}
-          <Script strategy="afterInteractive">
+          {/* <Script strategy="afterInteractive">
             {`
               document.addEventListener('contextmenu', function(e) {
                 e.preventDefault();
               });
             `}
-          </Script>
+          </Script> */}
         </body>
       </html>
     </Providers>
