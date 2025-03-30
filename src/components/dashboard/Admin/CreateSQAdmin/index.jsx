@@ -9,6 +9,11 @@ import Head from "next/head";
 import { createEditor, Editor, Transforms, Text } from "slate";
 import { Slate, Editable, withReact, useSlate } from "slate-react";
 import { withHistory } from "slate-history";
+import dynamic from 'next/dynamic';
+
+const EditableMathField = dynamic(() => import('react-mathquill').then((mod) => mod.EditableMathField), { ssr: false });
+const StaticMathField = dynamic(() => import('react-mathquill').then((mod) => mod.StaticMathField), { ssr: false });
+
 
 // Normalize text to Unicode NFC
 const normalizeText = (text) => {
@@ -82,9 +87,8 @@ const ToolbarButton = ({ format, icon, label, tooltip }) => {
         event.preventDefault();
         toggleFormat();
       }}
-      className={`px-2 py-1 mx-1 rounded ${
-        isActive ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
-      } hover:bg-blue-400 hover:text-white transition`}
+      className={`px-2 py-1 mx-1 rounded ${isActive ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
+        } hover:bg-blue-400 hover:text-white transition`}
       title={tooltip}
     >
       {icon || label}
@@ -250,6 +254,12 @@ const serializeToHtml = (nodes) => {
 
 // Main CreateSQAdmin Component
 export default function CreateSQAdmin() {
+  useEffect(() => {
+    (async function applyMathquillStyles() {
+      const { addStyles } = await import('react-mathquill');
+      addStyles();
+    })();
+  }, []);
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
   const [subjects, setSubjects] = useState([]);
@@ -266,8 +276,8 @@ export default function CreateSQAdmin() {
   const [sqs, setSQs] = useState([
     {
       type: "জ্ঞানমূলক",
-      question: initialSlateValue,
-      answer: initialSlateValue,
+      question: "",
+      answer: "",
       image: null,
       imageAlignment: "center",
       videoLink: "",
@@ -357,13 +367,13 @@ export default function CreateSQAdmin() {
 
   const handleQuestionChange = (index, value) => {
     const newSQs = [...sqs];
-    newSQs[index].question = value || initialSlateValue;
+    newSQs[index].question = value;
     setSQs(newSQs);
   };
 
   const handleAnswerChange = (index, value) => {
     const newSQs = [...sqs];
-    newSQs[index].answer = value || initialSlateValue;
+    newSQs[index].answer = value;
     setSQs(newSQs);
   };
 
@@ -512,8 +522,8 @@ export default function CreateSQAdmin() {
     formData.append("teacherEmail", "admin");
 
     sqs.forEach((sq, index) => {
-      const questionHtml = serializeToHtml(sq.question);
-      const answerHtml = serializeToHtml(sq.answer);
+      const questionHtml = sq.question;
+      const answerHtml = sq.answer;
 
       formData.append(`sqs[${index}][type]`, sq.type);
       formData.append(`sqs[${index}][question]`, questionHtml);
@@ -740,10 +750,10 @@ export default function CreateSQAdmin() {
                     <label className="block text-gray-700 font-semibold mb-1 bangla-text">
                       প্রশ্ন লিখুন
                     </label>
-                    <CustomEditor
-                      value={sq.question}
-                      onChange={(value) => handleQuestionChange(index, value)}
-                      placeholder="🔹 প্রশ্ন লিখুন"
+                    <EditableMathField
+                      latex="" // Set initial value or empty string
+                      onChange={(mathField) => handleQuestionChange(index, mathField.latex())}
+                      className="border p-2 rounded-md w-full text-lg"
                     />
                   </div>
 
@@ -751,10 +761,10 @@ export default function CreateSQAdmin() {
                     <label className="block text-gray-700 font-semibold mb-1 bangla-text">
                       উত্তর লিখুন (ঐচ্ছিক)
                     </label>
-                    <CustomEditor
-                      value={sq.answer}
-                      onChange={(value) => handleAnswerChange(index, value)}
-                      placeholder="🔹 উত্তর লিখুন (ঐচ্ছিক)"
+                    <EditableMathField
+                      latex="" // Set initial value or empty string
+                      onChange={(mathField) => handleAnswerChange(index, mathField.latex())}
+                      className="border p-2 rounded-md w-full text-lg"
                     />
                   </div>
 
@@ -871,13 +881,12 @@ export default function CreateSQAdmin() {
                 )}
                 {sq.image && (
                   <div
-                    className={`mb-4 ${
-                      sq.imageAlignment === "left"
+                    className={`mb-4 ${sq.imageAlignment === "left"
                         ? "text-left"
                         : sq.imageAlignment === "right"
-                        ? "text-right"
-                        : "text-center"
-                    }`}
+                          ? "text-right"
+                          : "text-center"
+                      }`}
                   >
                     <img
                       src={URL.createObjectURL(sq.image)}

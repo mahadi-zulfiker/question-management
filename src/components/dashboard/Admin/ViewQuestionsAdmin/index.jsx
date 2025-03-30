@@ -4,8 +4,18 @@ import { useEffect, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Head from "next/head";
+import dynamic from 'next/dynamic';
+
+const EditableMathField = dynamic(() => import('react-mathquill').then((mod) => mod.EditableMathField), { ssr: false });
+const StaticMathField = dynamic(() => import('react-mathquill').then((mod) => mod.StaticMathField), { ssr: false });
 
 export default function ViewQuestionsAdmin() {
+    useEffect(() => {
+        (async function applyMathquillStyles() {
+          const { addStyles } = await import('react-mathquill');
+          addStyles();
+        })();
+      }, []);
     const [questions, setQuestions] = useState([]);
     const [loading, setLoading] = useState(false);
     const [type, setType] = useState("");
@@ -13,6 +23,9 @@ export default function ViewQuestionsAdmin() {
     const [editingMCQ, setEditingMCQ] = useState(null); // For MCQ
     const [editingCQ, setEditingCQ] = useState(null); // For CQ
     const [editingSQ, setEditingSQ] = useState(null); // For SQ
+    const [latex, setLatex] = useState("");
+
+    console.log(questions)
 
     useEffect(() => {
         const fetchQuestions = async () => {
@@ -457,7 +470,9 @@ export default function ViewQuestionsAdmin() {
                                     {/* MCQ Display */}
                                     {q.type === "mcq" && (
                                         <div>
-                                            <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">{q.question || "কোনো প্রশ্ন দেওয়া হয়নি"}</p>
+                                            <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">
+                                                <StaticMathField>{q.question}</StaticMathField>
+                                            </p>
                                             {q.imageId && (
                                                 <div className={`mb-4 ${q.imageAlignment === "left" ? "text-left" : q.imageAlignment === "right" ? "text-right" : "text-center"}`}>
                                                     <img
@@ -485,7 +500,9 @@ export default function ViewQuestionsAdmin() {
                                                     {(q.options || []).map((opt, i) => (
                                                         <div key={i} className="w-1/2 p-1">
                                                             <p className={`text-gray-700 bangla-text ${q.correctAnswer === i ? "font-bold" : ""}`}>
-                                                                {String.fromCharCode(2453 + i)}. {opt || "N/A"}
+                                                                {String.fromCharCode(2453 + i)}. <StaticMathField>
+                                                                    {opt}
+                                                                </StaticMathField>
                                                             </p>
                                                         </div>
                                                     ))}
@@ -494,7 +511,11 @@ export default function ViewQuestionsAdmin() {
                                                 <div>
                                                     <div className="mb-3 text-gray-700">
                                                         {(q.options || []).slice(0, 3).map((opt, i) => (
-                                                            <p key={i} className="bangla-text">{String.fromCharCode(2453 + i)}. {opt || "N/A"}</p>
+                                                            <p key={i} className="bangla-text">{String.fromCharCode(2453 + i)}.
+                                                                <StaticMathField>
+                                                                    {opt}
+                                                                </StaticMathField>
+                                                            </p>
                                                         ))}
                                                     </div>
                                                     <p className="font-bold mb-2 bangla-text">নিচের কোনটি সঠিক?</p>
@@ -518,40 +539,86 @@ export default function ViewQuestionsAdmin() {
                                     {/* CQ Display */}
                                     {q.type === "cq" && (
                                         <div>
-                                            <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">উদ্দীপক:</p>
-                                            <div
-                                                className="text-gray-700 mb-4 bangla-text"
-                                                dangerouslySetInnerHTML={{ __html: q.passage || "কোনো উদ্দীপক দেওয়া হয়নি" }}
-                                            />
-                                            {q.imageId && (
-                                                <div className={`mb-4 ${q.imageAlignment === "left" ? "text-left" : q.imageAlignment === "right" ? "text-right" : "text-center"}`}>
-                                                    <img
-                                                        src={`/api/image/${q.imageId}?type=cq`}
-                                                        alt="CQ related visual"
-                                                        className="rounded shadow-md max-h-64 inline-block"
-                                                        onError={(e) => (e.target.style.display = "none")}
-                                                    />
+                                            {q.cqType == "generalCQ" ? <>
+                                                <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">উদ্দীপক:</p>
+                                                <div
+                                                    className="text-gray-700 mb-4 bangla-text"
+                                                    dangerouslySetInnerHTML={{ __html: q.passage || "কোনো উদ্দীপক দেওয়া হয়নি" }}
+                                                />
+                                                {q.imageId && (
+                                                    <div className={`mb-4 ${q.imageAlignment === "left" ? "text-left" : q.imageAlignment === "right" ? "text-right" : "text-center"}`}>
+                                                        <img
+                                                            src={`/api/image/${q.imageId}?type=cq`}
+                                                            alt="CQ related visual"
+                                                            className="rounded shadow-md max-h-64 inline-block"
+                                                            onError={(e) => (e.target.style.display = "none")}
+                                                        />
+                                                    </div>
+                                                )}
+                                                {q.videoLink && (
+                                                    <div className="mb-4">
+                                                        <a
+                                                            href={q.videoLink}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="video-link bangla-text"
+                                                        >
+                                                            📹 ভিডিও দেখুন
+                                                        </a>
+                                                    </div>
+                                                )}
+                                                <div className="text-gray-900">
+                                                    {(q.questions || []).map((ques, i) => (
+                                                        <p key={i} className="mb-2 bangla-text">
+                                                            {String.fromCharCode(2453 + i)}) <span dangerouslySetInnerHTML={{ __html: ques || "N/A" }} /> {q.marks && q.marks[i] ? `(${q.marks[i]} নম্বর)` : ""}
+                                                        </p>
+                                                    ))}
                                                 </div>
-                                            )}
-                                            {q.videoLink && (
-                                                <div className="mb-4">
-                                                    <a
-                                                        href={q.videoLink}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="video-link bangla-text"
-                                                    >
-                                                        📹 ভিডিও দেখুন
-                                                    </a>
-                                                </div>
-                                            )}
-                                            <div className="text-gray-900">
-                                                {(q.questions || []).map((ques, i) => (
-                                                    <p key={i} className="mb-2 bangla-text">
-                                                        {String.fromCharCode(2453 + i)}) <span dangerouslySetInnerHTML={{ __html: ques || "N/A" }} /> {q.marks && q.marks[i] ? `(${q.marks[i]} নম্বর)` : ""}
-                                                    </p>
-                                                ))}
-                                            </div>
+                                            </>
+                                                :
+                                                <>
+                                                    <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">উদ্দীপক:</p>
+                                                    <div
+                                                        className="text-gray-700 mb-4 bangla-text">
+                                                        <StaticMathField>
+                                                            {q.passage}
+                                                        </StaticMathField>
+                                                    </div>
+                                                    {q.imageId && (
+                                                        <div className={`mb-4 ${q.imageAlignment === "left" ? "text-left" : q.imageAlignment === "right" ? "text-right" : "text-center"}`}>
+                                                            <img
+                                                                src={`/api/image/${q.imageId}?type=cq`}
+                                                                alt="CQ related visual"
+                                                                className="rounded shadow-md max-h-64 inline-block"
+                                                                onError={(e) => (e.target.style.display = "none")}
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    {q.videoLink && (
+                                                        <div className="mb-4">
+                                                            <a
+                                                                href={q.videoLink}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
+                                                                className="video-link bangla-text"
+                                                            >
+                                                                📹 ভিডিও দেখুন
+                                                            </a>
+                                                        </div>
+                                                    )}
+                                                    <div className="text-gray-900">
+                                                        {(q.questions || []).map((ques, i) => (
+                                                            <p key={i} className="mb-2 bangla-text">
+                                                                <span>
+                                                                    {String.fromCharCode(2453 + i)})
+                                                                    <StaticMathField>
+                                                                        {ques}
+                                                                    </StaticMathField>
+                                                                </span>  {q.marks && q.marks[i] ? `(${q.marks[i]} নম্বর)` : ""}
+                                                            </p>
+                                                        ))}
+                                                    </div>
+                                                </>}
                                             <p className="text-sm text-gray-500 mt-4 bangla-text">
                                                 ক্লাস: {q.classNumber || "N/A"} | বিষয়: {q.subject || "N/A"} | অধ্যায়: {q.chapterName || "N/A"} | প্রশ্নের ধরণ: {q.cqType || "N/A"}
                                             </p>
@@ -562,7 +629,11 @@ export default function ViewQuestionsAdmin() {
                                     {q.type === "sq" && (
                                         <div>
                                             <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">
-                                                {q.type ? `${q.type}: ` : ""}<span dangerouslySetInnerHTML={{ __html: q.question || "কোনো প্রশ্ন দেওয়া হয়নি" }} />
+                                                <span>
+                                                    <StaticMathField>
+                                                        {q.question}
+                                                    </StaticMathField>
+                                                </span>
                                             </p>
                                             {q.imageId && (
                                                 <div className={`mb-4 ${q.imageAlignment === "left" ? "text-left" : q.imageAlignment === "right" ? "text-right" : "text-center"}`}>

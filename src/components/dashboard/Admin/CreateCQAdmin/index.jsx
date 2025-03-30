@@ -10,6 +10,13 @@ import { createEditor, Editor, Transforms, Text } from "slate";
 import { Slate, Editable, withReact, useSlate } from "slate-react";
 import { withHistory } from "slate-history";
 
+//quilt
+import dynamic from 'next/dynamic';
+
+const EditableMathField = dynamic(() => import('react-mathquill').then((mod) => mod.EditableMathField), { ssr: false });
+const StaticMathField = dynamic(() => import('react-mathquill').then((mod) => mod.StaticMathField), { ssr: false });
+
+
 // Normalize text to Unicode NFC
 const normalizeText = (text) => {
   return text.normalize("NFC");
@@ -102,9 +109,8 @@ const ToolbarButton = ({ format, icon, label, tooltip }) => {
         event.preventDefault();
         toggleFormat();
       }}
-      className={`px-2 py-1 mx-1 rounded ${
-        isActive ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
-      } hover:bg-blue-400 hover:text-white transition`}
+      className={`px-2 py-1 mx-1 rounded ${isActive ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
+        } hover:bg-blue-400 hover:text-white transition`}
       title={tooltip}
     >
       {icon || label}
@@ -323,6 +329,12 @@ const deserializeFromHtml = (html) => {
 };
 
 export default function CreateCQAdmin() {
+  useEffect(() => {
+    (async function applyMathquillStyles() {
+      const { addStyles } = await import('react-mathquill');
+      addStyles();
+    })();
+  }, []);
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
   const [subjects, setSubjects] = useState([]);
@@ -334,7 +346,6 @@ export default function CreateCQAdmin() {
   const [selectedSubjectPart, setSelectedSubjectPart] = useState("");
   const [cqType, setCQType] = useState("");
   const [isMultipleCQs, setIsMultipleCQs] = useState(false);
-
   const initialSlateValue = [{ type: "paragraph", children: [{ text: "" }] }];
 
   const [cqs, setCQs] = useState([
@@ -342,11 +353,12 @@ export default function CreateCQAdmin() {
       passage: initialSlateValue,
       questions: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
       answers: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
-      mathQuestions: [initialSlateValue, initialSlateValue, initialSlateValue],
-      mathAnswers: [initialSlateValue, initialSlateValue, initialSlateValue],
+      latexQuestions: ["ab","bc","cd"],
+      latexAnswers: ["", "", ""],
       image: null,
       imageAlignment: "center",
       videoLink: "",
+      latexPassage: ""
     },
   ]);
 
@@ -415,6 +427,11 @@ export default function CreateCQAdmin() {
     newCQs[cqIndex].passage = value;
     setCQs(newCQs);
   };
+  const handleMathCQChange = (cqIndex, latexValue) => {
+    const newCQs = [...cqs];
+    newCQs[cqIndex].latexPassage = latexValue; // Update the LaTeX value
+    setCQs(newCQs);
+  };
 
   const handleQuestionChange = (cqIndex, qIndex, value) => {
     const newCQs = [...cqs];
@@ -428,15 +445,15 @@ export default function CreateCQAdmin() {
     setCQs(newCQs);
   };
 
-  const handleMathQuestionChange = (cqIndex, qIndex, value) => {
+  const handleMathQuestionChange = (cqIndex, qIndex, latexValue) => {
     const newCQs = [...cqs];
-    newCQs[cqIndex].mathQuestions[qIndex] = value;
+    newCQs[cqIndex].latexQuestions[qIndex] = latexValue; // Update the LaTeX value
     setCQs(newCQs);
   };
 
-  const handleMathAnswerChange = (cqIndex, qIndex, value) => {
+  const handleMathAnswerChange = (cqIndex, qIndex, latexValue) => {
     const newCQs = [...cqs];
-    newCQs[cqIndex].mathAnswers[qIndex] = value;
+    newCQs[cqIndex].latexAnswers[qIndex] = latexValue; // Update the LaTeX value
     setCQs(newCQs);
   };
 
@@ -546,29 +563,29 @@ export default function CreateCQAdmin() {
             questions:
               row["CQ Type"] === "generalCQ"
                 ? [
-                    normalizeText(row["Knowledge Question"] || ""),
-                    normalizeText(row["Comprehension Question"] || ""),
-                    normalizeText(row["Application Question"] || ""),
-                    normalizeText(row["Higher Skills Question"] || ""),
-                  ]
+                  normalizeText(row["Knowledge Question"] || ""),
+                  normalizeText(row["Comprehension Question"] || ""),
+                  normalizeText(row["Application Question"] || ""),
+                  normalizeText(row["Higher Skills Question"] || ""),
+                ]
                 : [
-                    normalizeText(row["Knowledge Question"] || ""),
-                    normalizeText(row["Application Question"] || ""),
-                    normalizeText(row["Higher Skills Question"] || ""),
-                  ],
+                  normalizeText(row["Knowledge Question"] || ""),
+                  normalizeText(row["Application Question"] || ""),
+                  normalizeText(row["Higher Skills Question"] || ""),
+                ],
             answers:
               row["CQ Type"] === "generalCQ"
                 ? [
-                    normalizeText(row["Knowledge Answer"] || ""),
-                    normalizeText(row["Comprehension Answer"] || ""),
-                    normalizeText(row["Application Answer"] || ""),
-                    normalizeText(row["Higher Skills Answer"] || ""),
-                  ]
+                  normalizeText(row["Knowledge Answer"] || ""),
+                  normalizeText(row["Comprehension Answer"] || ""),
+                  normalizeText(row["Application Answer"] || ""),
+                  normalizeText(row["Higher Skills Answer"] || ""),
+                ]
                 : [
-                    normalizeText(row["Knowledge Answer"] || ""),
-                    normalizeText(row["Application Answer"] || ""),
-                    normalizeText(row["Higher Skills Answer"] || ""),
-                  ],
+                  normalizeText(row["Knowledge Answer"] || ""),
+                  normalizeText(row["Application Answer"] || ""),
+                  normalizeText(row["Higher Skills Answer"] || ""),
+                ],
             imageAlignment: row["Image Alignment"] || "center",
             videoLink: row["Video Link"] || "",
           }));
@@ -633,13 +650,13 @@ export default function CreateCQAdmin() {
     formData.append("cqType", cqType);
 
     cqs.forEach((cq, index) => {
-      const passageHtml = serializeToHtml(cq.passage);
-      const questionsHtml = (cqType === "generalCQ" ? cq.questions : cq.mathQuestions).map((q) =>
+      const passageHtml = (cqType === "generalCQ" ? serializeToHtml(cq.passage) : cq.latexPassage);
+      const questionsHtml = (cqType === "generalCQ" ? cq.questions.map((q) =>
         serializeToHtml(q)
-      );
-      const answersHtml = (cqType === "generalCQ" ? cq.answers : cq.mathAnswers).map((a) =>
+      ) : cq.latexQuestions)
+      const answersHtml = (cqType === "generalCQ" ? cq.answers.map((a) =>
         serializeToHtml(a)
-      );
+      ) : cq.latexAnswers);
 
       formData.append(`cqs[${index}][passage]`, passageHtml);
       formData.append(`cqs[${index}][questions]`, JSON.stringify(questionsHtml));
@@ -673,6 +690,7 @@ export default function CreateCQAdmin() {
       toast.error("❌ সার্ভারের সাথে সংযোগে সমস্যা!", { position: "top-right" });
     }
   };
+  const [latex, setLatex] = useState("");
 
   return (
     <>
@@ -1013,13 +1031,19 @@ export default function CreateCQAdmin() {
                   <label className="block text-gray-700 font-semibold mb-2 bangla-text">
                     উদ্দীপক
                   </label>
-                  <CustomEditor
+                  {cqType == "generalCQ" && <CustomEditor
                     value={cq.passage}
                     onChange={(value) => handlePassageChange(cqIndex, value)}
                     placeholder="🔹 অনুচ্ছেদ লিখুন"
-                  />
-
-                  <div className="mb-4">
+                  />}
+                  {cqType == "mathCQ" && (
+                    <EditableMathField
+                      latex={cq.latex || ""} // Set initial value or empty string
+                      onChange={(mathField) => handleMathCQChange(cqIndex, mathField.latex())}
+                      className="border p-2 rounded-md w-full text-lg"
+                    />
+                  )}
+                  <div className="mb-4 mt-4">
                     <label className="block text-gray-700 font-semibold mb-2 bangla-text">
                       ভিডিও লিঙ্ক যুক্ত করুন (ঐচ্ছিক)
                     </label>
@@ -1073,10 +1097,10 @@ export default function CreateCQAdmin() {
                           {i === 0
                             ? "জ্ঞানমূলক প্রশ্ন"
                             : i === 1
-                            ? "অনুধাবনমূলক প্রশ্ন"
-                            : i === 2
-                            ? "প্রয়োগ প্রশ্ন"
-                            : "উচ্চতর দক্ষতা"}
+                              ? "অনুধাবনমূলক প্রশ্ন"
+                              : i === 2
+                                ? "প্রয়োগ প্রশ্ন"
+                                : "উচ্চতর দক্ষতা"}
                         </label>
                         <CustomEditor
                           value={question}
@@ -1085,10 +1109,10 @@ export default function CreateCQAdmin() {
                             i === 0
                               ? "জ্ঞানমূলক প্রশ্ন লিখুন"
                               : i === 1
-                              ? "অনুধাবনমূলক প্রশ্ন লিখুন"
-                              : i === 2
-                              ? "প্রয়োগ প্রশ্ন লিখুন"
-                              : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
+                                ? "অনুধাবনমূলক প্রশ্ন লিখুন"
+                                : i === 2
+                                  ? "প্রয়োগ প্রশ্ন লিখুন"
+                                  : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
                           }
                         />
                         <label className="block text-gray-700 font-semibold mb-2 bangla-text">
@@ -1103,29 +1127,26 @@ export default function CreateCQAdmin() {
                     ))}
 
                   {cqType === "mathCQ" &&
-                    cq.mathQuestions.map((question, i) => (
+                    cq.latexQuestions.map((question, i) => (
                       <div key={i} className="mb-3">
                         <label className="block text-gray-700 font-semibold mb-2 bangla-text">
                           {i === 0 ? "জ্ঞানমূলক প্রশ্ন" : i === 1 ? "প্রয়োগ প্রশ্ন" : "উচ্চতর দক্ষতা"}
                         </label>
-                        <CustomEditor
-                          value={question}
-                          onChange={(value) => handleMathQuestionChange(cqIndex, i, value)}
-                          placeholder={
-                            i === 0
-                              ? "জ্ঞানমূলক প্রশ্ন লিখুন"
-                              : i === 1
-                              ? "প্রয়োগ প্রশ্ন লিখুন"
-                              : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
-                          }
+                        <div className="bg-white shadow-md rounded-lg p-4 w-full max-w-lg">
+                        </div>
+                        <EditableMathField
+                          latex={cq.latex || ""} // Set initial value or empty string
+                          onChange={(mathField) => handleMathQuestionChange(cqIndex, i, mathField.latex())}
+                          className="border p-2 rounded-md w-full text-lg"
+                          placeholder="প্রশ্ন লিখুন"
                         />
                         <label className="block text-gray-700 font-semibold mb-2 bangla-text">
                           উত্তর (ঐচ্ছিক)
                         </label>
-                        <CustomEditor
-                          value={cq.mathAnswers[i]}
-                          onChange={(value) => handleMathAnswerChange(cqIndex, i, value)}
-                          placeholder="উত্তর লিখুন"
+                        <EditableMathField
+                          latex={cq.latex || ""} // Set initial value or empty string
+                          onChange={(mathField) => handleMathAnswerChange(cqIndex, i, mathField.latex())}
+                          className="border p-2 rounded-md w-full text-lg"
                         />
                       </div>
                     ))}
@@ -1156,99 +1177,7 @@ export default function CreateCQAdmin() {
           </motion.div>
 
           {/* Preview Section */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
-          >
-            <h2 className="text-xl font-bold text-blue-700 mb-4 bangla-text">প্রিভিউ</h2>
-            {cqs.map((cq, cqIndex) => (
-              <motion.div
-                key={cqIndex}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mb-6 p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100"
-              >
-                <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-2 bangla-text">
-                  CQ
-                </p>
-                <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">
-                  উদ্দীপক:
-                </p>
-                <div
-                  className="text-gray-700 mb-4 bangla-text"
-                  dangerouslySetInnerHTML={{
-                    __html: serializeToHtml(cq.passage) || "অনুচ্ছেদ লিখুন",
-                  }}
-                />
-                {cq.videoLink && (
-                  <div className="mb-4">
-                    <a
-                      href={cq.videoLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="video-link bangla-text"
-                    >
-                      📹 ভিডিও দেখুন
-                    </a>
-                  </div>
-                )}
-                {cq.image && (
-                  <div
-                    className={`mb-4 ${
-                      cq.imageAlignment === "left"
-                        ? "text-left"
-                        : cq.imageAlignment === "right"
-                        ? "text-right"
-                        : "text-center"
-                    }`}
-                  >
-                    <img
-                      src={URL.createObjectURL(cq.image)}
-                      alt={`CQ preview ${cqIndex + 1}`}
-                      className="rounded-lg shadow-md max-h-64 inline-block"
-                    />
-                  </div>
-                )}
-                <div className="text-gray-700">
-                  {(cqType === "generalCQ" ? cq.questions : cq.mathQuestions).map(
-                    (ques, i) => (
-                      <div key={i} className="mb-2">
-                        <p className="bangla-text">
-                          {String.fromCharCode(2453 + i)}) <span
-                            dangerouslySetInnerHTML={{
-                              __html: serializeToHtml(ques) || "প্রশ্ন লিখুন",
-                            }}
-                          />{" "}
-                          {cqType === "generalCQ"
-                            ? `(${[1, 2, 3, 4][i]} নম্বর)`
-                            : `(${[3, 3, 4][i]} নম্বর)`}
-                        </p>
-                        {(cqType === "generalCQ" ? cq.answers[i] : cq.mathAnswers[i]) && (
-                          <p className="text-gray-600 ml-4 bangla-text">
-                            <span className="font-semibold">উত্তর:</span>{" "}
-                            <span
-                              dangerouslySetInnerHTML={{
-                                __html: serializeToHtml(
-                                  cqType === "generalCQ" ? cq.answers[i] : cq.mathAnswers[i]
-                                ),
-                              }}
-                            />
-                          </p>
-                        )}
-                      </div>
-                    )
-                  )}
-                </div>
-                <p className="text-sm text-gray-500 mt-3 bangla-text">
-                  Class: {selectedClass || "N/A"} | Subject: {selectedSubject || "N/A"} | Chapter:{" "}
-                  {selectedChapterName || "N/A"} | Type: {cqType || "N/A"}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
+
         </div>
       </div>
     </>
