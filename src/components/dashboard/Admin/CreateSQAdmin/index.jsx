@@ -1,265 +1,28 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from "xlsx";
 import Head from "next/head";
-import { createEditor, Editor, Transforms, Text } from "slate";
-import { Slate, Editable, withReact, useSlate } from "slate-react";
-import { withHistory } from "slate-history";
-import dynamic from 'next/dynamic';
+import dynamic from "next/dynamic";
 
-const EditableMathField = dynamic(() => import('react-mathquill').then((mod) => mod.EditableMathField), { ssr: false });
-const StaticMathField = dynamic(() => import('react-mathquill').then((mod) => mod.StaticMathField), { ssr: false });
-
+const EditableMathField = dynamic(() => import("react-mathquill").then((mod) => mod.EditableMathField), { ssr: false });
+const StaticMathField = dynamic(() => import("react-mathquill").then((mod) => mod.StaticMathField), { ssr: false });
 
 // Normalize text to Unicode NFC
-const normalizeText = (text) => {
-  return text.normalize("NFC");
-};
-
-// Custom Leaf component to render text with formatting
-const Leaf = ({ attributes, children, leaf }) => {
-  let styledChildren = children;
-  if (leaf.math) {
-    return (
-      <span
-        {...attributes}
-        className="mathjax"
-        dangerouslySetInnerHTML={{ __html: `\\(${leaf.text}\\)` }}
-      />
-    );
-  }
-  if (leaf.bold) {
-    styledChildren = <strong>{styledChildren}</strong>;
-  }
-  if (leaf.italic) {
-    styledChildren = <em>{styledChildren}</em>;
-  }
-  if (leaf.underline) {
-    styledChildren = <u>{styledChildren}</u>;
-  }
-  if (leaf.strikethrough) {
-    styledChildren = <del>{styledChildren}</del>;
-  }
-  return <span {...attributes} className="bangla-text">{styledChildren}</span>;
-};
-
-// Custom Element component to render block-level elements
-const Element = ({ attributes, children, element }) => {
-  switch (element.type) {
-    case "bulleted-list":
-      return <ul {...attributes} className="list-disc pl-5">{children}</ul>;
-    case "numbered-list":
-      return <ol {...attributes} className="list-decimal pl-5">{children}</ol>;
-    case "list-item":
-      return <li {...attributes}>{children}</li>;
-    case "heading-one":
-      return <h1 {...attributes} className="text-2xl font-bold">{children}</h1>;
-    case "heading-two":
-      return <h2 {...attributes} className="text-xl font-semibold">{children}</h2>;
-    case "heading-three":
-      return <h3 {...attributes} className="text-lg font-medium">{children}</h3>;
-    default:
-      return <p {...attributes}>{children}</p>;
-  }
-};
-
-// Toolbar button component
-const ToolbarButton = ({ format, icon, label, tooltip }) => {
-  const editor = useSlate();
-  const isActive = isMarkActive(editor, format) || isBlockActive(editor, format);
-
-  const toggleFormat = () => {
-    if (["bold", "italic", "underline", "strikethrough", "math"].includes(format)) {
-      toggleMark(editor, format);
-    } else {
-      toggleBlock(editor, format);
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      onMouseDown={(event) => {
-        event.preventDefault();
-        toggleFormat();
-      }}
-      className={`px-2 py-1 mx-1 rounded ${isActive ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
-        } hover:bg-blue-400 hover:text-white transition`}
-      title={tooltip}
-    >
-      {icon || label}
-    </button>
-  );
-};
-
-// Check if a mark (e.g., bold, italic) is active
-const isMarkActive = (editor, format) => {
-  const marks = Editor.marks(editor);
-  return marks ? marks[format] === true : false;
-};
-
-// Check if a block (e.g., heading, list) is active
-const isBlockActive = (editor, format) => {
-  const [match] = Editor.nodes(editor, {
-    match: (n) => n.type === format,
-  });
-  return !!match;
-};
-
-// Toggle a mark (e.g., bold, italic)
-const toggleMark = (editor, format) => {
-  const isActive = isMarkActive(editor, format);
-  if (isActive) {
-    Editor.removeMark(editor, format);
-  } else {
-    Editor.addMark(editor, format, true);
-  }
-};
-
-// Toggle a block (e.g., heading, list)
-const toggleBlock = (editor, format) => {
-  const isActive = isBlockActive(editor, format);
-  const isList = ["bulleted-list", "numbered-list"].includes(format);
-
-  Transforms.unwrapNodes(editor, {
-    match: (n) => ["bulleted-list", "numbered-list"].includes(n.type),
-    split: true,
-  });
-
-  const newProperties = {
-    type: isActive ? "paragraph" : isList ? "list-item" : format,
-  };
-
-  Transforms.setNodes(editor, newProperties);
-
-  if (!isActive && isList) {
-    const block = { type: format, children: [] };
-    Transforms.wrapNodes(editor, block);
-  }
-};
-
-// Custom Slate Editor component with paste handling
-const CustomEditor = ({ value, onChange, placeholder }) => {
-  const defaultValue = [{ type: "paragraph", children: [{ text: "" }] }];
-  const editorValue = Array.isArray(value) && value.length > 0 ? value : defaultValue;
-
-  const editor = useMemo(() => withHistory(withReact(createEditor())), []);
-
-  const renderElement = useCallback((props) => <Element {...props} />, []);
-  const renderLeaf = useCallback((props) => <Leaf {...props} />, []);
-
-  // Handle paste to normalize text and remove unwanted formatting
-  const handlePaste = (event) => {
-    event.preventDefault();
-    const pastedText = event.clipboardData.getData("text/plain");
-    const normalizedText = normalizeText(pastedText);
-
-    Transforms.insertText(editor, normalizedText, {
-      at: editor.selection || { anchor: { path: [0, 0], offset: 0 }, focus: { path: [0, 0], offset: 0 } },
-    });
-  };
-
-  return (
-    <div className="slate-editor border rounded-lg mb-4 bangla-text">
-      <Slate editor={editor} initialValue={editorValue} onChange={onChange}>
-        <div className="toolbar p-2 border-b bg-gray-100 rounded-t-lg flex flex-wrap gap-1">
-          <ToolbarButton format="bold" icon="B" tooltip="Bold (Ctrl+B)" />
-          <ToolbarButton format="italic" icon="I" tooltip="Italic (Ctrl+I)" />
-          <ToolbarButton format="underline" icon="U" tooltip="Underline (Ctrl+U)" />
-          <ToolbarButton format="strikethrough" icon="S" tooltip="Strikethrough" />
-          <ToolbarButton format="math" icon="∑" tooltip="Math Mode (Ctrl+M)" />
-          <ToolbarButton format="heading-one" label="H1" tooltip="Heading 1" />
-          <ToolbarButton format="heading-two" label="H2" tooltip="Heading 2" />
-          <ToolbarButton format="heading-three" label="H3" tooltip="Heading 3" />
-          <ToolbarButton format="bulleted-list" icon="•" tooltip="Bulleted List" />
-          <ToolbarButton format="numbered-list" icon="1." tooltip="Numbered List" />
-        </div>
-        <Editable
-          renderElement={renderElement}
-          renderLeaf={renderLeaf}
-          placeholder={placeholder}
-          className="p-3 min-h-[100px] max-h-[200px] overflow-y-auto bangla-text"
-          onPaste={handlePaste}
-          onKeyDown={(event) => {
-            if (event.ctrlKey || event.metaKey) {
-              switch (event.key) {
-                case "b":
-                  event.preventDefault();
-                  toggleMark(editor, "bold");
-                  break;
-                case "i":
-                  event.preventDefault();
-                  toggleMark(editor, "italic");
-                  break;
-                case "u":
-                  event.preventDefault();
-                  toggleMark(editor, "underline");
-                  break;
-                case "m":
-                  event.preventDefault();
-                  toggleMark(editor, "math");
-                  break;
-                default:
-                  return;
-              }
-            }
-          }}
-        />
-      </Slate>
-    </div>
-  );
-};
-
-// Serialize Slate content to HTML with normalization
-const serializeToHtml = (nodes) => {
-  if (!nodes || !Array.isArray(nodes)) {
-    return "";
-  }
-  return nodes
-    .map((node) => {
-      if (Text.isText(node)) {
-        let text = normalizeText(node.text);
-        if (node.math) return `<span class="mathjax">\\(${text}\\)</span>`;
-        if (node.bold) text = `<strong>${text}</strong>`;
-        if (node.italic) text = `<em>${text}</em>`;
-        if (node.underline) text = `<u>${text}</u>`;
-        if (node.strikethrough) text = `<del>${text}</del>`;
-        return text;
-      }
-
-      const children = serializeToHtml(node.children);
-      switch (node.type) {
-        case "heading-one":
-          return `<h1>${children}</h1>`;
-        case "heading-two":
-          return `<h2>${children}</h2>`;
-        case "heading-three":
-          return `<h3>${children}</h3>`;
-        case "bulleted-list":
-          return `<ul>${children}</ul>`;
-        case "numbered-list":
-          return `<ol>${children}</ol>`;
-        case "list-item":
-          return `<li>${children}</li>`;
-        default:
-          return `<p>${children}</p>`;
-      }
-    })
-    .join("");
-};
+const normalizeText = (text) => text.normalize("NFC");
 
 // Main CreateSQAdmin Component
 export default function CreateSQAdmin() {
   useEffect(() => {
-    (async function applyMathquillStyles() {
-      const { addStyles } = await import('react-mathquill');
+    (async () => {
+      const { addStyles } = await import("react-mathquill");
       addStyles();
     })();
   }, []);
+
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
   const [subjects, setSubjects] = useState([]);
@@ -271,13 +34,11 @@ export default function CreateSQAdmin() {
   const [selectedChapterName, setSelectedChapterName] = useState("");
   const [isMultipleSQs, setIsMultipleSQs] = useState(false);
 
-  const initialSlateValue = [{ type: "paragraph", children: [{ text: "" }] }];
-
   const [sqs, setSQs] = useState([
     {
       type: "জ্ঞানমূলক",
-      question: "",
-      answer: "",
+      question: "", // Changed from Slate object to empty string
+      answer: "",   // Changed from Slate object to empty string
       image: null,
       imageAlignment: "center",
       videoLink: "",
@@ -289,7 +50,6 @@ export default function CreateSQAdmin() {
       try {
         const res = await fetch("/api/sq");
         const data = await res.json();
-        console.log("Initial Classes Data:", data);
         setClasses(data);
       } catch (error) {
         console.error("Error fetching classes:", error);
@@ -315,7 +75,6 @@ export default function CreateSQAdmin() {
       try {
         const res = await fetch(`/api/sq?classNumber=${selectedClass}`);
         const data = await res.json();
-        console.log("API Response for classNumber", selectedClass, ":", data);
 
         if (data.length > 0) {
           const subjects = [...new Set(data.map((item) => item.subject))];
@@ -350,8 +109,8 @@ export default function CreateSQAdmin() {
       ...sqs,
       {
         type: "জ্ঞানমূলক",
-        question: initialSlateValue,
-        answer: initialSlateValue,
+        question: "", // Use empty string instead of Slate object
+        answer: "",   // Use empty string instead of Slate object
         image: null,
         imageAlignment: "center",
         videoLink: "",
@@ -428,8 +187,8 @@ export default function CreateSQAdmin() {
         "Chapter Number": 1,
         "Chapter Name": "Chapter 1",
         Type: "অনুধাবনমূলক",
-        Question: "শক্তি কীভাবে স্থানান্তরিত হয় তা ব্যাখ্যা কর।",
-        Answer: "শক্তি বিকিরণের মাধ্যমে স্থানান্তরিত হয়।",
+        Question: "\\frac{1}{2} + \\frac{1}{3} = ?",
+        Answer: "\\frac{5}{6}",
         "Image Alignment": "center",
         "Video Link": "",
       },
@@ -498,11 +257,12 @@ export default function CreateSQAdmin() {
     setChapters([]);
     setSelectedChapterNumber("");
     setSelectedChapterName("");
+    setIsMultipleSQs(false);
     setSQs([
       {
         type: "জ্ঞানমূলক",
-        question: initialSlateValue,
-        answer: initialSlateValue,
+        question: "", // Use empty string instead of Slate object
+        answer: "",   // Use empty string instead of Slate object
         image: null,
         imageAlignment: "center",
         videoLink: "",
@@ -522,15 +282,10 @@ export default function CreateSQAdmin() {
     formData.append("teacherEmail", "admin");
 
     sqs.forEach((sq, index) => {
-      const questionHtml = sq.question;
-      const answerHtml = sq.answer;
-
       formData.append(`sqs[${index}][type]`, sq.type);
-      formData.append(`sqs[${index}][question]`, questionHtml);
-      formData.append(`sqs[${index}][answer]`, answerHtml);
-      if (sq.image) {
-        formData.append(`sqs[${index}][image]`, sq.image);
-      }
+      formData.append(`sqs[${index}][question]`, sq.question);
+      formData.append(`sqs[${index}][answer]`, sq.answer);
+      if (sq.image) formData.append(`sqs[${index}][image]`, sq.image);
       formData.append(`sqs[${index}][imageAlignment]`, sq.imageAlignment);
       formData.append(`sqs[${index}][videoLink]`, sq.videoLink || "");
     });
@@ -543,32 +298,22 @@ export default function CreateSQAdmin() {
 
       const responseData = await response.json();
       if (response.ok) {
-        toast.success(`✅ ${sqs.length}টি সংক্ষিপ্ত প্রশ্ন সফলভাবে যোগ করা হয়েছে!`, {
-          position: "top-right",
-        });
+        toast.success(`✅ ${sqs.length}টি সংক্ষিপ্ত প্রশ্ন সফলভাবে যোগ করা হয়েছে!`);
         resetForm();
       } else {
-        toast.error(`❌ ${responseData.error || "কিছু সমস্যা হয়েছে!"}`, {
-          position: "top-right",
-        });
+        toast.error(`❌ ${responseData.error || "কিছু সমস্যা হয়েছে!"}`);
       }
     } catch (error) {
       console.error("Submission error:", error);
-      toast.error("❌ সার্ভারের সাথে সংযোগে সমস্যা!", { position: "top-right" });
+      toast.error("❌ সার্ভারের সাথে সংযোগে সমস্যা!");
     }
   };
 
   return (
     <>
       <Head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap"
-          rel="stylesheet"
-        />
-        <script
-          src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_CHTML"
-          async
-        ></script>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap" rel="stylesheet" />
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/MathJax.js?config=TeX-MML-AM_CHTML" async></script>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 p-6">
         <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
@@ -619,9 +364,7 @@ export default function CreateSQAdmin() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-gray-700 font-semibold mb-1 bangla-text">
-                    ক্লাস
-                  </label>
+                  <label className="block text-gray-700 font-semibold mb-1 bangla-text">ক্লাস</label>
                   <select
                     className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                     value={selectedClass}
@@ -639,9 +382,7 @@ export default function CreateSQAdmin() {
 
                 {selectedClass && subjects.length > 0 && (
                   <div>
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
-                      বিষয়
-                    </label>
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">বিষয়</label>
                     <select
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={selectedSubject}
@@ -650,9 +391,7 @@ export default function CreateSQAdmin() {
                     >
                       <option value="">বিষয় নির্বাচন করুন</option>
                       {subjects.map((subject) => (
-                        <option key={subject} value={subject}>
-                          {subject}
-                        </option>
+                        <option key={subject} value={subject}>{subject}</option>
                       ))}
                     </select>
                   </div>
@@ -660,9 +399,7 @@ export default function CreateSQAdmin() {
 
                 {selectedSubject && subjectParts.length > 0 && (
                   <div>
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
-                      বিষয়ের অংশ
-                    </label>
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">বিষয়ের অংশ</label>
                     <select
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={selectedSubjectPart}
@@ -670,9 +407,7 @@ export default function CreateSQAdmin() {
                     >
                       <option value="">বিষয়ের অংশ (যদি থাকে)</option>
                       {subjectParts.map((part) => (
-                        <option key={part} value={part}>
-                          {part}
-                        </option>
+                        <option key={part} value={part}>{part}</option>
                       ))}
                     </select>
                   </div>
@@ -680,16 +415,12 @@ export default function CreateSQAdmin() {
 
                 {selectedSubject && chapters.length > 0 && (
                   <div>
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
-                      অধ্যায়
-                    </label>
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">অধ্যায়</label>
                     <select
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={selectedChapterNumber}
                       onChange={(e) => {
-                        const selected = chapters.find(
-                          (chap) => chap.chapterNumber === parseInt(e.target.value)
-                        );
+                        const selected = chapters.find((chap) => chap.chapterNumber === parseInt(e.target.value));
                         setSelectedChapterNumber(e.target.value);
                         setSelectedChapterName(selected?.chapterName || "");
                       }}
@@ -730,9 +461,7 @@ export default function CreateSQAdmin() {
                     সংক্ষিপ্ত প্রশ্ন {index + 1}
                   </h3>
                   <div>
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
-                      প্রশ্নের ধরণ
-                    </label>
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">প্রশ্নের ধরণ</label>
                     <select
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-4 bangla-text"
                       value={sq.type}
@@ -747,22 +476,18 @@ export default function CreateSQAdmin() {
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
-                      প্রশ্ন লিখুন
-                    </label>
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">প্রশ্ন লিখুন</label>
                     <EditableMathField
-                      latex="" // Set initial value or empty string
+                      latex={sq.question}
                       onChange={(mathField) => handleQuestionChange(index, mathField.latex())}
                       className="border p-2 rounded-md w-full text-lg"
                     />
                   </div>
 
                   <div className="mb-4">
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
-                      উত্তর লিখুন (ঐচ্ছিক)
-                    </label>
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">উত্তর লিখুন (ঐচ্ছিক)</label>
                     <EditableMathField
-                      latex="" // Set initial value or empty string
+                      latex={sq.answer}
                       onChange={(mathField) => handleAnswerChange(index, mathField.latex())}
                       className="border p-2 rounded-md w-full text-lg"
                     />
@@ -845,72 +570,69 @@ export default function CreateSQAdmin() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
+            className="bg-white rounded-xl shadow-lg p-8 border border-gray-200"
           >
-            <h2 className="text-xl font-bold text-blue-700 mb-4 bangla-text">প্রিভিউ</h2>
+            <h2 className="text-2xl font-bold text-blue-700 mb-6 bangla-text">প্রিভিউ</h2>
             {sqs.map((sq, index) => (
               <motion.div
                 key={index}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="mb-6 p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100"
+                className="mb-6 p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-100"
               >
-                <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-2 bangla-text">
-                  SQ
+                <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-3 bangla-text">
+                  SQ {index + 1}
                 </p>
-                <div className="text-lg font-semibold text-gray-900 mb-2 bangla-text">
-                  {sq.type ? `${sq.type}: ` : ""}
-                  <span
-                    dangerouslySetInnerHTML={{
-                      __html: serializeToHtml(sq.question) || "প্রশ্ন লিখুন",
-                    }}
-                  />
-                </div>
+                <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">
+                  প্রশ্ন: {sq.type}
+                </p>
+                <StaticMathField className="text-gray-700 mb-4">
+                  {sq.question || "প্রশ্ন লিখুন"}
+                </StaticMathField>
+
                 {sq.videoLink && (
                   <div className="mb-4">
                     <a
                       href={sq.videoLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="video-link bangla-text"
+                      className="text-blue-600 underline hover:text-blue-800 bangla-text"
                     >
                       📹 ভিডিও দেখুন
                     </a>
                   </div>
                 )}
+
                 {sq.image && (
                   <div
-                    className={`mb-4 ${sq.imageAlignment === "left"
-                        ? "text-left"
-                        : sq.imageAlignment === "right"
-                          ? "text-right"
-                          : "text-center"
-                      }`}
+                    className={`mb-4 ${sq.imageAlignment === "left" ? "text-left" : sq.imageAlignment === "right" ? "text-right" : "text-center"}`}
                   >
                     <img
                       src={URL.createObjectURL(sq.image)}
                       alt={`SQ preview ${index + 1}`}
-                      className="rounded-lg shadow-md max-h-48 inline-block"
+                      className="rounded-lg shadow-md max-h-64 inline-block"
                     />
                   </div>
                 )}
-                {sq.answer && sq.answer[0]?.children[0]?.text && (
-                  <div className="text-gray-700 mb-4 bangla-text">
-                    <span className="font-semibold">উত্তর:</span>{" "}
-                    <span
-                      dangerouslySetInnerHTML={{
-                        __html: serializeToHtml(sq.answer),
-                      }}
-                    />
+
+                {sq.answer && (
+                  <div className="text-gray-700 mb-4">
+                    <p className="font-semibold bangla-text">উত্তর:</p>
+                    <StaticMathField className="text-gray-700">
+                      {sq.answer || "উত্তর লিখুন"}
+                    </StaticMathField>
                   </div>
                 )}
-                <p className="text-sm text-gray-500 mt-3 bangla-text">
-                  Class: {selectedClass || "N/A"} | Subject: {selectedSubject || "N/A"} | Chapter:{" "}
-                  {selectedChapterName || "N/A"}
+
+                <p className="text-sm text-gray-500 mt-4 bangla-text">
+                  ক্লাস: {selectedClass || "N/A"} | বিষয়: {selectedSubject || "N/A"} | অংশ: {selectedSubjectPart || "N/A"} | অধ্যায়: {selectedChapterName || "N/A"}
                 </p>
               </motion.div>
             ))}
+            {sqs.length === 0 && (
+              <p className="text-gray-500 text-center text-lg bangla-text">প্রিভিউ দেখতে প্রশ্ন যোগ করুন</p>
+            )}
           </motion.div>
         </div>
       </div>
