@@ -10,6 +10,10 @@ import { createEditor, Editor, Transforms, Text } from "slate";
 import { Slate, Editable, withReact, useSlate } from "slate-react";
 import { withHistory } from "slate-history";
 
+//quilt
+import { addStyles, EditableMathField } from "react-mathquill";
+addStyles();
+
 // Normalize text to Unicode NFC
 const normalizeText = (text) => {
   return text.normalize("NFC");
@@ -102,9 +106,8 @@ const ToolbarButton = ({ format, icon, label, tooltip }) => {
         event.preventDefault();
         toggleFormat();
       }}
-      className={`px-2 py-1 mx-1 rounded ${
-        isActive ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
-      } hover:bg-blue-400 hover:text-white transition`}
+      className={`px-2 py-1 mx-1 rounded ${isActive ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"
+        } hover:bg-blue-400 hover:text-white transition`}
       title={tooltip}
     >
       {icon || label}
@@ -334,6 +337,17 @@ export default function CreateCQAdmin() {
   const [selectedSubjectPart, setSelectedSubjectPart] = useState("");
   const [cqType, setCQType] = useState("");
   const [isMultipleCQs, setIsMultipleCQs] = useState(false);
+  const [mathML, setMathML] = useState("");
+
+  const handleInput = (e) => {
+    const input = e.target.value;
+    try {
+      const math = katex.renderToString(input, { output: "mathml" });
+      setMathML(math);
+    } catch (err) {
+      console.error("KaTeX Error:", err);
+    }
+  };
 
   const initialSlateValue = [{ type: "paragraph", children: [{ text: "" }] }];
 
@@ -546,29 +560,29 @@ export default function CreateCQAdmin() {
             questions:
               row["CQ Type"] === "generalCQ"
                 ? [
-                    normalizeText(row["Knowledge Question"] || ""),
-                    normalizeText(row["Comprehension Question"] || ""),
-                    normalizeText(row["Application Question"] || ""),
-                    normalizeText(row["Higher Skills Question"] || ""),
-                  ]
+                  normalizeText(row["Knowledge Question"] || ""),
+                  normalizeText(row["Comprehension Question"] || ""),
+                  normalizeText(row["Application Question"] || ""),
+                  normalizeText(row["Higher Skills Question"] || ""),
+                ]
                 : [
-                    normalizeText(row["Knowledge Question"] || ""),
-                    normalizeText(row["Application Question"] || ""),
-                    normalizeText(row["Higher Skills Question"] || ""),
-                  ],
+                  normalizeText(row["Knowledge Question"] || ""),
+                  normalizeText(row["Application Question"] || ""),
+                  normalizeText(row["Higher Skills Question"] || ""),
+                ],
             answers:
               row["CQ Type"] === "generalCQ"
                 ? [
-                    normalizeText(row["Knowledge Answer"] || ""),
-                    normalizeText(row["Comprehension Answer"] || ""),
-                    normalizeText(row["Application Answer"] || ""),
-                    normalizeText(row["Higher Skills Answer"] || ""),
-                  ]
+                  normalizeText(row["Knowledge Answer"] || ""),
+                  normalizeText(row["Comprehension Answer"] || ""),
+                  normalizeText(row["Application Answer"] || ""),
+                  normalizeText(row["Higher Skills Answer"] || ""),
+                ]
                 : [
-                    normalizeText(row["Knowledge Answer"] || ""),
-                    normalizeText(row["Application Answer"] || ""),
-                    normalizeText(row["Higher Skills Answer"] || ""),
-                  ],
+                  normalizeText(row["Knowledge Answer"] || ""),
+                  normalizeText(row["Application Answer"] || ""),
+                  normalizeText(row["Higher Skills Answer"] || ""),
+                ],
             imageAlignment: row["Image Alignment"] || "center",
             videoLink: row["Video Link"] || "",
           }));
@@ -673,6 +687,7 @@ export default function CreateCQAdmin() {
       toast.error("❌ সার্ভারের সাথে সংযোগে সমস্যা!", { position: "top-right" });
     }
   };
+  const [latex, setLatex] = useState("");
 
   return (
     <>
@@ -1018,7 +1033,6 @@ export default function CreateCQAdmin() {
                     onChange={(value) => handlePassageChange(cqIndex, value)}
                     placeholder="🔹 অনুচ্ছেদ লিখুন"
                   />
-
                   <div className="mb-4">
                     <label className="block text-gray-700 font-semibold mb-2 bangla-text">
                       ভিডিও লিঙ্ক যুক্ত করুন (ঐচ্ছিক)
@@ -1073,10 +1087,10 @@ export default function CreateCQAdmin() {
                           {i === 0
                             ? "জ্ঞানমূলক প্রশ্ন"
                             : i === 1
-                            ? "অনুধাবনমূলক প্রশ্ন"
-                            : i === 2
-                            ? "প্রয়োগ প্রশ্ন"
-                            : "উচ্চতর দক্ষতা"}
+                              ? "অনুধাবনমূলক প্রশ্ন"
+                              : i === 2
+                                ? "প্রয়োগ প্রশ্ন"
+                                : "উচ্চতর দক্ষতা"}
                         </label>
                         <CustomEditor
                           value={question}
@@ -1085,10 +1099,10 @@ export default function CreateCQAdmin() {
                             i === 0
                               ? "জ্ঞানমূলক প্রশ্ন লিখুন"
                               : i === 1
-                              ? "অনুধাবনমূলক প্রশ্ন লিখুন"
-                              : i === 2
-                              ? "প্রয়োগ প্রশ্ন লিখুন"
-                              : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
+                                ? "অনুধাবনমূলক প্রশ্ন লিখুন"
+                                : i === 2
+                                  ? "প্রয়োগ প্রশ্ন লিখুন"
+                                  : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
                           }
                         />
                         <label className="block text-gray-700 font-semibold mb-2 bangla-text">
@@ -1108,6 +1122,13 @@ export default function CreateCQAdmin() {
                         <label className="block text-gray-700 font-semibold mb-2 bangla-text">
                           {i === 0 ? "জ্ঞানমূলক প্রশ্ন" : i === 1 ? "প্রয়োগ প্রশ্ন" : "উচ্চতর দক্ষতা"}
                         </label>
+                          <div className="bg-white shadow-md rounded-lg p-4 w-full max-w-lg">
+                            <EditableMathField
+                              latex={latex}
+                              onChange={(mathField) => setLatex(mathField.latex())}
+                              className="border p-2 rounded-md w-full text-lg"
+                            />
+                        </div>
                         <CustomEditor
                           value={question}
                           onChange={(value) => handleMathQuestionChange(cqIndex, i, value)}
@@ -1115,8 +1136,8 @@ export default function CreateCQAdmin() {
                             i === 0
                               ? "জ্ঞানমূলক প্রশ্ন লিখুন"
                               : i === 1
-                              ? "প্রয়োগ প্রশ্ন লিখুন"
-                              : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
+                                ? "প্রয়োগ প্রশ্ন লিখুন"
+                                : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
                           }
                         />
                         <label className="block text-gray-700 font-semibold mb-2 bangla-text">
@@ -1197,13 +1218,12 @@ export default function CreateCQAdmin() {
                 )}
                 {cq.image && (
                   <div
-                    className={`mb-4 ${
-                      cq.imageAlignment === "left"
-                        ? "text-left"
-                        : cq.imageAlignment === "right"
+                    className={`mb-4 ${cq.imageAlignment === "left"
+                      ? "text-left"
+                      : cq.imageAlignment === "right"
                         ? "text-right"
                         : "text-center"
-                    }`}
+                      }`}
                   >
                     <img
                       src={URL.createObjectURL(cq.image)}
