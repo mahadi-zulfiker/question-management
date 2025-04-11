@@ -8,14 +8,15 @@ import * as XLSX from "xlsx";
 import Head from "next/head";
 import dynamic from "next/dynamic";
 import { convert } from "mathml-to-latex";
+import { CKEditor } from "@ckeditor/ckeditor5-react";
+import DecoupledEditor from "@ckeditor/ckeditor5-build-decoupled-document";
 
 const EditableMathField = dynamic(() => import("react-mathquill").then((mod) => mod.EditableMathField), { ssr: false });
 const StaticMathField = dynamic(() => import("react-mathquill").then((mod) => mod.StaticMathField), { ssr: false });
 
-// Normalize text to Unicode NFC
+// Utility Functions (unchanged)
 const normalizeText = (text) => text.normalize("NFC");
 
-// Compute the Greatest Common Divisor (GCD) using Euclidean algorithm
 const gcd = (a, b) => {
   a = Math.abs(a);
   b = Math.abs(b);
@@ -27,7 +28,6 @@ const gcd = (a, b) => {
   return a;
 };
 
-// Simplify a fraction
 const simplifyFraction = (numerator, denominator) => {
   const divisor = gcd(numerator, denominator);
   return {
@@ -36,7 +36,6 @@ const simplifyFraction = (numerator, denominator) => {
   };
 };
 
-// Convert a repeating decimal to a fraction
 const repeatingDecimalToFraction = (decimalStr) => {
   const match = decimalStr.match(/^(\d*)\.(\d*?)(\d*?)̇$/);
   if (!match) return null;
@@ -44,7 +43,6 @@ const repeatingDecimalToFraction = (decimalStr) => {
   const wholePart = match[1] ? parseInt(match[1]) : 0;
   const nonRepeatingPart = match[2] || "";
   const repeatingPart = match[3] || "";
-
   const nonRepeatingLength = nonRepeatingPart.length;
   const repeatingLength = repeatingPart.length;
 
@@ -78,26 +76,18 @@ const repeatingDecimalToFraction = (decimalStr) => {
 };
 
 const cleanTextForLatex = (text) => {
-  // Step 1: Normalize text and replace special characters
   text = text.replace(/[\u00A0\u202F]/g, " ").replace(/\u2044/g, "/").normalize("NFC");
-
-  // Step 2: Normalize multiple spaces to single space
   text = text.replace(/\s+/g, " ");
-
-  // Step 3: Handle repeating decimals (e.g., "5.23457 ̇" where "7" has the dot)
   text = text.replace(/(\d*\.\d+)( ̇)+/g, (match, number) => {
     const parts = number.split(".");
     const wholePart = parts[0];
     const decimalPart = parts[1];
     const dotCount = (match.match(/ ̇/g) || []).length;
-
-    // The last 'dotCount' digits have the dot over them
     const repeatingStart = decimalPart.length - dotCount;
     const nonRepeatingPart = decimalPart.slice(0, repeatingStart > 0 ? repeatingStart : 0);
     const repeatingPart = decimalPart.slice(repeatingStart > 0 ? repeatingStart : 0);
 
     if (repeatingPart) {
-      // Apply \dot{} to each repeating digit individually
       const repeatingWithDots = repeatingPart
         .split("")
         .map((digit) => `\\dot{${digit}}`)
@@ -106,14 +96,10 @@ const cleanTextForLatex = (text) => {
     }
     return number;
   });
-
-  // Step 4: Add space between numbers and Bangla text
   text = text.replace(
     /(\d+\.\d*|\d+|\d*\.\d+\\dot\{\d+\})([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯])/g,
     "$1\\ $2"
   );
-
-  // Step 5: Wrap Bangla text in \text{}
   text = text.replace(
     /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
     (match) => {
@@ -125,8 +111,6 @@ const cleanTextForLatex = (text) => {
       return match;
     }
   );
-
-  // Step 6: Handle fractions and mixed numbers
   text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
     const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
     return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
@@ -135,8 +119,6 @@ const cleanTextForLatex = (text) => {
     const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
     return `\\frac{${numerator}}{${denominator}}`;
   });
-
-  // Step 7: Handle superscripts, roots, and symbols
   text = text.replace(/\^(\d+|\w+)/g, "^{$1}");
   text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
   text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
@@ -146,11 +128,9 @@ const cleanTextForLatex = (text) => {
   text = text.replace(/≥/g, "\\geq");
   text = text.replace(/≤/g, "\\leq");
   text = text.replace(/≠/g, "\\neq");
-
   return text;
 };
 
-// Function to extract fraction from HTML elements (e.g., <sup> and <sub>)
 const extractFractionFromHTML = (element) => {
   const sup = element.querySelector("sup");
   const sub = element.querySelector("sub");
@@ -164,7 +144,6 @@ const extractFractionFromHTML = (element) => {
   return null;
 };
 
-// Function to extract fraction from MathML <m:f> element
 const extractFractionFromMathML = (element) => {
   const fractionElements = Array.from(element.querySelectorAll("*")).filter(
     (el) => el.localName === "f" && el.namespaceURI === "http://schemas.microsoft.com/office/2004/12/omml"
@@ -184,7 +163,6 @@ const extractFractionFromMathML = (element) => {
   return null;
 };
 
-// Function to extract repeating decimal from MathML <m:acc> element
 const extractRepeatingDecimalFromMathML = (element) => {
   const accElements = Array.from(element.querySelectorAll("*")).filter(
     (el) => el.localName === "acc" && el.namespaceURI === "http://schemas.microsoft.com/office/2004/12/omml"
@@ -239,6 +217,7 @@ export default function CreateMCQAdmin() {
   const [selectedSubjectPart, setSelectedSubjectPart] = useState("");
   const [questionType, setQuestionType] = useState("general");
   const [isMultipleQuestions, setIsMultipleQuestions] = useState(false);
+  const [useRichText, setUseRichText] = useState(false); // Toggle for CKEditor
 
   const [questions, setQuestions] = useState([
     {
@@ -501,6 +480,12 @@ export default function CreateMCQAdmin() {
     }
   };
 
+  const handleRichTextChange = (qIndex, data) => {
+    const newQuestions = [...questions];
+    newQuestions[qIndex].question = data;
+    setQuestions(newQuestions);
+  };
+
   const downloadExcelTemplate = () => {
     const templateData = [
       {
@@ -685,6 +670,37 @@ export default function CreateMCQAdmin() {
     }
   };
 
+  const editorConfig = {
+    toolbar: {
+      items: [
+        "heading",
+        "fontFamily",
+        "fontSize",
+        "fontColor",
+        "bold",
+        "italic",
+        "underline",
+        "alignment",
+        "bulletedList",
+        "numberedList",
+        "imageUpload",
+        "insertTable",
+        "link",
+        "undo",
+        "redo",
+      ],
+    },
+    fontFamily: {
+      options: ["Noto Sans Bengali", "Kalpurush", "Arial", "Times New Roman"],
+      supportAllValues: true,
+    },
+    fontSize: {
+      options: [12, 14, 16, 18, "default", 22, 24],
+    },
+    placeholder: "রিচ টেক্সট প্রশ্ন লিখুন (LaTeX সমর্থিত, যেমন: \\frac{1}{2})",
+    pasteFromOffice: true,
+  };
+
   return (
     <>
       <Head>
@@ -776,6 +792,24 @@ export default function CreateMCQAdmin() {
             font-size: 1.2em !important;
             vertical-align: top !important;
           }
+          .ck-editor__editable {
+            min-height: 100px !important;
+            max-height: 200px !important;
+            overflow-y: auto !important;
+            font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
+            font-size: 16px !important;
+            line-height: 1.5 !important;
+            border: 1px solid #d1d5db !important;
+            border-radius: 6px !important;
+            padding: 10px !important;
+          }
+          .ck.ck-editor__top .ck-toolbar {
+            background: #f7fafc !important;
+            border: 1px solid #d1d5db !important;
+            border-bottom: none !important;
+            border-top-left-radius: 6px !important;
+            border-top-right-radius: 6px !important;
+          }
         `}</style>
       </Head>
       <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 p-6">
@@ -848,6 +882,18 @@ export default function CreateMCQAdmin() {
                   />
                   <label className="ml-2 text-gray-700 font-medium bangla-text">
                     একাধিক প্রশ্ন যোগ করুন
+                  </label>
+                </div>
+
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={useRichText}
+                    onChange={(e) => setUseRichText(e.target.checked)}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  />
+                  <label className="ml-2 text-gray-700 font-medium bangla-text">
+                    রিচ টেক্সট প্রশ্ন ব্যবহার করুন (CKEditor)
                   </label>
                 </div>
 
@@ -934,15 +980,38 @@ export default function CreateMCQAdmin() {
                   <h3 className="text-lg font-semibold text-gray-800 mb-3 bangla-text">
                     প্রশ্ন {qIndex + 1}
                   </h3>
-                  <EditableMathField
-                    latex={q.question}
-                    onChange={(mathField) => handleQuestionChange(qIndex, mathField.latex())}
-                    onPaste={(e) => handlePaste(qIndex, "question", null, e)}
-                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-4 bangla-text"
-                  />
-                  <p className="text-sm text-gray-500 mt-1 bangla-text">
-                    * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                  </p>
+                  {useRichText ? (
+                    <div className="mb-4 mt-6 p-5 bg-gray-50 rounded-lg shadow-sm border border-gray-200">
+                      <CKEditor
+                        editor={DecoupledEditor}
+                        config={editorConfig}
+                        data={q.question}
+                        onReady={(editor) => {
+                          const toolbarContainer = document.createElement("div");
+                          toolbarContainer.className = `ck-toolbar-container-${qIndex}`;
+                          editor.ui.view.editable.element.parentElement.prepend(toolbarContainer);
+                          toolbarContainer.appendChild(editor.ui.view.toolbar.element);
+                        }}
+                        onChange={(event, editor) => handleRichTextChange(qIndex, editor.getData())}
+                        onPaste={(event, editor) => handlePaste(qIndex, "question", null, event)}
+                      />
+                      <p className="text-sm text-gray-500 mt-1 bangla-text">
+                        * Word থেকে পেস্ট করলে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <EditableMathField
+                        latex={q.question}
+                        onChange={(mathField) => handleQuestionChange(qIndex, mathField.latex())}
+                        onPaste={(e) => handlePaste(qIndex, "question", null, e)}
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-4 bangla-text"
+                      />
+                      <p className="text-sm text-gray-500 mt-1 bangla-text">
+                        * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                      </p>
+                    </>
+                  )}
 
                   <div className="mb-4">
                     <label className="block text-gray-700 font-semibold mb-2 bangla-text">
@@ -1099,9 +1168,16 @@ export default function CreateMCQAdmin() {
                   MCQ {qIndex + 1}
                 </p>
                 <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">প্রশ্ন:</p>
-                <StaticMathField className="text-gray-700 mb-4">
-                  {q.question || "প্রশ্ন লিখুন"}
-                </StaticMathField>
+                {useRichText ? (
+                  <div
+                    className="text-gray-700 mb-4 bangla-text"
+                    dangerouslySetInnerHTML={{ __html: q.question || "প্রশ্ন লিখুন" }}
+                  />
+                ) : (
+                  <StaticMathField className="text-gray-700 mb-4">
+                    {q.question || "প্রশ্ন লিখুন"}
+                  </StaticMathField>
+                )}
 
                 {q.videoLink && (
                   <div className="mb-4">
