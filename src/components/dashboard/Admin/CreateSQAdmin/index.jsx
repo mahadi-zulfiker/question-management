@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -8,15 +8,15 @@ import * as XLSX from "xlsx";
 import Head from "next/head";
 import dynamic from "next/dynamic";
 import { convert } from "mathml-to-latex";
+import { CKEditor } from "@ckeditor/ckeditor5-react";
+import DecoupledEditor from "@ckeditor/ckeditor5-build-decoupled-document";
 
-// Dynamically import react-mathquill components
-const EditableMathField = dynamic(() => import("react-mathquill").then((mod) => mod.EditableMathField), { ssr: false });
+// Dynamically import react-mathquill for preview only
 const StaticMathField = dynamic(() => import("react-mathquill").then((mod) => mod.StaticMathField), { ssr: false });
 
-// Normalize text to Unicode NFC
+// Utility functions
 const normalizeText = (text) => text.normalize("NFC");
 
-// Compute the Greatest Common Divisor (GCD) using Euclidean algorithm
 const gcd = (a, b) => {
   a = Math.abs(a);
   b = Math.abs(b);
@@ -28,7 +28,6 @@ const gcd = (a, b) => {
   return a;
 };
 
-// Simplify a fraction
 const simplifyFraction = (numerator, denominator) => {
   const divisor = gcd(numerator, denominator);
   return {
@@ -37,7 +36,6 @@ const simplifyFraction = (numerator, denominator) => {
   };
 };
 
-// Convert a repeating decimal to a fraction
 const repeatingDecimalToFraction = (decimalStr) => {
   const match = decimalStr.match(/^(\d*)\.(\d*?)(\d*?)̇$/);
   if (!match) return null;
@@ -78,43 +76,33 @@ const repeatingDecimalToFraction = (decimalStr) => {
   return `\\frac{${simplifiedNum}}{${simplifiedDenom}}`;
 };
 
+// Updated cleanTextForLatex to use \rdot for repeating decimals
 const cleanTextForLatex = (text) => {
-  // Step 1: Normalize text and replace special characters
   text = text.replace(/[\u00A0\u202F]/g, " ").replace(/\u2044/g, "/").normalize("NFC");
-
-  // Step 2: Normalize multiple spaces to single space
   text = text.replace(/\s+/g, " ");
-
-  // Step 3: Handle repeating decimals (e.g., "5.23457 ̇" where "7" has the dot)
   text = text.replace(/(\d*\.\d+)( ̇)+/g, (match, number) => {
     const parts = number.split(".");
     const wholePart = parts[0];
     const decimalPart = parts[1];
     const dotCount = (match.match(/ ̇/g) || []).length;
-
-    // The last 'dotCount' digits have the dot over them
     const repeatingStart = decimalPart.length - dotCount;
     const nonRepeatingPart = decimalPart.slice(0, repeatingStart > 0 ? repeatingStart : 0);
     const repeatingPart = decimalPart.slice(repeatingStart > 0 ? repeatingStart : 0);
 
     if (repeatingPart) {
-      // Apply \dot{} to each repeating digit individually
+      // Use \rdot for each repeating digit to place the dot on the right
       const repeatingWithDots = repeatingPart
         .split("")
-        .map((digit) => `\\dot{${digit}}`)
+        .map((digit) => `${digit}\\rdot`)
         .join("");
       return `${wholePart}.${nonRepeatingPart}${repeatingWithDots}`;
     }
     return number;
   });
-
-  // Step 4: Add space between numbers and Bangla text
   text = text.replace(
-    /(\d+\.\d*|\d+|\d*\.\d+\\dot\{\d+\})([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯])/g,
+    /(\d+\.\d*|\d+|\d*\.\d+\\rdot)([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯])/g,
     "$1\\ $2"
   );
-
-  // Step 5: Wrap Bangla text in \text{}
   text = text.replace(
     /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
     (match) => {
@@ -126,8 +114,6 @@ const cleanTextForLatex = (text) => {
       return match;
     }
   );
-
-  // Step 6: Handle fractions and mixed numbers
   text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
     const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
     return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
@@ -136,8 +122,6 @@ const cleanTextForLatex = (text) => {
     const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
     return `\\frac{${numerator}}{${denominator}}`;
   });
-
-  // Step 7: Handle superscripts, roots, and symbols
   text = text.replace(/\^(\d+|\w+)/g, "^{$1}");
   text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
   text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
@@ -147,11 +131,9 @@ const cleanTextForLatex = (text) => {
   text = text.replace(/≥/g, "\\geq");
   text = text.replace(/≤/g, "\\leq");
   text = text.replace(/≠/g, "\\neq");
-
   return text;
 };
 
-// Function to extract fraction from HTML elements (e.g., <sup> and <sub>)
 const extractFractionFromHTML = (element) => {
   const sup = element.querySelector("sup");
   const sub = element.querySelector("sub");
@@ -165,7 +147,6 @@ const extractFractionFromHTML = (element) => {
   return null;
 };
 
-// Function to extract fraction from MathML <m:f> element
 const extractFractionFromMathML = (element) => {
   const fractionElements = Array.from(element.querySelectorAll("*")).filter(
     (el) => el.localName === "f" && el.namespaceURI === "http://schemas.microsoft.com/office/2004/12/omml"
@@ -173,10 +154,10 @@ const extractFractionFromMathML = (element) => {
   if (fractionElements.length > 0) {
     const fractionElement = fractionElements[0];
     const numerator = fractionElement
-      .querySelector("*[local-name()='num'] *[local-name()='r']")
+      .querySelector("*[localName='num'] *[localName='r']")
       ?.textContent.trim();
     const denominator = fractionElement
-      .querySelector("*[local-name()='den'] *[local-name()='r']")
+      .querySelector("*[localName='den'] *[localName='r']")
       ?.textContent.trim();
     if (numerator && denominator && !isNaN(numerator) && !isNaN(denominator)) {
       return `${numerator}/${denominator}`;
@@ -185,51 +166,90 @@ const extractFractionFromMathML = (element) => {
   return null;
 };
 
-// Function to extract repeating decimal from MathML <m:acc> element
 const extractRepeatingDecimalFromMathML = (element) => {
   const accElements = Array.from(element.querySelectorAll("*")).filter(
     (el) => el.localName === "acc" && el.namespaceURI === "http://schemas.microsoft.com/office/2004/12/omml"
   );
-  if (accElements.length > 0) {
-    let digits = "";
-    let dotCount = 0;
-    const parent = element.closest("*[local-name()='r']");
-    if (parent) {
-      const siblings = Array.from(parent.childNodes);
-      let currentDigits = "";
-      siblings.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE && node.localName === "acc") {
-          const chr = node.querySelector("*[local-name()='accPr'] *[local-name()='chr']")?.getAttribute("m:val");
-          const base = node.querySelector("*[local-name()='e'] *[local-name()='r']")?.textContent.trim();
-          if (chr === "̇" && base) {
-            currentDigits += base;
-            dotCount += 1;
-          }
-        } else if (node.nodeType === Node.ELEMENT_NODE && node.localName === "t") {
-          const text = node.textContent.trim();
-          if (text && /\d/.test(text)) {
-            currentDigits += text;
+
+  if (accElements.length === 0) return null;
+
+  let wholePart = "";
+  let decimalPart = "";
+  let repeatingPart = "";
+  let isRepeating = false;
+
+  const parent = element.closest("*[localName='r']");
+  if (!parent) return null;
+
+  const siblings = Array.from(parent.childNodes);
+  let currentText = "";
+
+  siblings.forEach((node) => {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.localName === "t") {
+        const text = node.textContent.trim();
+        if (text) {
+          if (!isRepeating) {
+            if (text.includes(".")) {
+              const [whole, decimal] = text.split(".");
+              wholePart = whole || "0";
+              decimalPart += decimal || "";
+            } else {
+              if (decimalPart) {
+                decimalPart += text;
+              } else {
+                wholePart += text;
+              }
+            }
+          } else {
+            repeatingPart += text;
           }
         }
-      });
-      digits = currentDigits;
+      } else if (node.localName === "acc") {
+        const chr = node.querySelector("*[localName='accPr'] *[localName='chr']")?.getAttribute("m:val");
+        const base = node.querySelector("*[localName='e'] *[localName='r']")?.textContent.trim();
+        if (chr === "̇" && base) {
+          if (!isRepeating) {
+            isRepeating = true;
+          }
+          repeatingPart += base;
+        }
+      }
     }
-    if (digits) {
-      return `${digits}${dotCount > 0 ? " ̇".repeat(dotCount) : ""}`;
-    }
-  }
-  return null;
+  });
+
+  if (!wholePart && !decimalPart && !repeatingPart) return null;
+
+  const dotCount = repeatingPart.length;
+  if (dotCount === 0) return null;
+
+  const result = `${wholePart || "0"}${decimalPart || repeatingPart ? "." : ""}${decimalPart}${repeatingPart}${" ̇".repeat(dotCount)}`;
+  return result;
 };
 
-// Main CreateSQAdmin Component
-export default function CreateSQAdmin() {
-  useEffect(() => {
-    (async () => {
-      const { addStyles } = await import("react-mathquill");
-      addStyles();
-    })();
-  }, []);
+const extractMatrixFromMathML = (element) => {
+  const mtable = element.querySelector("mtable");
+  if (!mtable) return null;
 
+  const rows = Array.from(mtable.querySelectorAll("mtr"));
+  if (rows.length === 0) return null;
+
+  const matrixRows = rows.map((row) => {
+    const cells = Array.from(row.querySelectorAll("mtd"));
+    return cells
+      .map((cell) => {
+        const content = cell.textContent.trim();
+        if (!content) return "0"; // Handle empty cells
+        return content;
+      })
+      .join(" & ");
+  });
+
+  const matrixLatex = `\\begin{bmatrix} ${matrixRows.join(" \\\\ ")} \\end{bmatrix}`;
+  return matrixLatex;
+};
+
+export default function CreateSQAdmin() {
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
   const [subjects, setSubjects] = useState([]);
@@ -252,6 +272,18 @@ export default function CreateSQAdmin() {
     },
   ]);
 
+  // Load MathJax
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js";
+    script.async = true;
+    document.head.appendChild(script);
+    return () => {
+      document.head.removeChild(script);
+    };
+  }, []);
+
+  // Fetch classes
   useEffect(() => {
     async function fetchClasses() {
       try {
@@ -265,6 +297,7 @@ export default function CreateSQAdmin() {
     fetchClasses();
   }, []);
 
+  // Fetch class data
   useEffect(() => {
     async function fetchClassData() {
       if (!selectedClass) {
@@ -329,18 +362,6 @@ export default function CreateSQAdmin() {
     setSQs(newSQs);
   };
 
-  const handleQuestionChange = (index, value) => {
-    const newSQs = [...sqs];
-    newSQs[index].question = value;
-    setSQs(newSQs);
-  };
-
-  const handleAnswerChange = (index, value) => {
-    const newSQs = [...sqs];
-    newSQs[index].answer = value;
-    setSQs(newSQs);
-  };
-
   const handleImageChange = (index, e) => {
     const newSQs = [...sqs];
     newSQs[index].image = e.target.files[0];
@@ -359,10 +380,7 @@ export default function CreateSQAdmin() {
     setSQs(newSQs);
   };
 
-  const handlePaste = (index, fieldType, e) => {
-    e.preventDefault();
-
-    const clipboardData = e.clipboardData;
+  const handlePaste = (index, fieldType, editor, clipboardData) => {
     let pastedData = "";
 
     const mathml = clipboardData.getData("application/mathml+xml");
@@ -370,6 +388,7 @@ export default function CreateSQAdmin() {
       try {
         pastedData = convert(mathml);
       } catch (error) {
+        console.error("MathML conversion error:", error);
         toast.error("❌ MathML প্রক্রিয়া করা যায়নি। দয়া করে LaTeX ফরম্যাটে লিখুন।");
       }
     }
@@ -383,9 +402,15 @@ export default function CreateSQAdmin() {
         const mathmlElement = doc.querySelector("math");
         if (mathmlElement) {
           try {
-            const mathmlString = new XMLSerializer().serializeToString(mathmlElement);
-            pastedData = convert(mathmlString);
+            const matrixLatex = extractMatrixFromMathML(mathmlElement);
+            if (matrixLatex) {
+              pastedData = matrixLatex;
+            } else {
+              const mathmlString = new XMLSerializer().serializeToString(mathmlElement);
+              pastedData = convert(mathmlString);
+            }
           } catch (error) {
+            console.error("HTML MathML conversion error:", error);
             toast.error("❌ HTML থেকে MathML প্রক্রিয়া করা যায়নি। দয়া করে LaTeX ফরম্যাটে লিখুন।");
           }
         } else {
@@ -444,14 +469,12 @@ export default function CreateSQAdmin() {
                 } else {
                   const repeatingDecimal = extractRepeatingDecimalFromMathML(node);
                   if (repeatingDecimal) {
-                    const cleanRepeating = repeatingDecimal.replace(/( ̇)+$/, "").replace(/ ̇/g, "");
                     if (currentNumber) {
-                      currentNumber += cleanRepeating;
-                    } else {
-                      currentNumber = cleanRepeating;
+                      currentNumber = "";
                     }
+                    textParts.push(repeatingDecimal);
                   } else {
-                    if (node.tagName === "SPAN" && node.style.fontFamily.includes("Cambria Math")) {
+                    if (node.tagName === "SPAN" && node.style.fontFamily?.includes("Cambria Math")) {
                       const text = node.textContent.trim();
                       if (text) {
                         if (currentNumber && /[\d.]/.test(text)) {
@@ -478,7 +501,8 @@ export default function CreateSQAdmin() {
           }
           const extractedText = textParts.join(" ").trim();
 
-          const looksIncomplete = extractedText.match(/^\d+$/) || (!extractedText.includes("/") && !extractedText.includes("̇"));
+          const looksIncomplete =
+            extractedText.match(/^\d+$/) || (!extractedText.includes("/") && !extractedText.includes("̇"));
           if (extractedText && !looksIncomplete) {
             pastedData = cleanTextForLatex(extractedText);
           }
@@ -502,6 +526,7 @@ export default function CreateSQAdmin() {
         newSQs[index].answer = pastedData;
       }
       setSQs(newSQs);
+      editor.setData(pastedData);
     } else {
       toast.error("❌ পেস্ট করা ডেটা প্রক্রিয়া করা যায়নি। দয়া করে LaTeX ফরম্যাটে লিখুন।");
     }
@@ -661,79 +686,130 @@ export default function CreateSQAdmin() {
     }
   };
 
+  const editorConfig = {
+    toolbar: {
+      items: [
+        "heading",
+        "|",
+        "fontFamily",
+        "fontSize",
+        "fontColor",
+        "|",
+        "bold",
+        "italic",
+        "underline",
+        "|",
+        "alignment",
+        "|",
+        "bulletedList",
+        "numberedList",
+        "|",
+        "imageUpload",
+        "insertTable",
+        "link",
+        "|",
+        "undo",
+        "redo",
+      ],
+    },
+    fontFamily: {
+      options: ["Noto Sans Bengali", "Arial", "Times New Roman"],
+      supportAllValues: true,
+    },
+    fontSize: {
+      options: [12, 14, 16, 18, "default", 22, 24],
+    },
+    image: {
+      toolbar: ["imageTextAlternative", "imageStyle:inline", "imageStyle:block", "imageStyle:side"],
+    },
+    table: {
+      contentToolbar: ["tableColumn", "tableRow", "mergeTableCells"],
+    },
+    placeholder: "এখানে আপনার বিষয়বস্তু লিখুন বা পেস্ট করুন...",
+    pasteFromOffice: true,
+  };
+
   return (
     <>
       <Head>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet" />
-        <script>
-          {`
-            MathJax = {
-              tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                tags: 'ams',
-              },
-              chtml: {
-                scale: 1.1,
-                mtextInheritFont: true,
-              }
-            };
-          `}
-        </script>
-        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              MathJax = {
+                tex: {
+                  inlineMath: [['$', '$'], ['\\(', '\\)']],
+                  tags: 'ams',
+                  macros: {
+                    rdot: "{\\\\mathrel{\\\\dot{\\\\hphantom{0}}}}"
+                  }
+                },
+                chtml: {
+                  scale: 1.1,
+                  mtextInheritFont: true,
+                }
+              };
+            `,
+          }}
+        />
       </Head>
       <style jsx global>{`
-        .bangla-text {
-          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-          direction: ltr;
-          unicode-bidi: embed;
-        }
-
-        .mq-editable-field {
-          min-height: 50px !important;
-          height: auto !important;
+        .ck-editor__editable {
+          min-height: 150px !important;
+          max-height: 300px !important;
           overflow-y: auto !important;
-          max-height: 200px !important;
-          white-space: pre-wrap !important;
-          word-wrap: break-word !important;
-          padding: 12px !important;
-          box-sizing: border-box !important;
-          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
+          font-family: var(--font-noto-bengali), sans-serif !important;
           font-size: 18px !important;
           line-height: 1.5 !important;
           border: 1px solid #d1d5db !important;
           border-radius: 6px !important;
+          padding: 12px !important;
           box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
         }
-
-        .mq-editable-field .mq-root-block {
+        .ck.ck-editor__top .ck-toolbar {
+          background: #f7fafc !important;
+          border: 1px solid #d1d5db !important;
+          border-bottom: none !important;
+          border-top-left-radius: 6px !important;
+          border-top-right-radius: 6px !important;
+        }
+        .ck-content {
+          font-family: var(--font-noto-bengali), sans-serif !important;
           white-space: pre-wrap !important;
           word-wrap: break-word !important;
-          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
         }
-
-        .mq-static-field {
-          white-space: pre-wrap !important;
-          word-wrap: break-word !important;
-          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-          font-size: 18px !important;
-          line-height: 1.5 !important;
+        .ck-content p {
+          margin: 0 0 1em !important;
         }
-
-        .MathJax .mtext {
-          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-          white-space: pre-wrap !important;
-          margin-right: 0.25em !important;
-          margin-left: 0.25em !important;
+        .bangla-text {
+          font-family: var(--font-noto-bengali), sans-serif !important;
         }
-
-        .MathJax .mspace {
-          width: 0.5em !important;
+        .preview-section {
+          margin-bottom: 1.5rem;
+          overflow-x: auto; /* Allow horizontal scrolling if content overflows */
+          max-width: 100%; /* Prevent overflow beyond container */
+          word-wrap: break-word; /* Ensure text wraps within the container */
         }
-
-        .MathJax .mo {
-          font-size: 1.2em !important;
-          vertical-align: top !important;
+        .preview-section .question-content,
+        .preview-section .answer-content {
+          margin-top: 0.5rem;
+          margin-bottom: 0.5rem;
+          display: block;
+          white-space: normal; /* Allow text to wrap */
+        }
+        .preview-section .math-content {
+          display: inline; /* Default to inline for math content */
+          vertical-align: middle; /* Align math content with surrounding text */
+          margin: 0 0.2rem; /* Small margin for spacing */
+        }
+        .preview-section .math-content.block {
+          display: block; /* Use block display for standalone math expressions */
+          margin: 0.5rem 0;
+          text-align: center; /* Center block math expressions */
+        }
+        .preview-section img {
+          max-width: 100%; /* Ensure images don't overflow */
+          height: auto;
         }
       `}</style>
       <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 p-6">
@@ -897,11 +973,26 @@ export default function CreateSQAdmin() {
 
                   <div className="mb-4">
                     <label className="block text-gray-700 font-semibold mb-1 bangla-text">প্রশ্ন লিখুন</label>
-                    <EditableMathField
-                      latex={sq.question}
-                      onChange={(mathField) => handleQuestionChange(index, mathField.latex())}
-                      onPaste={(e) => handlePaste(index, "question", e)}
-                      className="border p-2 rounded-md w-full text-lg"
+                    <CKEditor
+                      editor={DecoupledEditor}
+                      config={editorConfig}
+                      data={sq.question}
+                      onReady={(editor) => {
+                        const toolbarContainer = document.createElement("div");
+                        toolbarContainer.className = "ck-toolbar-container";
+                        editor.ui.view.editable.element.parentElement.prepend(toolbarContainer);
+                        toolbarContainer.appendChild(editor.ui.view.toolbar.element);
+                      }}
+                      onChange={(event, editor) => {
+                        const data = editor.getData();
+                        const newSQs = [...sqs];
+                        newSQs[index].question = data;
+                        setSQs(newSQs);
+                      }}
+                      onPaste={(event, editor) => {
+                        const clipboardData = event.data.dataTransfer;
+                        handlePaste(index, "question", editor, clipboardData);
+                      }}
                     />
                     <p className="text-sm text-gray-500 mt-1 bangla-text">
                       * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
@@ -910,11 +1001,26 @@ export default function CreateSQAdmin() {
 
                   <div className="mb-4">
                     <label className="block text-gray-700 font-semibold mb-1 bangla-text">উত্তর লিখুন (ঐচ্ছিক)</label>
-                    <EditableMathField
-                      latex={sq.answer}
-                      onChange={(mathField) => handleAnswerChange(index, mathField.latex())}
-                      onPaste={(e) => handlePaste(index, "answer", e)}
-                      className="border p-2 rounded-md w-full text-lg"
+                    <CKEditor
+                      editor={DecoupledEditor}
+                      config={editorConfig}
+                      data={sq.answer}
+                      onReady={(editor) => {
+                        const toolbarContainer = document.createElement("div");
+                        toolbarContainer.className = "ck-toolbar-container";
+                        editor.ui.view.editable.element.parentElement.prepend(toolbarContainer);
+                        toolbarContainer.appendChild(editor.ui.view.toolbar.element);
+                      }}
+                      onChange={(event, editor) => {
+                        const data = editor.getData();
+                        const newSQs = [...sqs];
+                        newSQs[index].answer = data;
+                        setSQs(newSQs);
+                      }}
+                      onPaste={(event, editor) => {
+                        const clipboardData = event.data.dataTransfer;
+                        handlePaste(index, "answer", editor, clipboardData);
+                      }}
                     />
                     <p className="text-sm text-gray-500 mt-1 bangla-text">
                       * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
@@ -1000,63 +1106,97 @@ export default function CreateSQAdmin() {
             className="bg-white rounded-xl shadow-lg p-8 border border-gray-200"
           >
             <h2 className="text-2xl font-bold text-blue-700 mb-6 bangla-text">প্রিভিউ</h2>
-            {sqs.map((sq, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mb-6 p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-100"
-              >
-                <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-3 bangla-text">
-                  SQ <span>{index + 1}</span>
-                </p>
-                <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text" style={{ padding: '0.25rem 0' }}>
-                  প্রশ্ন: <span>{sq.type}</span>
-                </p>
-                <StaticMathField className="text-gray-700 mb-4">
-                  {sq.question || "প্রশ্ন লিখুন"}
-                </StaticMathField>
+            {sqs.map((sq, index) => {
+              // Helper function to determine if the content should be block or inline
+              const shouldRenderMathAsBlock = (content) => {
+                // If the content is a standalone math expression (e.g., no surrounding text), render as block
+                const trimmedContent = content.trim();
+                return (
+                  trimmedContent.startsWith("\\") &&
+                  trimmedContent.endsWith("}") &&
+                  !trimmedContent.includes(" ") // Simple heuristic: no spaces means likely a single expression
+                );
+              };
 
-                {sq.videoLink && (
-                  <div className="mb-4">
-                    <a
-                      href={sq.videoLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 underline hover:text-blue-800 bangla-text"
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="preview-section mb-6 p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-100"
+                >
+                  <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-3 bangla-text">
+                    SQ <span>{index + 1}</span>
+                  </p>
+                  <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">
+                    প্রশ্ন: <span>{sq.type}</span>
+                  </p>
+                  <div className="text-gray-700 question-content bangla-text">
+                    {sq.question.includes("\\") ? (
+                      <StaticMathField
+                        className={`math-content ${shouldRenderMathAsBlock(sq.question) ? "block" : ""}`}
+                      >
+                        {sq.question}
+                      </StaticMathField>
+                    ) : (
+                      <div dangerouslySetInnerHTML={{ __html: sq.question }} />
+                    )}
+                  </div>
+
+                  {sq.videoLink && (
+                    <div className="mb-4">
+                      <a
+                        href={sq.videoLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 underline hover:text-blue-800 bangla-text"
+                      >
+                        📹 ভিডিও দেখুন
+                      </a>
+                    </div>
+                  )}
+
+                  {sq.image && (
+                    <div
+                      className={`mb-4 ${
+                        sq.imageAlignment === "left"
+                          ? "text-left"
+                          : sq.imageAlignment === "right"
+                          ? "text-right"
+                          : "text-center"
+                      }`}
                     >
-                      📹 ভিডিও দেখুন
-                    </a>
-                  </div>
-                )}
+                      <img
+                        src={URL.createObjectURL(sq.image)}
+                        alt={`SQ preview ${index + 1}`}
+                        className="rounded-lg shadow-md max-h-64 inline-block"
+                      />
+                    </div>
+                  )}
 
-                {sq.image && (
-                  <div
-                    className={`mb-4 ${sq.imageAlignment === "left" ? "text-left" : sq.imageAlignment === "right" ? "text-right" : "text-center"}`}
-                  >
-                    <img
-                      src={URL.createObjectURL(sq.image)}
-                      alt={`SQ preview ${index + 1}`}
-                      className="rounded-lg shadow-md max-h-64 inline-block"
-                    />
-                  </div>
-                )}
+                  {sq.answer && (
+                    <div className="text-gray-700 answer-content">
+                      <p className="font-semibold bangla-text">উত্তর:</p>
+                      {sq.answer.includes("\\") ? (
+                        <StaticMathField
+                          className={`math-content ${shouldRenderMathAsBlock(sq.answer) ? "block" : ""}`}
+                        >
+                          {sq.answer}
+                        </StaticMathField>
+                      ) : (
+                        <div dangerouslySetInnerHTML={{ __html: sq.answer }} />
+                      )}
+                    </div>
+                  )}
 
-                {sq.answer && (
-                  <div className="text-gray-700 mb-4">
-                    <p className="font-semibold bangla-text">উত্তর:</p>
-                    <StaticMathField className="text-gray-700">
-                      {sq.answer || "উত্তর লিখুন"}
-                    </StaticMathField>
-                  </div>
-                )}
-
-                <p className="text-sm text-gray-500 mt-4 bangla-text">
-                  ক্লাস: <span>{selectedClass || "N/A"}</span> | বিষয়: <span>{selectedSubject || "N/A"}</span> | অংশ: <span>{selectedSubjectPart || "N/A"}</span> | অধ্যায়: <span>{selectedChapterName || "N/A"}</span>
-                </p>
-              </motion.div>
-            ))}
+                  <p className="text-sm text-gray-500 mt-4 bangla-text">
+                    ক্লাস: <span>{selectedClass || "N/A"}</span> | বিষয়: <span>{selectedSubject || "N/A"}</span> | অংশ:{" "}
+                    <span>{selectedSubjectPart || "N/A"}</span> | অধ্যায়: <span>{selectedChapterName || "N/A"}</span>
+                  </p>
+                </motion.div>
+              );
+            })}
             {sqs.length === 0 && (
               <p className="text-gray-500 text-center text-lg bangla-text">প্রিভিউ দেখতে প্রশ্ন যোগ করুন</p>
             )}

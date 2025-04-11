@@ -6,19 +6,13 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from "xlsx";
 import Head from "next/head";
-import { createEditor, Editor, Transforms, Text } from "slate";
-import { Slate, Editable, withReact, useSlate } from "slate-react";
-import { withHistory } from "slate-history";
-import dynamic from "next/dynamic";
+import { CKEditor } from "@ckeditor/ckeditor5-react";
+import DecoupledEditor from "@ckeditor/ckeditor5-build-decoupled-document";
 import { convert } from "mathml-to-latex";
 
-const EditableMathField = dynamic(() => import("react-mathquill").then((mod) => mod.EditableMathField), { ssr: false });
-const StaticMathField = dynamic(() => import("react-mathquill").then((mod) => mod.StaticMathField), { ssr: false });
-
-// Normalize text to Unicode NFC
+// Utility Functions (unchanged from your original)
 const normalizeText = (text) => text.normalize("NFC");
 
-// Compute the Greatest Common Divisor (GCD) using Euclidean algorithm
 const gcd = (a, b) => {
   a = Math.abs(a);
   b = Math.abs(b);
@@ -30,7 +24,6 @@ const gcd = (a, b) => {
   return a;
 };
 
-// Simplify a fraction
 const simplifyFraction = (numerator, denominator) => {
   const divisor = gcd(numerator, denominator);
   return {
@@ -39,7 +32,6 @@ const simplifyFraction = (numerator, denominator) => {
   };
 };
 
-// Convert a repeating decimal to a fraction
 const repeatingDecimalToFraction = (decimalStr) => {
   const match = decimalStr.match(/^(\d*)\.(\d*?)(\d*?)̇$/);
   if (!match) return null;
@@ -47,7 +39,6 @@ const repeatingDecimalToFraction = (decimalStr) => {
   const wholePart = match[1] ? parseInt(match[1]) : 0;
   const nonRepeatingPart = match[2] || "";
   const repeatingPart = match[3] || "";
-
   const nonRepeatingLength = nonRepeatingPart.length;
   const repeatingLength = repeatingPart.length;
 
@@ -81,42 +72,30 @@ const repeatingDecimalToFraction = (decimalStr) => {
 };
 
 const cleanTextForLatex = (text) => {
-  // Step 1: Normalize text and replace special characters
   text = text.replace(/[\u00A0\u202F]/g, " ").replace(/\u2044/g, "/").normalize("NFC");
-
-  // Step 2: Normalize multiple spaces to single space
   text = text.replace(/\s+/g, " ");
-
-  // Step 3: Handle repeating decimals (e.g., "5.23457 ̇" where "7" has the dot)
   text = text.replace(/(\d*\.\d+)( ̇)+/g, (match, number) => {
     const parts = number.split(".");
     const wholePart = parts[0];
     const decimalPart = parts[1];
     const dotCount = (match.match(/ ̇/g) || []).length;
-
-    // The last 'dotCount' digits have the dot over them
     const repeatingStart = decimalPart.length - dotCount;
     const nonRepeatingPart = decimalPart.slice(0, repeatingStart > 0 ? repeatingStart : 0);
     const repeatingPart = decimalPart.slice(repeatingStart > 0 ? repeatingStart : 0);
 
     if (repeatingPart) {
-      // Apply \dot{} to each repeating digit individually
       const repeatingWithDots = repeatingPart
         .split("")
-        .map((digit) => `\\dot{${digit}}`)
+        .map((digit) => `${digit}\\rdot`)
         .join("");
       return `${wholePart}.${nonRepeatingPart}${repeatingWithDots}`;
     }
     return number;
   });
-
-  // Step 4: Add space between numbers and Bangla text
   text = text.replace(
-    /(\d+\.\d*|\d+|\d*\.\d+\\dot\{\d+\})([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯])/g,
+    /(\d+\.\d*|\d+|\d*\.\d+\\rdot)([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯])/g,
     "$1\\ $2"
   );
-
-  // Step 5: Wrap Bangla text in \text{}
   text = text.replace(
     /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
     (match) => {
@@ -128,8 +107,6 @@ const cleanTextForLatex = (text) => {
       return match;
     }
   );
-
-  // Step 6: Handle fractions and mixed numbers
   text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
     const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
     return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
@@ -138,8 +115,6 @@ const cleanTextForLatex = (text) => {
     const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
     return `\\frac{${numerator}}{${denominator}}`;
   });
-
-  // Step 7: Handle superscripts, roots, and symbols
   text = text.replace(/\^(\d+|\w+)/g, "^{$1}");
   text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
   text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
@@ -149,11 +124,9 @@ const cleanTextForLatex = (text) => {
   text = text.replace(/≥/g, "\\geq");
   text = text.replace(/≤/g, "\\leq");
   text = text.replace(/≠/g, "\\neq");
-
   return text;
 };
 
-// Function to extract fraction from HTML elements (e.g., <sup> and <sub>)
 const extractFractionFromHTML = (element) => {
   const sup = element.querySelector("sup");
   const sub = element.querySelector("sub");
@@ -167,7 +140,6 @@ const extractFractionFromHTML = (element) => {
   return null;
 };
 
-// Function to extract fraction from MathML <m:f> element
 const extractFractionFromMathML = (element) => {
   const fractionElements = Array.from(element.querySelectorAll("*")).filter(
     (el) => el.localName === "f" && el.namespaceURI === "http://schemas.microsoft.com/office/2004/12/omml"
@@ -175,10 +147,10 @@ const extractFractionFromMathML = (element) => {
   if (fractionElements.length > 0) {
     const fractionElement = fractionElements[0];
     const numerator = fractionElement
-      .querySelector("*[local-name()='num'] *[local-name()='r']")
+      .querySelector("*[localName='num'] *[localName='r']")
       ?.textContent.trim();
     const denominator = fractionElement
-      .querySelector("*[local-name()='den'] *[local-name()='r']")
+      .querySelector("*[localName='den'] *[localName='r']")
       ?.textContent.trim();
     if (numerator && denominator && !isNaN(numerator) && !isNaN(denominator)) {
       return `${numerator}/${denominator}`;
@@ -187,216 +159,118 @@ const extractFractionFromMathML = (element) => {
   return null;
 };
 
-// Function to extract repeating decimal from MathML <m:acc> element
 const extractRepeatingDecimalFromMathML = (element) => {
   const accElements = Array.from(element.querySelectorAll("*")).filter(
     (el) => el.localName === "acc" && el.namespaceURI === "http://schemas.microsoft.com/office/2004/12/omml"
   );
-  if (accElements.length > 0) {
-    let digits = "";
-    let dotCount = 0;
-    const parent = element.closest("*[local-name()='r']");
-    if (parent) {
-      const siblings = Array.from(parent.childNodes);
-      let currentDigits = "";
-      siblings.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE && node.localName === "acc") {
-          const chr = node.querySelector("*[local-name()='accPr'] *[local-name()='chr']")?.getAttribute("m:val");
-          const base = node.querySelector("*[local-name()='e'] *[local-name()='r']")?.textContent.trim();
-          if (chr === "̇" && base) {
-            currentDigits += base;
-            dotCount += 1;
-          }
-        } else if (node.nodeType === Node.ELEMENT_NODE && node.localName === "t") {
-          const text = node.textContent.trim();
-          if (text && /\d/.test(text)) {
-            currentDigits += text;
-          }
-        }
-      });
-      digits = currentDigits;
-    }
-    if (digits) {
-      return `${digits}${dotCount > 0 ? " ̇".repeat(dotCount) : ""}`;
-    }
-  }
-  return null;
-};
+  if (accElements.length === 0) return null;
 
-// Custom Leaf component
-const Leaf = ({ attributes, children, leaf }) => {
-  let styledChildren = children;
-  if (leaf.math) {
-    return <span {...attributes} className="mathjax" dangerouslySetInnerHTML={{ __html: `\\(${leaf.text}\\)` }} />;
-  }
-  if (leaf.bold) styledChildren = <strong>{styledChildren}</strong>;
-  if (leaf.italic) styledChildren = <em>{styledChildren}</em>;
-  if (leaf.underline) styledChildren = <u>{styledChildren}</u>;
-  if (leaf.strikethrough) styledChildren = <del>{styledChildren}</del>;
-  return <span {...attributes} className="bangla-text">{styledChildren}</span>;
-};
+  let wholePart = "";
+  let decimalPart = "";
+  let repeatingPart = "";
+  let isRepeating = false;
 
-// Custom Element component
-const Element = ({ attributes, children, element }) => {
-  switch (element.type) {
-    case "bulleted-list": return <ul {...attributes} className="list-disc pl-5">{children}</ul>;
-    case "numbered-list": return <ol {...attributes} className="list-decimal pl-5">{children}</ol>;
-    case "list-item": return <li {...attributes}>{children}</li>;
-    case "heading-one": return <h1 {...attributes} className="text-2xl font-bold">{children}</h1>;
-    case "heading-two": return <h2 {...attributes} className="text-xl font-semibold">{children}</h2>;
-    case "heading-three": return <h3 {...attributes} className="text-lg font-medium">{children}</h3>;
-    default: return <p {...attributes}>{children}</p>;
-  }
-};
+  const parent = element.closest("*[localName='r']");
+  if (!parent) return null;
 
-// Toolbar Button
-const ToolbarButton = ({ format, icon, label, tooltip }) => {
-  const editor = useSlate();
-  const isActive = isMarkActive(editor, format) || isBlockActive(editor, format);
-
-  const toggleFormat = () => {
-    if (["bold", "italic", "underline", "strikethrough", "math"].includes(format)) {
-      toggleMark(editor, format);
-    } else {
-      toggleBlock(editor, format);
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      onMouseDown={(event) => {
-        event.preventDefault();
-        toggleFormat();
-      }}
-      className={`px-2 py-1 mx-1 rounded ${isActive ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"} hover:bg-blue-400 hover:text-white transition`}
-      title={tooltip}
-    >
-      {icon || label}
-    </button>
-  );
-};
-
-// Mark and Block utilities
-const isMarkActive = (editor, format) => Editor.marks(editor)?.[format] === true;
-const isBlockActive = (editor, format) => !!Editor.nodes(editor, { match: (n) => n.type === format })[0];
-const toggleMark = (editor, format) => {
-  const isActive = isMarkActive(editor, format);
-  isActive ? Editor.removeMark(editor, format) : Editor.addMark(editor, format, true);
-};
-const toggleBlock = (editor, format) => {
-  const isActive = isBlockActive(editor, format);
-  const isList = ["bulleted-list", "numbered-list"].includes(format);
-  Transforms.unwrapNodes(editor, { match: (n) => ["bulleted-list", "numbered-list"].includes(n.type), split: true });
-  Transforms.setNodes(editor, { type: isActive ? "paragraph" : isList ? "list-item" : format });
-  if (!isActive && isList) Transforms.wrapNodes(editor, { type: format, children: [] });
-};
-
-// Custom Slate Editor with Paste Handling
-const CustomEditor = ({ value, onChange, placeholder, onPaste }) => {
-  const editor = useMemo(() => withHistory(withReact(createEditor())), []);
-  const renderElement = useCallback((props) => <Element {...props} />, []);
-  const renderLeaf = useCallback((props) => <Leaf {...props} />, []);
-
-  return (
-    <div className="slate-editor border rounded-lg mb-4">
-      <Slate editor={editor} initialValue={value} onChange={onChange}>
-        <div className="toolbar p-2 border-b bg-gray-100 rounded-t-lg flex flex-wrap gap-1">
-          <ToolbarButton format="bold" icon="B" tooltip="Bold (Ctrl+B)" />
-          <ToolbarButton format="italic" icon="I" tooltip="Italic (Ctrl+I)" />
-          <ToolbarButton format="underline" icon="U" tooltip="Underline (Ctrl+U)" />
-          <ToolbarButton format="strikethrough" icon="S" tooltip="Strikethrough" />
-          <ToolbarButton format="math" icon="∑" tooltip="Math Mode (Ctrl+M)" />
-          <ToolbarButton format="heading-one" label="H1" tooltip="Heading 1" />
-          <ToolbarButton format="heading-two" label="H2" tooltip="Heading 2" />
-          <ToolbarButton format="heading-three" label="H3" tooltip="Heading 3" />
-          <ToolbarButton format="bulleted-list" icon="•" tooltip="Bulleted List" />
-          <ToolbarButton format="numbered-list" icon="1." tooltip="Numbered List" />
-        </div>
-        <Editable
-          renderElement={renderElement}
-          renderLeaf={renderLeaf}
-          placeholder={placeholder}
-          className="p-3 min-h-[120px] max-h-[200px] overflow-y-auto bangla-text"
-          onKeyDown={(event) => {
-            if (event.ctrlKey || event.metaKey) {
-              switch (event.key) {
-                case "b": event.preventDefault(); toggleMark(editor, "bold"); break;
-                case "i": event.preventDefault(); toggleMark(editor, "italic"); break;
-                case "u": event.preventDefault(); toggleMark(editor, "underline"); break;
-                case "m": event.preventDefault(); toggleMark(editor, "math"); break;
+  const siblings = Array.from(parent.childNodes);
+  siblings.forEach((node) => {
+    if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.localName === "t") {
+        const text = node.textContent.trim();
+        if (text) {
+          if (!isRepeating) {
+            if (text.includes(".")) {
+              const [whole, decimal] = text.split(".");
+              wholePart = whole || "0";
+              decimalPart += decimal || "";
+            } else {
+              if (decimalPart) {
+                decimalPart += text;
+              } else {
+                wholePart += text;
               }
             }
-          }}
-          onPaste={onPaste}
-        />
-      </Slate>
-    </div>
-  );
+          } else {
+            repeatingPart += text;
+          }
+        }
+      } else if (node.localName === "acc") {
+        const chr = node.querySelector("*[localName='accPr'] *[localName='chr']")?.getAttribute("m:val");
+        const base = node.querySelector("*[localName='e'] *[localName='r']")?.textContent.trim();
+        if (chr === "̇" && base) {
+          if (!isRepeating) isRepeating = true;
+          repeatingPart += base;
+        }
+      }
+    }
+  });
+
+  if (!wholePart && !decimalPart && !repeatingPart) return null;
+
+  const dotCount = repeatingPart.length;
+  if (dotCount === 0) return null;
+
+  return `${wholePart || "0"}${decimalPart || repeatingPart ? "." : ""}${decimalPart}${repeatingPart}${" ̇".repeat(dotCount)}`;
 };
 
-// Serialize and Deserialize
-const serializeToHtml = (nodes) => {
-  return nodes
-    .map((node) => {
-      if (Text.isText(node)) {
-        let text = normalizeText(node.text);
-        if (node.math) return `<span class="mathjax">\\(${text}\\)</span>`;
-        if (node.bold) text = `<strong>${text}</strong>`;
-        if (node.italic) text = `<em>${text}</em>`;
-        if (node.underline) text = `<u>${text}</u>`;
-        if (node.strikethrough) text = `<del>${text}</del>`;
-        return text;
-      }
-      const children = serializeToHtml(node.children);
-      switch (node.type) {
-        case "heading-one": return `<h1>${children}</h1>`;
-        case "heading-two": return `<h2>${children}</h2>`;
-        case "heading-three": return `<h3>${children}</h3>`;
-        case "bulleted-list": return `<ul>${children}</ul>`;
-        case "numbered-list": return `<ol>${children}</ol>`;
-        case "list-item": return `<li>${children}</li>`;
-        default: return `<p>${children}</p>`;
-      }
-    })
-    .join("");
+const extractMatrixFromMathML = (element) => {
+  const mtable = element.querySelector("mtable");
+  if (!mtable) return null;
+
+  const rows = Array.from(mtable.querySelectorAll("mtr"));
+  if (rows.length === 0) return null;
+
+  const matrixRows = rows.map((row) => {
+    const cells = Array.from(row.querySelectorAll("mtd"));
+    return cells
+      .map((cell) => cell.textContent.trim() || "0")
+      .join(" & ");
+  });
+
+  return `\\begin{bmatrix} ${matrixRows.join(" \\\\ ")} \\end{bmatrix}`;
 };
 
 export default function CreateCQAdmin() {
-  useEffect(() => {
-    (async () => {
-      const { addStyles } = await import("react-mathquill");
-      addStyles();
-    })();
-  }, []);
-
+  // State Management
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState("");
-  const [chapters, setChapters] = useState([]);
-  const [selectedChapter, setSelectedChapter] = useState("");
-  const [selectedChapterName, setSelectedChapterName] = useState("");
   const [subjectParts, setSubjectParts] = useState([]);
   const [selectedSubjectPart, setSelectedSubjectPart] = useState("");
+  const [chapters, setChapters] = useState([]);
+  const [selectedChapterNumber, setSelectedChapterNumber] = useState("");
+  const [selectedChapterName, setSelectedChapterName] = useState("");
   const [cqType, setCQType] = useState("");
   const [isMultipleCQs, setIsMultipleCQs] = useState(false);
-  const initialSlateValue = [{ type: "paragraph", children: [{ text: "" }] }];
 
   const [cqs, setCQs] = useState([
     {
-      passage: initialSlateValue,
-      questions: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
-      answers: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
-      latexQuestions: ["", "", ""],
-      latexAnswers: ["", "", ""],
+      passage: "",
+      questions: ["", "", "", ""],
+      answers: ["", "", "", ""],
       image: null,
       imageAlignment: "center",
       videoLink: "",
-      latexPassage: "",
     },
   ]);
 
+  // Reset CQs when cqType changes
+  useEffect(() => {
+    setCQs([
+      {
+        passage: "",
+        questions: cqType === "mathCQ" ? ["", "", ""] : ["", "", "", ""],
+        answers: cqType === "mathCQ" ? ["", "", ""] : ["", "", "", ""],
+        image: null,
+        imageAlignment: "center",
+        videoLink: "",
+      },
+    ]);
+  }, [cqType]);
+
+  // Fetch Classes
   useEffect(() => {
     async function fetchClasses() {
       try {
@@ -404,293 +278,269 @@ export default function CreateCQAdmin() {
         const data = await res.json();
         setClasses(data);
       } catch (error) {
-        toast.error("ক্লাস লোড করতে ব্যর্থ");
+        toast.error("❌ ক্লাস লোড করতে সমস্যা হয়েছে!");
       }
     }
     fetchClasses();
   }, []);
 
+  // Fetch Class Data
   useEffect(() => {
     async function fetchClassData() {
-      if (!selectedClass) return;
+      if (!selectedClass) {
+        setSubjects([]);
+        setSubjectParts([]);
+        setChapters([]);
+        setSelectedSubject("");
+        setSelectedSubjectPart("");
+        setSelectedChapterNumber("");
+        setSelectedChapterName("");
+        return;
+      }
+
       try {
         const res = await fetch(`/api/cq?classNumber=${selectedClass}`);
         const data = await res.json();
+
         if (data.length > 0) {
-          setSubjects([...new Set(data.map((item) => item.subject))]);
-          setSubjectParts([...new Set(data.map((item) => item.subjectPart).filter((part) => part))]);
-          const chapterMap = new Map();
-          data.forEach((item) => {
-            const key = `${item.chapterNumber}-${item.chapterName}`;
-            if (!chapterMap.has(key)) chapterMap.set(key, { number: item.chapterNumber, name: item.chapterName });
-          });
-          setChapters(Array.from(chapterMap.values()));
+          const subjects = [...new Set(data.map((item) => item.subject))];
+          const subjectParts = [...new Set(data.map((item) => item.subjectPart).filter(Boolean))];
+          const chapters = [
+            ...new Set(
+              data.map((item) => ({
+                chapterNumber: item.chapterNumber,
+                chapterName: item.chapterName,
+              }))
+            ),
+          ];
+          setSubjects(subjects);
+          setSubjectParts(subjectParts);
+          setChapters(chapters);
+        } else {
+          setSubjects([]);
+          setSubjectParts([]);
+          setChapters([]);
+          toast.info("⚠️ এই ক্লাসের জন্য কোনো ডেটা নেই।");
         }
       } catch (error) {
-        toast.error("ক্লাস ডেটা লোড করতে ব্যর্থ");
+        toast.error("❌ ডেটা লোড করতে সমস্যা হয়েছে!");
       }
     }
     fetchClassData();
   }, [selectedClass]);
 
-  const addNewCQ = () => {
-    setCQs([
-      ...cqs,
+  // Handlers
+  const addNewCQ = useCallback(() => {
+    setCQs((prev) => [
+      ...prev,
       {
-        passage: initialSlateValue,
-        questions: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
-        answers: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
-        latexQuestions: ["", "", ""],
-        latexAnswers: ["", "", ""],
+        passage: "",
+        questions: cqType === "mathCQ" ? ["", "", ""] : ["", "", "", ""],
+        answers: cqType === "mathCQ" ? ["", "", ""] : ["", "", "", ""],
         image: null,
         imageAlignment: "center",
         videoLink: "",
-        latexPassage: "",
       },
     ]);
-  };
+  }, [cqType]);
 
-  const handlePassageChange = (cqIndex, value) => {
-    const newCQs = [...cqs];
-    newCQs[cqIndex].passage = value;
-    setCQs(newCQs);
-  };
-
-  const handleMathCQChange = (cqIndex, latexValue) => {
-    const newCQs = [...cqs];
-    newCQs[cqIndex].latexPassage = latexValue;
-    setCQs(newCQs);
-  };
-
-  const handleQuestionChange = (cqIndex, qIndex, value) => {
-    const newCQs = [...cqs];
-    newCQs[cqIndex].questions[qIndex] = value;
-    setCQs(newCQs);
-  };
-
-  const handleAnswerChange = (cqIndex, qIndex, value) => {
-    const newCQs = [...cqs];
-    newCQs[cqIndex].answers[qIndex] = value;
-    setCQs(newCQs);
-  };
-
-  const handleMathQuestionChange = (cqIndex, qIndex, latexValue) => {
-    const newCQs = [...cqs];
-    newCQs[cqIndex].latexQuestions[qIndex] = latexValue;
-    setCQs(newCQs);
-  };
-
-  const handleMathAnswerChange = (cqIndex, qIndex, latexValue) => {
-    const newCQs = [...cqs];
-    newCQs[cqIndex].latexAnswers[qIndex] = latexValue;
-    setCQs(newCQs);
-  };
-
-  const handleImageChange = (cqIndex, e) => {
-    const newCQs = [...cqs];
-    newCQs[cqIndex].image = e.target.files[0];
-    setCQs(newCQs);
-  };
-
-  const handleImageAlignmentChange = (cqIndex, value) => {
-    const newCQs = [...cqs];
-    newCQs[cqIndex].imageAlignment = value;
-    setCQs(newCQs);
-  };
-
-  const handleVideoLinkChange = (cqIndex, value) => {
-    const newCQs = [...cqs];
-    newCQs[cqIndex].videoLink = value;
-    setCQs(newCQs);
-  };
-
-  const handlePaste = (cqIndex, fieldType, index, e) => {
-    e.preventDefault();
-
-    const clipboardData = e.clipboardData;
-    let pastedData = "";
-
-    const mathml = clipboardData.getData("application/mathml+xml");
-    if (mathml) {
-      try {
-        pastedData = convert(mathml);
-      } catch (error) {
-        toast.error("❌ MathML প্রক্রিয়া করা যায়নি। দয়া করে LaTeX ফরম্যাটে লিখুন।");
+  const handleFieldChange = useCallback((cqIndex, field, index, data) => {
+    setCQs((prev) => {
+      const newCQs = [...prev];
+      if (field === "passage") {
+        newCQs[cqIndex].passage = data;
+      } else if (field === "question") {
+        newCQs[cqIndex].questions[index] = data;
+      } else if (field === "answer") {
+        newCQs[cqIndex].answers[index] = data;
       }
+      return newCQs;
+    });
+  }, []);
+
+  const handleImageChange = useCallback((index, e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setCQs((prev) => {
+        const newCQs = [...prev];
+        newCQs[index].image = file;
+        return newCQs;
+      });
     }
+  }, []);
 
-    if (!pastedData) {
-      const html = clipboardData.getData("text/html");
-      if (html) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, "text/html");
+  const handleImageAlignmentChange = useCallback((index, value) => {
+    setCQs((prev) => {
+      const newCQs = [...prev];
+      newCQs[index].imageAlignment = value;
+      return newCQs;
+    });
+  }, []);
 
-        const mathmlElement = doc.querySelector("math");
-        if (mathmlElement) {
-          try {
-            const mathmlString = new XMLSerializer().serializeToString(mathmlElement);
-            pastedData = convert(mathmlString);
-          } catch (error) {
-            toast.error("❌ HTML থেকে MathML প্রক্রিয়া করা যায়নি। দয়া করে LaTeX ফরম্যাটে লিখুন।");
-          }
-        } else {
-          const body = doc.body;
-          let textParts = [];
-          let currentNumber = "";
+  const handleVideoLinkChange = useCallback((index, value) => {
+    setCQs((prev) => {
+      const newCQs = [...prev];
+      newCQs[index].videoLink = value;
+      return newCQs;
+    });
+  }, []);
 
-          const traverseDOM = (node, visited = new Set()) => {
-            if (visited.has(node)) return;
-            visited.add(node);
+  const handlePaste = useCallback(
+    (cqIndex, field, index, editor, clipboardData) => {
+      let pastedData = "";
 
-            if (node.nodeType === Node.TEXT_NODE) {
-              let text = node.textContent.trim();
-              if (text) {
-                text = text.replace(/[\u200B-\u200F\uFEFF]/g, "");
-                if (currentNumber && /[\d.]/.test(text)) {
-                  currentNumber += text;
-                } else {
-                  if (currentNumber) {
-                    textParts.push(currentNumber);
-                    currentNumber = "";
-                  }
-                  textParts.push(text);
-                }
-              }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-              if (node.tagName === "SPAN" || node.tagName === "P" || node.tagName === "DIV") {
+      const mathml = clipboardData.getData("application/mathml+xml");
+      if (mathml) {
+        try {
+          pastedData = convert(mathml);
+        } catch (error) {
+          console.error("MathML conversion error:", error);
+          toast.error("❌ MathML প্রক্রিয়া করা যায়নি। LaTeX ফরম্যাটে লিখুন।");
+        }
+      }
+
+      if (!pastedData) {
+        const html = clipboardData.getData("text/html");
+        if (html) {
+          const parser = new DOMParser();
+          const doc = parser.parseFromString(html, "text/html");
+
+          const mathmlElement = doc.querySelector("math");
+          if (mathmlElement) {
+            try {
+              const matrixLatex = extractMatrixFromMathML(mathmlElement);
+              pastedData = matrixLatex || convert(new XMLSerializer().serializeToString(mathmlElement));
+            } catch (error) {
+              console.error("HTML MathML conversion error:", error);
+              toast.error("❌ HTML থেকে MathML প্রক্রিয়া করা যায়নি। LaTeX ফরম্যাটে লিখুন।");
+            }
+          } else {
+            const body = doc.body;
+            let textParts = [];
+            let currentNumber = "";
+
+            const traverseDOM = (node, visited = new Set()) => {
+              if (visited.has(node)) return;
+              visited.add(node);
+
+              if (node.nodeType === Node.TEXT_NODE) {
                 let text = node.textContent.trim();
-                if (text && !node.querySelector("sup, sub, acc") && !visited.has(text)) {
-                  if (currentNumber) {
-                    textParts.push(currentNumber);
-                    currentNumber = "";
-                  }
+                if (text) {
                   text = text.replace(/[\u200B-\u200F\uFEFF]/g, "");
-                  textParts.push(text);
-                  visited.add(text);
-                  return;
+                  if (currentNumber && /[\d.]/.test(text)) {
+                    currentNumber += text;
+                  } else {
+                    if (currentNumber) {
+                      textParts.push(currentNumber);
+                      currentNumber = "";
+                    }
+                    textParts.push(text);
+                  }
                 }
-              }
+              } else if (node.nodeType === Node.ELEMENT_NODE) {
+                if (["SPAN", "P", "DIV"].includes(node.tagName)) {
+                  let text = node.textContent.trim();
+                  if (text && !node.querySelector("sup, sub, acc") && !visited.has(text)) {
+                    if (currentNumber) {
+                      textParts.push(currentNumber);
+                      currentNumber = "";
+                    }
+                    text = text.replace(/[\u200B-\u200F\uFEFF]/g, "");
+                    textParts.push(text);
+                    visited.add(text);
+                    return;
+                  }
+                }
 
-              const fraction = extractFractionFromHTML(node);
-              if (fraction) {
-                if (currentNumber) {
-                  textParts.push(currentNumber);
-                  currentNumber = "";
-                }
-                textParts.push(fraction);
-              } else {
-                const mathMLFraction = extractFractionFromMathML(node);
-                if (mathMLFraction) {
+                const fraction = extractFractionFromHTML(node);
+                if (fraction) {
                   if (currentNumber) {
                     textParts.push(currentNumber);
                     currentNumber = "";
                   }
-                  textParts.push(mathMLFraction);
+                  textParts.push(fraction);
                 } else {
-                  const repeatingDecimal = extractRepeatingDecimalFromMathML(node);
-                  if (repeatingDecimal) {
-                    const cleanRepeating = repeatingDecimal.replace(/( ̇)+$/, "").replace(/ ̇/g, "");
+                  const mathMLFraction = extractFractionFromMathML(node);
+                  if (mathMLFraction) {
                     if (currentNumber) {
-                      currentNumber += cleanRepeating;
-                    } else {
-                      currentNumber = cleanRepeating;
+                      textParts.push(currentNumber);
+                      currentNumber = "";
                     }
+                    textParts.push(mathMLFraction);
                   } else {
-                    if (node.tagName === "SPAN" && node.style.fontFamily.includes("Cambria Math")) {
-                      const text = node.textContent.trim();
-                      if (text) {
-                        if (currentNumber && /[\d.]/.test(text)) {
-                          currentNumber += text;
-                        } else {
-                          if (currentNumber) {
-                            textParts.push(currentNumber);
-                            currentNumber = "";
+                    const repeatingDecimal = extractRepeatingDecimalFromMathML(node);
+                    if (repeatingDecimal) {
+                      if (currentNumber) {
+                        currentNumber = "";
+                      }
+                      textParts.push(repeatingDecimal);
+                    } else {
+                      if (node.tagName === "SPAN" && node.style.fontFamily?.includes("Cambria Math")) {
+                        const text = node.textContent.trim();
+                        if (text) {
+                          if (currentNumber && /[\d.]/.test(text)) {
+                            currentNumber += text;
+                          } else {
+                            if (currentNumber) {
+                              textParts.push(currentNumber);
+                              currentNumber = "";
+                            }
+                            currentNumber = text;
                           }
-                          currentNumber = text;
                         }
                       }
+                      node.childNodes.forEach((child) => traverseDOM(child, visited));
                     }
-                    node.childNodes.forEach((child) => traverseDOM(child, visited));
                   }
                 }
               }
+            };
+
+            traverseDOM(body);
+            if (currentNumber) textParts.push(currentNumber);
+            const extractedText = textParts.join(" ").trim();
+
+            if (extractedText && !extractedText.match(/^\d+$/)) {
+              pastedData = cleanTextForLatex(extractedText);
             }
-          };
-
-          traverseDOM(body);
-          if (currentNumber) {
-            textParts.push(currentNumber);
-          }
-          const extractedText = textParts.join(" ").trim();
-
-          const looksIncomplete = extractedText.match(/^\d+$/) || (!extractedText.includes("/") && !extractedText.includes("̇"));
-          if (extractedText && !looksIncomplete) {
-            pastedData = cleanTextForLatex(extractedText);
           }
         }
       }
-    }
 
-    if (!pastedData) {
-      let plainText = clipboardData.getData("text/plain");
-      if (plainText) {
-        plainText = plainText.replace(/[\u200B-\u200F\uFEFF]/g, "");
-        pastedData = cleanTextForLatex(plainText);
-      }
-    }
-
-    if (pastedData) {
-      const newCQs = [...cqs];
-      if (fieldType === "passage") {
-        if (cqType === "generalCQ") {
-          // For Slate editor, insert the text with math formatting
-          const newNodes = [
-            {
-              type: "paragraph",
-              children: [{ text: "", math: true }, { text: pastedData, math: true }],
-            },
-          ];
-          newCQs[cqIndex].passage = newNodes;
-        } else {
-          // For mathCQ passage
-          newCQs[cqIndex].latexPassage = pastedData;
-        }
-      } else if (fieldType === "question") {
-        if (cqType === "generalCQ") {
-          const newNodes = [
-            {
-              type: "paragraph",
-              children: [{ text: "", math: true }, { text: pastedData, math: true }],
-            },
-          ];
-          newCQs[cqIndex].questions[index] = newNodes;
-        } else {
-          newCQs[cqIndex].latexQuestions[index] = pastedData;
-        }
-      } else if (fieldType === "answer") {
-        if (cqType === "generalCQ") {
-          const newNodes = [
-            {
-              type: "paragraph",
-              children: [{ text: "", math: true }, { text: pastedData, math: true }],
-            },
-          ];
-          newCQs[cqIndex].answers[index] = newNodes;
-        } else {
-          newCQs[cqIndex].latexAnswers[index] = pastedData;
+      if (!pastedData) {
+        let plainText = clipboardData.getData("text/plain");
+        if (plainText) {
+          plainText = plainText.replace(/[\u200B-\u200F\uFEFF]/g, "");
+          pastedData = cleanTextForLatex(plainText);
         }
       }
-      setCQs(newCQs);
-    } else {
-      toast.error("❌ পেস্ট করা ডেটা প্রক্রিয়া করা যায়নি। দয়া করে LaTeX ফরম্যাটে লিখুন।");
-    }
-  };
+
+      if (pastedData) {
+        setCQs((prev) => {
+          const newCQs = [...prev];
+          if (field === "passage") {
+            newCQs[cqIndex].passage = pastedData;
+          } else if (field === "question") {
+            newCQs[cqIndex].questions[index] = pastedData;
+          } else if (field === "answer") {
+            newCQs[cqIndex].answers[index] = pastedData;
+          }
+          return newCQs;
+        });
+        editor.setData(pastedData);
+      } else {
+        toast.error("❌ পেস্ট করা ডেটা প্রক্রিয়া করা যায়নি। LaTeX ফরম্যাটে লিখুন।");
+      }
+    },
+    []
+  );
 
   const downloadExcelTemplate = () => {
     const templateData = [
       {
         Class: "",
         Subject: "",
+        "Subject Part": "",
         "Chapter Number": "",
         "Chapter Name": "",
         "CQ Type": "",
@@ -709,20 +559,40 @@ export default function CreateCQAdmin() {
       {
         Class: 9,
         Subject: "General Science",
+        "Subject Part": "",
         "Chapter Number": 1,
-        "Chapter Name": "Chapter 1",
+        "Chapter Name": "Introduction",
         "CQ Type": "generalCQ",
-        Passage: "This is a sample passage for a general CQ.",
+        Passage: "The sun is the primary source of energy...",
         "Knowledge Question": "What is the primary source of energy?",
         "Knowledge Answer": "The Sun.",
         "Comprehension Question": "Explain how energy is transferred.",
-        "Comprehension Answer": "Energy is transferred through radiation.",
-        "Application Question": "How can we use solar energy in daily life?",
-        "Application Answer": "By using solar panels to generate electricity.",
-        "Higher Skills Question": "Evaluate the impact of solar energy on the environment.",
-        "Higher Skills Answer": "Solar energy reduces carbon emissions.",
+        "Comprehension Answer": "Through radiation.",
+        "Application Question": "How can solar energy be used daily?",
+        "Application Answer": "Using solar panels.",
+        "Higher Skills Question": "Evaluate solar energy’s impact.",
+        "Higher Skills Answer": "Reduces emissions.",
         "Image Alignment": "center",
-        "Video Link": "https://drive.google.com/file/d/example",
+        "Video Link": "https://example.com/video",
+      },
+      {
+        Class: 10,
+        Subject: "Mathematics",
+        "Subject Part": "",
+        "Chapter Number": 2,
+        "Chapter Name": "Algebra",
+        "CQ Type": "mathCQ",
+        Passage: "\\frac{1}{2} + \\frac{1}{3}",
+        "Knowledge Question": "Simplify \\frac{1}{2} + \\frac{1}{3}",
+        "Knowledge Answer": "\\frac{5}{6}",
+        "Comprehension Question": "",
+        "Comprehension Answer": "",
+        "Application Question": "Solve \\frac{x}{2} = \\frac{5}{6}",
+        "Application Answer": "x = \\frac{5}{3}",
+        "Higher Skills Question": "Prove the simplification.",
+        "Higher Skills Answer": "\\frac{3}{6} + \\frac{2}{6} = \\frac{5}{6}",
+        "Image Alignment": "center",
+        "Video Link": "",
       },
     ];
 
@@ -747,35 +617,36 @@ export default function CreateCQAdmin() {
 
         if (data.length > 0) {
           const extractedQuestions = data.map((row) => ({
-            passage: normalizeText(row.Passage || ""),
             classNumber: row.Class || selectedClass,
             subject: row.Subject || selectedSubject,
-            chapterNumber: row["Chapter Number"] || selectedChapter,
+            subjectPart: row["Subject Part"] || selectedSubjectPart,
+            chapterNumber: row["Chapter Number"] || selectedChapterNumber,
             chapterName: row["Chapter Name"] || selectedChapterName,
             cqType: row["CQ Type"] || cqType,
+            passage: normalizeText(row.Passage || ""),
             questions:
-              row["CQ Type"] === "generalCQ"
+              row["CQ Type"] === "mathCQ"
                 ? [
                     normalizeText(row["Knowledge Question"] || ""),
-                    normalizeText(row["Comprehension Question"] || ""),
                     normalizeText(row["Application Question"] || ""),
                     normalizeText(row["Higher Skills Question"] || ""),
                   ]
                 : [
                     normalizeText(row["Knowledge Question"] || ""),
+                    normalizeText(row["Comprehension Question"] || ""),
                     normalizeText(row["Application Question"] || ""),
                     normalizeText(row["Higher Skills Question"] || ""),
                   ],
             answers:
-              row["CQ Type"] === "generalCQ"
+              row["CQ Type"] === "mathCQ"
                 ? [
                     normalizeText(row["Knowledge Answer"] || ""),
-                    normalizeText(row["Comprehension Answer"] || ""),
                     normalizeText(row["Application Answer"] || ""),
                     normalizeText(row["Higher Skills Answer"] || ""),
                   ]
                 : [
                     normalizeText(row["Knowledge Answer"] || ""),
+                    normalizeText(row["Comprehension Answer"] || ""),
                     normalizeText(row["Application Answer"] || ""),
                     normalizeText(row["Higher Skills Answer"] || ""),
                   ],
@@ -789,79 +660,144 @@ export default function CreateCQAdmin() {
             body: JSON.stringify({ questions: extractedQuestions }),
           });
 
-          if (response.ok) toast.success("প্রশ্ন সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!");
-          else {
+          if (response.ok) {
+            toast.success("✅ প্রশ্ন সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!");
+          } else {
             const errorData = await response.json();
-            toast.error(`❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ: ${errorData.error}`);
+            toast.error(`❌ ডাটাবেজে সংরক্ষণ ব্যর্থ: ${errorData.error}`);
           }
-        } else toast.error("❌ এক্সেল ফাইল খালি বা ভুল ফরম্যাটে আছে!");
+        } else {
+          toast.error("❌ এক্সেল ফাইল খালি বা ভুল ফরম্যাটে আছে!");
+        }
       } catch (error) {
-        toast.error("❌ ফাইল প্রসেসিংয়ে ত্রুটি!");
+        toast.error("❌ ফাইল প্রক্রিয়াকরণে ত্রুটি!");
       }
     };
     reader.readAsBinaryString(file);
   };
 
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setSelectedClass("");
     setSubjects([]);
     setSelectedSubject("");
-    setChapters([]);
-    setSelectedChapter("");
-    setSelectedChapterName("");
     setSubjectParts([]);
     setSelectedSubjectPart("");
+    setChapters([]);
+    setSelectedChapterNumber("");
+    setSelectedChapterName("");
     setCQType("");
+    setIsMultipleCQs(false);
     setCQs([
       {
-        passage: initialSlateValue,
-        questions: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
-        answers: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
-        latexQuestions: ["", "", ""],
-        latexAnswers: ["", "", ""],
+        passage: "",
+        questions: ["", "", "", ""],
+        answers: ["", "", "", ""],
         image: null,
         imageAlignment: "center",
         videoLink: "",
-        latexPassage: "",
       },
     ]);
-  };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!selectedClass || !selectedSubject || !selectedChapterNumber || !cqType) {
+      toast.error("❌ সকল প্রয়োজনীয় ক্ষেত্র পূরণ করুন!");
+      return;
+    }
 
     const formData = new FormData();
     formData.append("classNumber", selectedClass);
     formData.append("subject", selectedSubject);
     formData.append("subjectPart", selectedSubjectPart || "");
-    formData.append("chapterNumber", selectedChapter);
+    formData.append("chapterNumber", selectedChapterNumber);
     formData.append("chapterName", selectedChapterName);
     formData.append("teacherEmail", "admin");
     formData.append("cqType", cqType);
 
     cqs.forEach((cq, index) => {
-      const passageHtml = cqType === "generalCQ" ? serializeToHtml(cq.passage) : cq.latexPassage;
-      const questionsHtml = cqType === "generalCQ" ? cq.questions.map(serializeToHtml) : cq.latexQuestions;
-      const answersHtml = cqType === "generalCQ" ? cq.answers.map(serializeToHtml) : cq.latexAnswers;
-
-      formData.append(`cqs[${index}][passage]`, passageHtml);
-      formData.append(`cqs[${index}][questions]`, JSON.stringify(questionsHtml));
-      formData.append(`cqs[${index}][answers]`, JSON.stringify(answersHtml));
-      if (cq.image) formData.append(`cqs[${index}][image]`, cq.image);
+      formData.append(`cqs[${index}][passage]`, cq.passage);
+      formData.append(`cqs[${index}][questions]`, JSON.stringify(cq.questions));
+      formData.append(`cqs[${index}][answers]`, JSON.stringify(cq.answers));
+      if (cq.image) {
+        formData.append(`cqs[${index}][image]`, cq.image);
+      }
       formData.append(`cqs[${index}][imageAlignment]`, cq.imageAlignment);
-      formData.append(`cqs[${index}][videoLink]`, cq.videoLink);
+      formData.append(`cqs[${index}][videoLink]`, cq.videoLink || "");
     });
 
     try {
-      const response = await fetch("/api/cq/import", { method: "POST", body: formData });
+      const response = await fetch("/api/cq/import", {
+        method: "POST",
+        body: formData,
+      });
+
       const responseData = await response.json();
       if (response.ok) {
-        toast.success(`✅ ${cqs.length}টি সৃজনশীল প্রশ্ন সফলভাবে যোগ করা হয়েছে!`);
+        toast.success(`✅ ${cqs.length}টি প্রশ্ন সফলভাবে যোগ করা হয়েছে!`);
         resetForm();
-      } else toast.error(`❌ ${responseData.error || "কিছু সমস্যা হয়েছে!"}`);
+      } else {
+        toast.error(`❌ ${responseData.error || "কিছু সমস্যা হয়েছে!"}`);
+      }
     } catch (error) {
-      toast.error("❌ সার্ভারের সাথে সংযোগে সমস্যা!");
+      toast.error("❌ সার্ভারে সমস্যা!");
     }
+  };
+
+  const editorConfig = useMemo(
+    () => ({
+      toolbar: {
+        items: [
+          "heading",
+          "|",
+          "fontFamily",
+          "fontSize",
+          "fontColor",
+          "|",
+          "bold",
+          "italic",
+          "underline",
+          "|",
+          "alignment",
+          "|",
+          "bulletedList",
+          "numberedList",
+          "|",
+          "imageUpload",
+          "insertTable",
+          "link",
+          "|",
+          "undo",
+          "redo",
+        ],
+      },
+      fontFamily: {
+        options: ["Noto Sans Bengali", "Kalpurush", "Arial", "Times New Roman"],
+        supportAllValues: true,
+      },
+      fontSize: {
+        options: [12, 14, 16, 18, "default", 22, 24],
+      },
+      image: {
+        toolbar: ["imageTextAlternative", "imageStyle:inline", "imageStyle:block", "imageStyle:side"],
+      },
+      table: {
+        contentToolbar: ["tableColumn", "tableRow", "mergeTableCells"],
+      },
+      placeholder: "লিখুন বা পেস্ট করুন (LaTeX সমর্থিত, যেমন: \\frac{1}{2})",
+      pasteFromOffice: true,
+    }),
+    []
+  );
+
+  const shouldRenderMathAsBlock = (content) => {
+    const trimmedContent = content.trim();
+    return (
+      trimmedContent.startsWith("\\") &&
+      trimmedContent.endsWith("}") &&
+      !trimmedContent.includes(" ")
+    );
   };
 
   return (
@@ -869,130 +805,110 @@ export default function CreateCQAdmin() {
       <Head>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet" />
-        <script>
-          {`
-            MathJax = {
-              tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                tags: 'ams',
-              },
-              chtml: {
-                scale: 1.1,
-                mtextInheritFont: true,
-              }
-            };
-          `}
-        </script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              MathJax = {
+                tex: {
+                  inlineMath: [['$', '$'], ['\\(', '\\)']],
+                  tags: 'ams',
+                  macros: {
+                    rdot: "{\\\\mathrel{\\\\dot{\\\\hphantom{0}}}}"
+                  }
+                },
+                chtml: {
+                  scale: 1.1,
+                  mtextInheritFont: true,
+                }
+              };
+            `,
+          }}
+        />
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
-        <style jsx global>{`
-          .bangla-text {
-            font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-            direction: ltr;
-            unicode-bidi: embed;
-          }
-          .video-link {
-            color: #1a73e8;
-            text-decoration: underline;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem;
-            border-radius: 0.375rem;
-            transition: background-color 0.2s;
-          }
-          .video-link:hover {
-            background-color: #e8f0fe;
-          }
-          .slate-editor {
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            margin-bottom: 1.5rem;
-          }
-          .slate-editor .toolbar {
-            border-bottom: 1px solid #d1d5db;
-            background-color: #f7fafc;
-            border-top-left-radius: 0.5rem;
-            border-top-right-radius: 0.5rem;
-          }
-          .form-section, .preview-section {
-            min-height: 80vh;
-          }
-          .mq-editable-field {
-            min-height: 50px !important;
-            height: auto !important;
-            overflow-y: auto !important;
-            max-height: 200px !important;
-            white-space: pre-wrap !important;
-            word-wrap: break-word !important;
-            padding: 12px !important;
-            box-sizing: border-box !important;
-            font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-            font-size: 18px !important;
-            line-height: 1.5 !important;
-            border: 1px solid #d1d5db !important;
-            border-radius: 6px !important;
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
-          }
-          .mq-editable-field .mq-root-block {
-            white-space: pre-wrap !important;
-            word-wrap: break-word !important;
-            font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-          }
-          .mq-static-field {
-            white-space: pre-wrap !important;
-            word-wrap: break-word !important;
-            font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-            font-size: 18px !important;
-            line-height: 1.5 !important;
-          }
-          .MathJax .mtext {
-            font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-            white-space: pre-wrap !important;
-            margin-right: 0.25em !important;
-            margin-left: 0.25em !important;
-          }
-          .MathJax .mspace {
-            width: 0.5em !important;
-          }
-          .MathJax .mo {
-            font-size: 1.2em !important;
-            vertical-align: top !important;
-          }
-        `}</style>
       </Head>
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 p-8">
+      <style jsx global>{`
+        .ck-editor__editable {
+          min-height: 120px !important;
+          max-height: 250px !important;
+          overflow-y: auto !important;
+          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
+          font-size: 16px !important;
+          line-height: 1.5 !important;
+          border: 1px solid #d1d5db !important;
+          border-radius: 6px !important;
+          padding: 10px !important;
+          box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+        }
+        .ck.ck-editor__top .ck-toolbar {
+          background: #f7fafc !important;
+          border: 1px solid #d1d5db !important;
+          border-bottom: none !important;
+          border-top-left-radius: 6px !important;
+          border-top-right-radius: 6px !important;
+        }
+        .ck-content {
+          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
+          white-space: pre-wrap !important;
+          word-wrap: break-word !important;
+        }
+        .ck-content p {
+          margin: 0 0 0.5em !important;
+        }
+        .bangla-text {
+          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
+        }
+        .preview-section {
+          margin-bottom: 1rem;
+          overflow-x: auto;
+          max-width: 100%;
+          word-wrap: break-word;
+        }
+        .preview-section .mathjax {
+          display: inline-block;
+          vertical-align: middle;
+          margin: 0 0.2rem;
+        }
+        .preview-section .mathjax.block {
+          display: block;
+          margin: 0.5rem 0;
+          text-align: center;
+        }
+        .preview-section img {
+          max-width: 100%;
+          height: auto;
+        }
+      `}</style>
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 p-6">
         <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
         <motion.h1
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-4xl font-extrabold text-center text-blue-700 mb-10 bangla-text"
+          className="text-3xl font-bold text-center text-blue-700 mb-8 bangla-text"
         >
           📝 সৃজনশীল প্রশ্ন তৈরি করুন
         </motion.h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 max-w-7xl mx-auto">
-          {/* Form Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-lg p-8 border border-gray-200 form-section"
+            className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
           >
             <form onSubmit={handleSubmit}>
-              <div className="mb-8">
-                <label className="block text-gray-700 font-semibold text-lg mb-3 bangla-text">
+              <div className="mb-6">
+                <label className="block text-gray-700 font-semibold mb-2 bangla-text">
                   এক্সেল ফাইল থেকে আমদানি
                 </label>
-                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
+                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
                   <input
                     type="file"
                     accept=".xlsx, .xls"
                     onChange={handleFileUpload}
                     className="absolute inset-0 opacity-0 cursor-pointer"
                   />
-                  <p className="text-center text-gray-500 text-lg bangla-text">
+                  <p className="text-center text-gray-500 bangla-text">
                     এক্সেল ফাইল টেনে আনুন বা ক্লিক করুন
                   </p>
                 </div>
@@ -1001,18 +917,18 @@ export default function CreateCQAdmin() {
                   onClick={downloadExcelTemplate}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="mt-4 w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition shadow-md text-lg bangla-text"
+                  className="mt-2 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition shadow-md bangla-text"
                 >
-                  📥 এক্সেল টেমপ্লেট ডাউনলোড করুন
+                  📥 টেমপ্লেট ডাউনলোড করুন
                 </motion.button>
               </div>
-              <p className="text-center text-gray-500 mb-6 text-lg bangla-text">অথবা</p>
+              <p className="text-center text-gray-500 mb-4 bangla-text">অথবা</p>
 
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-gray-700 font-semibold mb-2 bangla-text">ক্লাস</label>
+                  <label className="block text-gray-700 font-semibold mb-1 bangla-text">ক্লাস</label>
                   <select
-                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                     value={selectedClass}
                     onChange={(e) => setSelectedClass(Number(e.target.value))}
                     required
@@ -1028,9 +944,9 @@ export default function CreateCQAdmin() {
 
                 {selectedClass && subjects.length > 0 && (
                   <div>
-                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">বিষয়</label>
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">বিষয়</label>
                     <select
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={selectedSubject}
                       onChange={(e) => setSelectedSubject(e.target.value)}
                       required
@@ -1045,9 +961,9 @@ export default function CreateCQAdmin() {
 
                 {selectedSubject && subjectParts.length > 0 && (
                   <div>
-                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">বিষয়ের অংশ</label>
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">বিষয়ের অংশ</label>
                     <select
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={selectedSubjectPart}
                       onChange={(e) => setSelectedSubjectPart(e.target.value)}
                     >
@@ -1061,21 +977,21 @@ export default function CreateCQAdmin() {
 
                 {selectedSubject && chapters.length > 0 && (
                   <div>
-                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">অধ্যায়</label>
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">অধ্যায়</label>
                     <select
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
-                      value={selectedChapter}
+                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                      value={selectedChapterNumber}
                       onChange={(e) => {
-                        const selected = chapters.find((chap) => chap.number === parseInt(e.target.value));
-                        setSelectedChapter(e.target.value);
-                        setSelectedChapterName(selected?.name || "");
+                        const selected = chapters.find((chap) => chap.chapterNumber === parseInt(e.target.value));
+                        setSelectedChapterNumber(e.target.value);
+                        setSelectedChapterName(selected?.chapterName || "");
                       }}
                       required
                     >
                       <option value="">অধ্যায় নির্বাচন করুন</option>
                       {chapters.map((chapter) => (
-                        <option key={`${chapter.number}-${chapter.name}`} value={chapter.number}>
-                          {chapter.name}
+                        <option key={chapter.chapterNumber} value={chapter.chapterNumber}>
+                          {chapter.chapterNumber} - {chapter.chapterName}
                         </option>
                       ))}
                     </select>
@@ -1083,14 +999,14 @@ export default function CreateCQAdmin() {
                 )}
 
                 <div>
-                  <label className="block text-gray-700 font-semibold mb-2 bangla-text">প্রশ্নের ধরণ</label>
+                  <label className="block text-gray-700 font-semibold mb-1 bangla-text">প্রশ্নের ধরণ</label>
                   <select
-                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                    className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                     value={cqType}
                     onChange={(e) => setCQType(e.target.value)}
                     required
                   >
-                    <option value="">সৃজনশীল প্রশ্নের ধরণ নির্বাচন করুন</option>
+                    <option value="">প্রশ্নের ধরণ নির্বাচন করুন</option>
                     <option value="generalCQ">সাধারণ সৃজনশীল প্রশ্ন</option>
                     <option value="mathCQ">গাণিতিক সৃজনশীল প্রশ্ন</option>
                   </select>
@@ -1101,10 +1017,10 @@ export default function CreateCQAdmin() {
                     type="checkbox"
                     checked={isMultipleCQs}
                     onChange={(e) => setIsMultipleCQs(e.target.checked)}
-                    className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <label className="ml-3 text-gray-700 font-semibold text-lg bangla-text">
-                    একাধিক সৃজনশীল প্রশ্ন যোগ করুন
+                  <label className="ml-2 text-gray-700 font-medium bangla-text">
+                    একাধিক প্রশ্ন যোগ করুন
                   </label>
                 </div>
               </div>
@@ -1115,77 +1031,71 @@ export default function CreateCQAdmin() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="mt-8 p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
+                  className="mt-6 p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
                 >
-                  <h3 className="text-xl font-semibold text-gray-800 mb-4 bangla-text">
-                    সৃজনশীল প্রশ্ন {cqIndex + 1}
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3 bangla-text">
+                    প্রশ্ন {cqIndex + 1}
                   </h3>
-                  <label className="block text-gray-700 font-semibold mb-2 bangla-text">উদ্দীপক</label>
-                  {cqType === "generalCQ" ? (
-                    <>
-                      <CustomEditor
-                        value={cq.passage}
-                        onChange={(value) => handlePassageChange(cqIndex, value)}
-                        placeholder="🔹 অনুচ্ছেদ লিখুন"
-                        onPaste={(e) => handlePaste(cqIndex, "passage", null, e)}
-                      />
-                      <p className="text-sm text-gray-500 mt-1 bangla-text">
-                        * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <EditableMathField
-                        latex={cq.latexPassage || ""}
-                        onChange={(mathField) => handleMathCQChange(cqIndex, mathField.latex())}
-                        onPaste={(e) => handlePaste(cqIndex, "passage", null, e)}
-                        className="border p-3 rounded-lg w-full text-lg shadow-sm"
-                      />
-                      <p className="text-sm text-gray-500 mt-1 bangla-text">
-                        * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                      </p>
-                    </>
-                  )}
+                  <div className="mb-4">
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">উদ্দীপক</label>
+                    <CKEditor
+                      editor={DecoupledEditor}
+                      config={editorConfig}
+                      data={cq.passage}
+                      onReady={(editor) => {
+                        const toolbarContainer = document.createElement("div");
+                        toolbarContainer.className = `ck-toolbar-container-${cqIndex}-passage`;
+                        editor.ui.view.editable.element.parentElement.prepend(toolbarContainer);
+                        toolbarContainer.appendChild(editor.ui.view.toolbar.element);
+                      }}
+                      onChange={(event, editor) => handleFieldChange(cqIndex, "passage", null, editor.getData())}
+                      onPaste={(event, editor) => handlePaste(cqIndex, "passage", null, editor, event.data.dataTransfer)}
+                    />
+                    <p className="text-sm text-gray-500 mt-1 bangla-text">
+                      * গাণিতিক প্রশ্নের জন্য LaTeX ব্যবহার করুন (যেমন: \frac{1}{2})
+                    </p>
+                  </div>
 
-                  <div className="mb-6">
-                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                      ভিডিও লিঙ্ক যুক্ত করুন (ঐচ্ছিক)
+                  <div className="mb-4">
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                      ভিডিও লিঙ্ক (ঐচ্ছিক)
                     </label>
                     <input
                       type="url"
-                      placeholder="উদাহরণ: https://drive.google.com/file/d/..."
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                      placeholder="উদাহরণ: https://example.com/video"
+                      className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={cq.videoLink}
                       onChange={(e) => handleVideoLinkChange(cqIndex, e.target.value)}
                     />
                   </div>
 
-                  <div className="mb-6">
-                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                      ছবি যুক্ত করুন (ঐচ্ছিক)
+                  {/* Restored Image Uploading System */}
+                  <div className="mb-4">
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                      ছবি (ঐচ্ছিক)
                     </label>
-                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
+                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
                       <input
                         type="file"
                         accept="image/*"
                         onChange={(e) => handleImageChange(cqIndex, e)}
                         className="absolute inset-0 opacity-0 cursor-pointer"
                       />
-                      <p className="text-center text-gray-500 text-lg bangla-text">
+                      <p className="text-center text-gray-500 bangla-text">
                         {cq.image ? cq.image.name : "ছবি টেনে আনুন বা ক্লিক করুন"}
                       </p>
                     </div>
                   </div>
 
                   {cq.image && (
-                    <div className="mb-6">
-                      <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+                    <div className="mb-4">
+                      <label className="block text-gray-700 font-semibold mb-1 bangla-text">
                         ছবির অ্যালাইনমেন্ট
                       </label>
                       <select
                         value={cq.imageAlignment}
                         onChange={(e) => handleImageAlignmentChange(cqIndex, e.target.value)}
-                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                        className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       >
                         <option value="left">বামে</option>
                         <option value="center">মাঝে</option>
@@ -1194,63 +1104,57 @@ export default function CreateCQAdmin() {
                     </div>
                   )}
 
-                  {cqType === "generalCQ" &&
-                    cq.questions.map((question, i) => (
-                      <div key={i} className="mb-4">
-                        <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                          {i === 0 ? "জ্ঞানমূলক প্রশ্ন" : i === 1 ? "অনুধাবনমূলক প্রশ্ন" : i === 2 ? "প্রয়োগ প্রশ্ন" : "উচ্চতর দক্ষতা"}
-                        </label>
-                        <CustomEditor
-                          value={question}
-                          onChange={(value) => handleQuestionChange(cqIndex, i, value)}
-                          placeholder={
-                            i === 0 ? "জ্ঞানমূলক প্রশ্ন লিখুন" : i === 1 ? "অনুধাবনমূলক প্রশ্ন লিখুন" : i === 2 ? "প্রয়োগ প্রশ্ন লিখুন" : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
-                          }
-                          onPaste={(e) => handlePaste(cqIndex, "question", i, e)}
-                        />
-                        <p className="text-sm text-gray-500 mt-1 bangla-text">
-                          * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                        </p>
-                        <label className="block text-gray-700 font-semibold mb-2 bangla-text">উত্তর (ঐচ্ছিক)</label>
-                        <CustomEditor
-                          value={cq.answers[i]}
-                          onChange={(value) => handleAnswerChange(cqIndex, i, value)}
-                          placeholder="উত্তর লিখুন"
-                          onPaste={(e) => handlePaste(cqIndex, "answer", i, e)}
-                        />
-                        <p className="text-sm text-gray-500 mt-1 bangla-text">
-                          * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                        </p>
-                      </div>
-                    ))}
+                  {(cqType === "mathCQ" ? cq.questions.slice(0, 3) : cq.questions).map((_, i) => (
+                    <div key={i} className="mb-4">
+                      <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                        {i === 0
+                          ? "জ্ঞানমূলক প্রশ্ন"
+                          : i === 1
+                          ? cqType === "mathCQ"
+                            ? "প্রয়োগমূলক প্রশ্ন"
+                            : "অনুধাবনমূলক প্রশ্ন"
+                          : i === 2
+                          ? "উচ্চতর দক্ষতা"
+                          : "উচ্চতর দক্ষতা"}
+                      </label>
+                      <CKEditor
+                        editor={DecoupledEditor}
+                        config={editorConfig}
+                        data={cq.questions[i]}
+                        onReady={(editor) => {
+                          const toolbarContainer = document.createElement("div");
+                          toolbarContainer.className = `ck-toolbar-container-${cqIndex}-q${i}`;
+                          editor.ui.view.editable.element.parentElement.prepend(toolbarContainer);
+                          toolbarContainer.appendChild(editor.ui.view.toolbar.element);
+                        }}
+                        onChange={(event, editor) => handleFieldChange(cqIndex, "question", i, editor.getData())}
+                        onPaste={(event, editor) => handlePaste(cqIndex, "question", i, editor, event.data.dataTransfer)}
+                      />
+                      <p className="text-sm text-gray-500 mt-1 bangla-text">
+                        * গাণিতিক প্রশ্নের জন্য LaTeX ব্যবহার করুন (যেমন: \frac{1}{2})
+                      </p>
 
-                  {cqType === "mathCQ" &&
-                    cq.latexQuestions.map((question, i) => (
-                      <div key={i} className="mb-4">
-                        <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                          {i === 0 ? "জ্ঞানমূলক প্রশ্ন" : i === 1 ? "প্রয়োগ প্রশ্ন" : "উচ্চতর দক্ষতা"}
-                        </label>
-                        <EditableMathField
-                          latex={cq.latexQuestions[i] || ""}
-                          onChange={(mathField) => handleMathQuestionChange(cqIndex, i, mathField.latex())}
-                          onPaste={(e) => handlePaste(cqIndex, "question", i, e)}
-                          className="border p-3 rounded-lg w-full text-lg shadow-sm"
-                        />
-                        <p className="text-sm text-gray-500 mt-1 bangla-text">
-                          * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                        </p>
-                        <label className="block text-gray-700 font-semibold mb-2 mt-3 bangla-text">উত্তর (ঐচ্ছিক)</label>
-                        <EditableMathField
-                          latex={cq.latexAnswers[i] || ""}
-                          onChange={(mathField) => handleMathAnswerChange(cqIndex, i, mathField.latex())}
-                          onPaste={(e) => handlePaste(cqIndex, "answer", i, e)}
-                          className="border p-3 rounded-lg w-full text-lg shadow-sm"
-                        />
-                        <p className="text-sm text-gray-500 mt-1 bangla-text">
-                          * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                        </p>
-                      </div>
-                    ))}
+                      <label className="block text-gray-700 font-semibold mb-1 mt-2 bangla-text">
+                        উত্তর (ঐচ্ছিক)
+                      </label>
+                      <CKEditor
+                        editor={DecoupledEditor}
+                        config={editorConfig}
+                        data={cq.answers[i]}
+                        onReady={(editor) => {
+                          const toolbarContainer = document.createElement("div");
+                          toolbarContainer.className = `ck-toolbar-container-${cqIndex}-a${i}`;
+                          editor.ui.view.editable.element.parentElement.prepend(toolbarContainer);
+                          toolbarContainer.appendChild(editor.ui.view.toolbar.element);
+                        }}
+                        onChange={(event, editor) => handleFieldChange(cqIndex, "answer", i, editor.getData())}
+                        onPaste={(event, editor) => handlePaste(cqIndex, "answer", i, editor, event.data.dataTransfer)}
+                      />
+                      <p className="text-sm text-gray-500 mt-1 bangla-text">
+                        * গাণিতিক উত্তরের জন্য LaTeX ব্যবহার করুন (যেমন: \frac{1}{2})
+                      </p>
+                    </div>
+                  ))}
                 </motion.div>
               ))}
 
@@ -1260,9 +1164,9 @@ export default function CreateCQAdmin() {
                   onClick={addNewCQ}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-green-600 text-white py-3 mt-6 rounded-lg hover:bg-green-700 transition shadow-md text-lg bangla-text flex items-center justify-center"
+                  className="w-full bg-green-600 text-white py-2 mt-4 rounded-lg hover:bg-green-700 transition shadow-md bangla-text flex items-center justify-center"
                 >
-                  <span className="text-xl mr-2">+</span> নতুন সৃজনশীল প্রশ্ন যোগ করুন
+                  <span className="mr-2">+</span> নতুন প্রশ্ন যোগ করুন
                 </motion.button>
               )}
 
@@ -1270,94 +1174,92 @@ export default function CreateCQAdmin() {
                 type="submit"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full bg-blue-600 text-white py-3 mt-8 rounded-lg hover:bg-blue-700 transition shadow-md text-lg bangla-text"
+                className="w-full bg-blue-600 text-white py-2 mt-4 rounded-lg hover:bg-blue-700 transition shadow-md bangla-text"
               >
                 ✅ সাবমিট করুন
               </motion.button>
             </form>
           </motion.div>
 
-          {/* Preview Section */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-lg p-8 border border-gray-200 preview-section"
+            className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
           >
-            <h2 className="text-2xl font-bold text-blue-700 mb-6 bangla-text">প্রিভিউ</h2>
+            <h2 className="text-xl font-bold text-blue-700 mb-4 bangla-text">প্রিভিউ</h2>
             {cqs.map((cq, cqIndex) => (
               <motion.div
                 key={cqIndex}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className="mb-6 p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-100"
+                className="preview-section mb-4 p-4 bg-gray-50 rounded-lg shadow-sm border border-gray-100"
               >
-                <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-3 bangla-text">
+                <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-2 bangla-text">
                   CQ {cqIndex + 1}
                 </p>
-                <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">উদ্দীপক:</p>
-                {cqType === "generalCQ" ? (
+                <p className="text-base font-semibold text-gray-900 mb-2 bangla-text">উদ্দীপক:</p>
+                <div
+                  className="text-gray-700 mb-2 bangla-text"
+                  dangerouslySetInnerHTML={{ __html: cq.passage || "উদ্দীপক লিখুন" }}
+                />
+
+                {cq.image && (
                   <div
-                    className="text-gray-700 mb-4 bangla-text"
-                    dangerouslySetInnerHTML={{ __html: serializeToHtml(cq.passage) || "অনুচ্ছেদ লিখুন" }}
-                  />
-                ) : (
-                  <StaticMathField className="text-gray-700 mb-4">{cq.latexPassage || "গাণিতিক উদ্দীপক লিখুন"}</StaticMathField>
+                    className={`mb-2 ${
+                      cq.imageAlignment === "left"
+                        ? "text-left"
+                        : cq.imageAlignment === "right"
+                        ? "text-right"
+                        : "text-center"
+                    }`}
+                  >
+                    <img
+                      src={URL.createObjectURL(cq.image)}
+                      alt={`CQ ${cqIndex + 1} Image`}
+                      className="rounded-lg shadow-md max-h-48 inline-block"
+                    />
+                  </div>
                 )}
 
                 {cq.videoLink && (
-                  <div className="mb-4">
-                    <a href={cq.videoLink} target="_blank" rel="noopener noreferrer" className="video-link bangla-text">
+                  <div className="mb-2">
+                    <a
+                      href={cq.videoLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 underline hover:text-blue-800 bangla-text"
+                    >
                       📹 ভিডিও দেখুন
                     </a>
                   </div>
                 )}
 
-                {cq.image && (
-                  <div
-                    className={`mb-4 ${cq.imageAlignment === "left" ? "text-left" : cq.imageAlignment === "right" ? "text-right" : "text-center"}`}
-                  >
-                    <img
-                      src={URL.createObjectURL(cq.image)}
-                      alt={`CQ preview ${cqIndex + 1}`}
-                      className="rounded-lg shadow-md max-h-64 inline-block"
-                    />
-                  </div>
-                )}
-
                 <div className="text-gray-700">
-                  {(cqType === "generalCQ" ? cq.questions : cq.latexQuestions).map((ques, i) => (
-                    <div key={i} className="mb-3">
+                  {(cqType === "mathCQ" ? cq.questions.slice(0, 3) : cq.questions).map((ques, i) => (
+                    <div key={i} className="mb-2">
                       <p className="bangla-text">
-                        {String.fromCharCode(2453 + i)}) {cqType === "generalCQ" ? (
-                          <span dangerouslySetInnerHTML={{ __html: serializeToHtml(ques) || "প্রশ্ন লিখুন" }} />
-                        ) : (
-                          <StaticMathField className="inline-block">{ques || "প্রশ্ন লিখুন"}</StaticMathField>
-                        )}{" "}
-                        {cqType === "generalCQ" ? `(${[1, 2, 3, 4][i]} নম্বর)` : `(${[3, 3, 4][i]} নম্বর)`}
+                        {String.fromCharCode(2453 + i)}) <span dangerouslySetInnerHTML={{ __html: ques || "প্রশ্ন লিখুন" }} />{" "}
+                        {cqType === "mathCQ" ? `(${[3, 3, 4][i]} নম্বর)` : `(${[1, 2, 3, 4][i]} নম্বর)`}
                       </p>
-                      {(cqType === "generalCQ" ? cq.answers[i] : cq.latexAnswers[i]) && (
+                      {cq.answers[i] && (
                         <p className="text-gray-600 ml-6 bangla-text">
                           <span className="font-semibold">উত্তর:</span>{" "}
-                          {cqType === "generalCQ" ? (
-                            <span dangerouslySetInnerHTML={{ __html: serializeToHtml(cq.answers[i]) }} />
-                          ) : (
-                            <StaticMathField className="inline-block">{cq.latexAnswers[i]}</StaticMathField>
-                          )}
+                          <span dangerouslySetInnerHTML={{ __html: cq.answers[i] }} />
                         </p>
                       )}
                     </div>
                   ))}
                 </div>
 
-                <p className="text-sm text-gray-500 mt-4 bangla-text">
+                <p className="text-sm text-gray-500 mt-2 bangla-text">
                   ক্লাস: {selectedClass || "N/A"} | বিষয়: {selectedSubject || "N/A"} | অংশ: {selectedSubjectPart || "N/A"} | অধ্যায়: {selectedChapterName || "N/A"} | ধরণ: {cqType || "N/A"}
                 </p>
               </motion.div>
             ))}
             {cqs.length === 0 && (
-              <p className="text-gray-500 text-center text-lg bangla-text">প্রিভিউ দেখতে প্রশ্ন যোগ করুন</p>
+              <p className="text-gray-500 text-center bangla-text">প্রিভিউ দেখতে প্রশ্ন যোগ করুন</p>
             )}
           </motion.div>
         </div>
