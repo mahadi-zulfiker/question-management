@@ -55,6 +55,7 @@ import SeeQuestions from "./Student/SeeQuestions";
 import ActivityChecker from "./Admin/ActivityChecker";
 import CreateMorderator from "./Admin/CreateMorderator";
 import Moderator from "./Moderator";
+import QuestionGenerator from "./Teacher/QuestionGenerator";
 
 const MainLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -103,6 +104,7 @@ const MainLayout = () => {
             {pathname === "/dashboard/teacher/examResult" && <ExamResult />}
             {pathname === "/dashboard/teacher/teacherRequests" && <TeacherRequests />}
             {pathname === "/dashboard/teacher/affiliateShareTeacher" && <AffiliateShareTeacher />}
+            {pathname === "/dashboard/teacher/questionGenerator" && <QuestionGenerator />}
 
             {pathname === "/dashboard/admin" && <Admin />}
             {pathname === "/dashboard/admin/adminProfileManagement" && <AdminProfileManagement />}

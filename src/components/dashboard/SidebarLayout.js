@@ -139,6 +139,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
             { href: "/dashboard/teacher/createCQTeacher", icon: <RiFileEditLine className="text-xl mr-2" />, label: "Create CQ" },
             { href: "/dashboard/teacher/createSQTeacher", icon: <AiOutlineFileAdd className="text-xl mr-2" />, label: "Create SQ" },
             { href: "/dashboard/teacher/createCertificate", icon: <FaCertificate className="text-xl mr-2" />, label: "Create Certificate" },
+            { href: "/dashboard/teacher/questionGenerator", icon: <FaCertificate className="text-xl mr-2" />, label: "Question Generator" },
           ],
         },
         {
