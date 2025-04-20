@@ -174,6 +174,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
           items: [
             { href: "/dashboard/admin/adminProfileManagement", icon: <MdAdminPanelSettings className="text-xl mr-2" />, label: "Profile Management" },
             { href: "/dashboard/admin/userManagement", icon: <FaUsers className="text-xl mr-2" />, label: "User Management" },
+            { href: "/dashboard/admin/createMorderator", icon: <FaUsers className="text-xl mr-2" />, label: "Create Morderator" },
             { href: "/dashboard/admin/userAccessControl", icon: <IoMdSettings className="text-xl mr-2" />, label: "User Access Control" },
             { href: "/dashboard/admin/activityChecker", icon: <VscChecklist className="text-xl mr-2" />, label: "Activity Checker" },
           ],
@@ -215,6 +216,58 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         },
       ];
     }
+
+    else if (pathname.startsWith("/dashboard/moderator")) {
+      return [
+        ...commonMenuItems,
+        // {
+        //   section: "Management",
+        //   items: [
+        //     { href: "/dashboard/admin/adminProfileManagement", icon: <MdAdminPanelSettings className="text-xl mr-2" />, label: "Profile Management" },
+        //     { href: "/dashboard/admin/userManagement", icon: <FaUsers className="text-xl mr-2" />, label: "User Management" },
+        //     { href: "/dashboard/admin/createMorderator", icon: <FaUsers className="text-xl mr-2" />, label: "Create Morderator" },
+        //     { href: "/dashboard/admin/userAccessControl", icon: <IoMdSettings className="text-xl mr-2" />, label: "User Access Control" },
+        //     { href: "/dashboard/admin/activityChecker", icon: <VscChecklist className="text-xl mr-2" />, label: "Activity Checker" },
+        //   ],
+        // },
+        {
+          section: "Question Creation",
+          items: [
+            { href: "/dashboard/admin/createMCQAdmin", icon: <IoMdCreate className="text-xl mr-2" />, label: "Create MCQ" },
+            { href: "/dashboard/admin/createCQAdmin", icon: <RiFileEditLine className="text-xl mr-2" />, label: "Create CQ" },
+            { href: "/dashboard/admin/createSQAdmin", icon: <AiOutlineFileAdd className="text-xl mr-2" />, label: "Create SQ" },
+            // { href: "/dashboard/admin/createPackage", icon: <TbPackage className="text-xl mr-2" />, label: "Create Package" },
+            // { href: "/dashboard/admin/createClass", icon: <RiTeamLine className="text-xl mr-2" />, label: "Create Class" },
+            // { href: "/dashboard/admin/createCertificateAdmin", icon: <FaCertificate className="text-xl mr-2" />, label: "Create Certificate" },
+            // { href: "/dashboard/admin/createModelTest", icon: <GrDocumentTest className="text-xl mr-2" />, label: "Create Model Test" },
+            // { href: "/dashboard/admin/createAdmissionTest", icon: <FaRegIdBadge className="text-xl mr-2" />, label: "Create Admission Test" },
+            // { href: "/dashboard/admin/createQuestionBank", icon: <GiNotebook className="text-xl mr-2" />, label: "Create Question Bank" },
+            // { href: "/dashboard/admin/onlineExamAdmin", icon: <FaBook className="text-xl mr-2" />, label: "Model Test" },
+          ],
+        },
+        {
+          section: "Resources",
+          items: [
+            { href: "/dashboard/admin/viewQuestionsAdmin", icon: <RiQuestionnaireLine className="text-xl mr-2" />, label: "View Questions" },
+            { href: "/dashboard/admin/teacherQuestions", icon: <AiOutlineEye className="text-xl mr-2" />, label: "Teacher Questions" },
+            // { href: "/dashboard/admin/viewCertificateAdmin", icon: <GiGraduateCap className="text-xl mr-2" />, label: "View Certificates" },
+            // { href: "/dashboard/admin/viewModelTest", icon: <VscGraph className="text-xl mr-2" />, label: "View Model Tests" },
+            // { href: "/dashboard/admin/viewAdmissionTest", icon: <BsCardChecklist className="text-xl mr-2" />, label: "View Admission Tests" },
+            // { href: "/dashboard/admin/viewQuestionBank", icon: <HiOutlineDocumentReport className="text-xl mr-2" />, label: "View Question Banks" },
+          ],
+        },
+        // {
+        //   section: "Payments",
+        //   items: [
+        //     { href: "/dashboard/admin/affiliateAdmin", icon: <HiOutlineReceiptRefund className="text-xl mr-2" />, label: "Discount Generator" },
+        //     { href: "/dashboard/admin/priceSetQuestions", icon: <AiOutlineDollar className="text-xl mr-2" />, label: "Set Pricing" },
+        //     { href: "/dashboard/admin/paymentHistoryAll", icon: <BiMoneyWithdraw className="text-xl mr-2" />, label: "Payment History" },
+        //     { href: "/dashboard/admin/affiliateShareView", icon: <RiMoneyDollarCircleLine className="text-xl mr-2" />, label: "View Affiliate" },
+        //   ],
+        // },
+      ];
+    }
+
     return commonMenuItems;
   };
 

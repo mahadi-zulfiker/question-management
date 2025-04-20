@@ -18,6 +18,7 @@ const Navbar = () => {
         admin: "/dashboard/admin",
         student: "/dashboard/student",
         teacher: "/dashboard/teacher",
+        moderator: "/dashboard/moderator",
     };
 
     const toggleMenu = () => setIsOpen(!isOpen);

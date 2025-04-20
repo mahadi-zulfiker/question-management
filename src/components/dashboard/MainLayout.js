@@ -53,6 +53,8 @@ import AffiliateShareTeacher from "./Teacher/AffiliateShareTeacher";
 import OnlineExamAdmin from "./Admin/OnlineExamAdmin";
 import SeeQuestions from "./Student/SeeQuestions";
 import ActivityChecker from "./Admin/ActivityChecker";
+import CreateMorderator from "./Admin/CreateMorderator";
+import Moderator from "./Moderator";
 
 const MainLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -127,6 +129,9 @@ const MainLayout = () => {
             {pathname === "/dashboard/admin/affiliateShareView" && <AffiliateShareView />}
             {pathname === "/dashboard/admin/onlineExamAdmin" && <OnlineExamAdmin />}
             {pathname === "/dashboard/admin/activityChecker" && <ActivityChecker />}
+            {pathname === "/dashboard/admin/createMorderator" && <CreateMorderator />}
+
+            {pathname === "/dashboard/moderator" && <Moderator />}
           </div>
         </main>
       </div>
