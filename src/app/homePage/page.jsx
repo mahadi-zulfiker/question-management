@@ -4,6 +4,7 @@ import Chat from '@/components/Chat';
 import Counter from '@/components/Counter';
 import ExtraInfo from '@/components/ExtraInfo';
 import FAQ from '@/components/FAQ';
+import FeaturesSection from '@/components/FeaturesSection';
 import Footer from '@/components/Footer';
 import InfoCards from '@/components/InfoCards';
 import Navbar from '@/components/Navbar'
@@ -17,6 +18,7 @@ function HomePage() {
         <div className='bg-gradient-to-r from-white-50 to-indigo-50'>
             <Navbar />
             <Banner />
+            <FeaturesSection />
             <InfoCards />
             <Testimonials />
             <Questions />
