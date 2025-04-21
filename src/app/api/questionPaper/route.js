@@ -25,6 +25,26 @@ const sanitizeQuestion = (q, segmentName) => {
     return sanitized;
 };
 
+const convertLatexToText = (latex) => {
+    if (!latex) return "N/A";
+    let text = latex
+        .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "($1)/($2)")
+        .replace(/\{([^}]+)\}/g, "$1")
+        .replace(/\^2/g, "²")
+        .replace(/\^3/g, "³")
+        .replace(/\^(\d+)/g, "^$1")
+        .replace(/\\sqrt\{([^}]+)\}/g, "√($1)")
+        .replace(/\\times/g, "×")
+        .replace(/\\div/g, "÷")
+        .replace(/\\alpha/g, "α")
+        .replace(/\\beta/g, "β")
+        .replace(/\\gamma/g, "γ")
+        .replace(/\\pi/g, "π")
+        .replace(/\\infty/g, "∞");
+    text = text.replace(/\\[a-zA-Z]+/g, "");
+    return text;
+};
+
 export async function GET(req) {
     console.log("GET /api/questionPaper called with query:", req.url);
     try {
@@ -40,7 +60,7 @@ export async function GET(req) {
         if (fetchFilters === "true") {
             console.log("Fetching filter options...");
             const classes = await db.collection("classes").find().toArray();
-            const classNumbers = [...new Set(classes.map(cls => cls.classNumber * 10))].sort((a, b) => a - b);
+            const classNumbers = [...new Set(classes.map(cls => cls.classNumber))].sort((a, b) => a - b);
             const subjects = [...new Set(classes.map(cls => cls.subject))];
             const chapters = [...new Set(classes.map(cls => ({ number: cls.chapterNumber, name: cls.chapterName })))]
                 .filter(ch => ch.number && ch.name)
@@ -109,10 +129,22 @@ export async function POST(req) {
             examMarks,
             subjectName,
             segmentName,
-            selectedQuestions
+            questionSetNumber,
+            subjectCodeNumber,
+            information,
+            selectedQuestions,
         } = await req.json();
 
-        if (!schoolName || !schoolAddress || !examName || !examTime || !examMarks || !subjectName || !segmentName || !selectedQuestions) {
+        if (
+            !schoolName ||
+            !schoolAddress ||
+            !examName ||
+            !examTime ||
+            !examMarks ||
+            !subjectName ||
+            !segmentName ||
+            !selectedQuestions
+        ) {
             return NextResponse.json({ error: "❌ সমস্ত প্রয়োজনীয় তথ্য প্রদান করুন!" }, { status: 400 });
         }
 
@@ -123,10 +155,13 @@ export async function POST(req) {
         }
 
         if (!Array.isArray(selectedQuestions) || selectedQuestions.length === 0) {
-            return NextResponse.json({ error: "❌ নির্বাচিত প্রশ্ন অবশ্যই একটি অ্যারে হতে হবে এবং খালি থাকতে পারবে না!" }, { status: 400 });
+            return NextResponse.json(
+                { error: "❌ নির্বাচিত প্রশ্ন অবশ্যই একটি অ্যারে হতে হবে এবং খালি থাকতে পারবে না!" },
+                { status: 400 }
+            );
         }
 
-        const sanitizedQuestions = selectedQuestions.map(q => sanitizeQuestion(q, segmentName));
+        const sanitizedQuestions = selectedQuestions.map((q) => sanitizeQuestion(q, segmentName));
 
         const db = await connectMongoDB();
         const formattedQuestionPaper = {
@@ -137,16 +172,28 @@ export async function POST(req) {
             examMarks: parsedExamMarks,
             subjectName,
             segmentName,
+            questionSetNumber,
+            subjectCodeNumber,
+            information,
             selectedQuestions: sanitizedQuestions,
-            createdAt: new Date()
+            createdAt: new Date(),
         };
         await db.collection("formattedQuestionPapers").insertOne(formattedQuestionPaper);
 
         const pdfDoc = await PDFDocument.create();
-        let page = pdfDoc.addPage([595, 842]);
+        let page = pdfDoc.addPage([595, 842]); // A4 size in points
         pdfDoc.registerFontkit(fontkit);
 
-        const fontPath = path.join(__dirname, "..", "..", "..", "..", "public", "fonts", "NotoSansBengali-VariableFont_wdth,wght.ttf");
+        const fontPath = path.join(
+            __dirname,
+            "..",
+            "..",
+            "..",
+            "..",
+            "public",
+            "fonts",
+            "NotoSansBengali-VariableFont_wdth,wght.ttf"
+        );
         let font;
         try {
             const fontBytes = fs.readFileSync(fontPath);
@@ -156,7 +203,7 @@ export async function POST(req) {
             font = await pdfDoc.embedFont(PDFDocument.Font.Helvetica);
         }
 
-        const margin = 40;
+        const margin = 30;
         const pageWidth = 595;
         const pageHeight = 842;
         const contentWidth = pageWidth - 2 * margin;
@@ -170,8 +217,8 @@ export async function POST(req) {
 
             const maxWidth = options.width || contentWidth;
             const lines = [];
-            let currentLine = '';
-            const words = text.split(' ');
+            let currentLine = "";
+            const words = text.split(" ");
 
             for (const word of words) {
                 const testLine = currentLine ? `${currentLine} ${word}` : word;
@@ -185,119 +232,159 @@ export async function POST(req) {
             }
             if (currentLine) lines.push(currentLine);
 
-            const align = options.align || 'left';
-            for (const line of lines) {
-                let xPosition = margin;
-                const lineWidth = font.widthOfTextAtSize(line, size);
-                if (align === 'center') {
-                    xPosition = margin + (contentWidth - lineWidth) / 2;
-                } else if (align === 'right') {
-                    xPosition = margin + contentWidth - lineWidth;
+            const align = options.align || "left";
+            let xPosition = margin;
+            if (options.x) {
+                xPosition = options.x;
+            } else {
+                for (const line of lines) {
+                    const lineWidth = font.widthOfTextAtSize(line, size);
+                    if (align === "center") {
+                        xPosition = margin + (contentWidth - lineWidth) / 2;
+                    } else if (align === "right") {
+                        xPosition = margin + contentWidth - lineWidth;
+                    }
                 }
+            }
 
+            for (const line of lines) {
                 page.drawText(line, {
                     x: xPosition,
                     y: yPosition,
                     size: size,
                     font: font,
+                    color: rgb(0, 0, 0), // Black color for all text
                 });
-                yPosition -= size + 5;
+                yPosition -= size + 2;
             }
-            return lines.length * (size + 5);
-        };
-
-        const drawLine = () => {
-            if (yPosition < margin + 10) {
-                page = pdfDoc.addPage([595, 842]);
-                yPosition = pageHeight - margin;
-            }
-            page.drawLine({
-                start: { x: margin, y: yPosition },
-                end: { x: pageWidth - margin, y: yPosition },
-                thickness: 1.5,
-                color: rgb(0, 0, 0),
-            });
-            yPosition -= 15;
+            return lines.length * (size + 2);
         };
 
         // Header
-        drawText(schoolName || "N/A", 16, { align: 'center' });
-        drawText(schoolAddress || "N/A", 12, { align: 'center' });
+        if (questionSetNumber || subjectCodeNumber) {
+            let codeText = "";
+            if (questionSetNumber) codeText += `বিভাগ কোড: ${questionSetNumber}`;
+            if (subjectCodeNumber) codeText += `${questionSetNumber ? "  " : ""}বিষয় কোড: ${subjectCodeNumber}`;
+            drawText(codeText, 10, { align: "right" });
+        }
+
+        drawText(schoolName || "N/A", 14, { align: "center" });
+        drawText(schoolAddress || "N/A", 10, { align: "center" });
+        yPosition -= 5;
+        drawText(examName || "N/A", 12, { align: "center" });
+        drawText(`বিষয়: ${subjectName || "N/A"}`, 10, { align: "center" });
+        yPosition -= 5;
+        drawText(`সময়: ${parsedExamTime} মিনিট`, 10, { x: margin });
+        drawText(`পূর্ণমান: ${parsedExamMarks}`, 10, { align: "right" });
+
+        if (information) {
+            yPosition -= 5;
+            drawText("বিশেষ নির্দেশাবলী:", 10);
+            drawText(information, 9);
+        }
+
+        yPosition -= 5;
+        drawText(`বিভাগ: ${segmentName}`, 11, { align: "center" });
         yPosition -= 10;
-        drawText(examName || "N/A", 14, { align: 'center' });
-        drawLine();
-        drawText(`বিষয়: ${subjectName || "N/A"}`, 12, { align: 'center' });
-        drawText(`সময়: ${parsedExamTime} মিনিট`, 12, { align: 'center' });
-        drawText(`পূর্ণমান: ${parsedExamMarks}`, 12, { align: 'center' });
-        yPosition -= 10;
-        drawText(`বিভাগ: ${segmentName}`, 14, { align: 'center' });
-        drawLine();
-        yPosition -= 20;
 
         // Questions
         if (segmentName === "MCQ") {
-            sanitizedQuestions.forEach((q, index) => {
-                // Question
-                drawText(`${index + 1}. ${q.question}`, 12, { align: 'left' });
-                yPosition -= 5;
+            const columnWidth = contentWidth / 2 - 5;
+            let currentColumn = 0;
+            let xPosition = margin;
+            let columnHeight = yPosition;
 
-                // Options in two columns (ক, খ) and (গ, ঘ)
-                const optionPairs = [];
-                for (let i = 0; i < q.options.length; i += 2) {
-                    optionPairs.push(q.options.slice(i, i + 2));
+            sanitizedQuestions.forEach((q, index) => {
+                const questionText = convertLatexToText(q.question);
+                const questionHeight = drawText(`${index + 1}. ${questionText}`, 9, { width: columnWidth, x: xPosition });
+
+                let optionsHeight = 0;
+                if (q.options.length > 4) {
+                    for (let j = 0; j < 3 && j < q.options.length; j++) {
+                        const statement = convertLatexToText(q.options[j]);
+                        optionsHeight += drawText(`${String.fromCharCode(2453 + j)}. ${statement}`, 8, { width: columnWidth, x: xPosition });
+                    }
+                    optionsHeight += drawText("নিচের কোনটি সঠিক?", 8, { width: columnWidth, x: xPosition });
+
+                    const remainingOptions = q.options.slice(3);
+                    const optionPairs = [];
+                    for (let j = 0; j < remainingOptions.length; j += 2) {
+                        optionPairs.push(remainingOptions.slice(j, j + 2));
+                    }
+
+                    optionPairs.forEach((pair, pairIndex) => {
+                        const option1 = pair[0] ? `${String.fromCharCode(2453 + pairIndex * 2)}) ${convertLatexToText(pair[0])}` : "";
+                        const option2 = pair[1] ? `${String.fromCharCode(2453 + pairIndex * 2 + 1)}) ${convertLatexToText(pair[1])}` : "";
+                        if (option1) {
+                            optionsHeight += drawText(option1, 8, { width: columnWidth / 2 - 2, x: xPosition });
+                        }
+                        if (option2) {
+                            optionsHeight += drawText(option2, 8, { width: columnWidth / 2 - 2, x: xPosition + columnWidth / 2 + 2 });
+                        }
+                    });
+                } else {
+                    const optionPairs = [];
+                    for (let j = 0; j < q.options.length; j += 2) {
+                        optionPairs.push(q.options.slice(j, j + 2));
+                    }
+
+                    optionPairs.forEach((pair, pairIndex) => {
+                        const option1 = pair[0] ? `${String.fromCharCode(2453 + pairIndex * 2)}) ${convertLatexToText(pair[0])}` : "";
+                        const option2 = pair[1] ? `${String.fromCharCode(2453 + pairIndex * 2 + 1)}) ${convertLatexToText(pair[1])}` : "";
+                        if (option1) {
+                            optionsHeight += drawText(option1, 8, { width: columnWidth / 2 - 2, x: xPosition });
+                        }
+                        if (option2) {
+                            optionsHeight += drawText(option2, 8, { width: columnWidth / 2 - 2, x: xPosition + columnWidth / 2 + 2 });
+                        }
+                    });
                 }
 
-                optionPairs.forEach((pair, pairIndex) => {
-                    const option1 = pair[0] ? `${String.fromCharCode(2453 + pairIndex * 2)}) ${pair[0]}` : '';
-                    const option2 = pair[1] ? `${String.fromCharCode(2453 + pairIndex * 2 + 1)}) ${pair[1]}` : '';
-                    
-                    // Calculate widths for alignment
-                    const option1Width = font.widthOfTextAtSize(option1, 12);
-                    const option2Width = font.widthOfTextAtSize(option2, 12);
-                    const halfWidth = contentWidth / 2;
+                const totalHeight = questionHeight + optionsHeight + 15;
+                columnHeight -= totalHeight;
 
-                    // Draw first option (ক or গ)
-                    if (option1) {
-                        page.drawText(option1, {
-                            x: margin,
-                            y: yPosition,
-                            size: 12,
-                            font: font,
-                        });
+                if (columnHeight < margin + 50) {
+                    currentColumn++;
+                    if (currentColumn > 1) {
+                        page = pdfDoc.addPage([595, 842]);
+                        yPosition = pageHeight - margin;
+                        currentColumn = 0;
                     }
-
-                    // Draw second option (খ or ঘ) if exists
-                    if (option2) {
-                        page.drawText(option2, {
-                            x: margin + halfWidth,
-                            y: yPosition,
-                            size: 12,
-                            font: font,
-                        });
-                    }
-
-                    yPosition -= 20;
-                });
-
-                yPosition -= 10;
+                    xPosition = margin + (currentColumn * (columnWidth + 10));
+                    columnHeight = yPosition;
+                    yPosition -= totalHeight;
+                } else {
+                    yPosition -= 15;
+                }
             });
         } else if (segmentName === "CQ") {
             sanitizedQuestions.forEach((q, index) => {
-                drawText(`প্রশ্ন ${index + 1}:`, 12, { align: 'left' });
-                drawText(`উদ্দীপক: ${q.passage}`, 12, { align: 'left' });
-                yPosition -= 10;
+                if (yPosition < margin + 100) {
+                    page = pdfDoc.addPage([595, 842]);
+                    yPosition = pageHeight - margin;
+                }
+
+                drawText(`প্রশ্ন ${index + 1}:`, 10);
+                yPosition -= 5;
+                drawText(`উদ্দীপক: ${convertLatexToText(q.passage)}`, 9);
+                yPosition -= 5;
 
                 q.questions.forEach((ques, i) => {
-                    drawText(`    ${String.fromCharCode(2453 + i)}) ${ques} (${q.marks[i]} নম্বর)`, 12, { align: 'left' });
-                    yPosition -= 5;
+                    drawText(`${String.fromCharCode(2453 + i)}) ${convertLatexToText(ques)} (${q.marks[i]} নম্বর)`, 9);
+                    yPosition -= 10;
                 });
 
-                yPosition -= 15;
+                yPosition -= 10;
             });
         } else if (segmentName === "SQ") {
             sanitizedQuestions.forEach((q, index) => {
-                drawText(`${index + 1}. (${q.type}) ${q.question}`, 12, { align: 'left' });
-                yPosition -= 15;
+                if (yPosition < margin + 50) {
+                    page = pdfDoc.addPage([595, 842]);
+                    yPosition = pageHeight - margin;
+                }
+
+                drawText(`${index + 1}. (${q.type}) ${convertLatexToText(q.question)}`, 9);
+                yPosition -= 12;
             });
         }
 
@@ -306,25 +393,25 @@ export async function POST(req) {
         pages.forEach((p, index) => {
             p.drawText(`পৃষ্ঠা ${index + 1} / ${pages.length}`, {
                 x: pageWidth - margin - 60,
-                y: margin - 15,
-                size: 10,
+                y: margin - 10,
+                size: 8,
                 font: font,
-                color: rgb(0.5, 0.5, 0.5),
+                color: rgb(0, 0, 0),
             });
             p.drawText(`${examName} - ${subjectName}`, {
                 x: margin,
-                y: margin - 15,
-                size: 10,
+                y: margin - 10,
+                size: 8,
                 font: font,
-                color: rgb(0.5, 0.5, 0.5),
+                color: rgb(0, 0, 0),
             });
         });
 
         const pdfBytes = await pdfDoc.save();
         return new NextResponse(pdfBytes, {
             headers: {
-                'Content-Type': 'application/pdf',
-                'Content-Disposition': `attachment; filename="${examName}-${subjectName}.pdf"`,
+                "Content-Type": "application/pdf",
+                "Content-Disposition": `attachment; filename="${examName}-${subjectName}.pdf"`,
             },
         });
     } catch (error) {

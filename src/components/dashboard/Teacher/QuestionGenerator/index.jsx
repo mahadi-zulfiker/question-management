@@ -32,6 +32,9 @@ export default function QuestionGenerator() {
     const [examMarks, setExamMarks] = useState("");
     const [subjectName, setSubjectName] = useState("");
     const [segmentName, setSegmentName] = useState("");
+    const [questionSetNumber, setQuestionSetNumber] = useState("");
+    const [subjectCodeNumber, setSubjectCodeNumber] = useState("");
+    const [information, setInformation] = useState("");
     const [preview, setPreview] = useState(false);
     const [classNumbers, setClassNumbers] = useState([]);
     const [subjects, setSubjects] = useState([]);
@@ -110,8 +113,20 @@ export default function QuestionGenerator() {
         const trimmedExamMarks = examMarks.trim();
         const trimmedSubjectName = subjectName.trim();
         const trimmedSegmentName = segmentName.trim();
+        const trimmedQuestionSetNumber = questionSetNumber.trim();
+        const trimmedSubjectCodeNumber = subjectCodeNumber.trim();
+        const trimmedInformation = information.trim();
 
-        if (!trimmedSchoolName || !trimmedSchoolAddress || !trimmedExamName || !trimmedExamTime || !trimmedExamMarks || !trimmedSubjectName || !trimmedSegmentName || selectedQuestions.length === 0) {
+        if (
+            !trimmedSchoolName ||
+            !trimmedSchoolAddress ||
+            !trimmedExamName ||
+            !trimmedExamTime ||
+            !trimmedExamMarks ||
+            !trimmedSubjectName ||
+            !trimmedSegmentName ||
+            selectedQuestions.length === 0
+        ) {
             toast.error("সমস্ত প্রয়োজনীয় তথ্য পূরণ করুন এবং কমপক্ষে একটি প্রশ্ন নির্বাচন করুন!");
             return;
         }
@@ -154,7 +169,10 @@ export default function QuestionGenerator() {
                     examMarks: trimmedExamMarks,
                     subjectName: trimmedSubjectName,
                     segmentName: trimmedSegmentName,
-                    selectedQuestions
+                    questionSetNumber: trimmedQuestionSetNumber,
+                    subjectCodeNumber: trimmedSubjectCodeNumber,
+                    information: trimmedInformation,
+                    selectedQuestions,
                 }),
             });
 
@@ -197,6 +215,18 @@ export default function QuestionGenerator() {
                         ring: 2px;
                         ring-color: #3b82f6;
                         border-color: #3b82f6;
+                    }
+                    .preview-container {
+                        max-width: 595px; /* A4 width in points at 72dpi */
+                        margin: 0 auto;
+                        font-size: 12px;
+                        line-height: 1.2;
+                    }
+                    .mcq-options {
+                        display: grid;
+                        grid-template-columns: repeat(2, 1fr);
+                        gap: 4px 8px;
+                        margin-top: 4px;
                     }
                 `}</style>
             </Head>
@@ -346,6 +376,30 @@ export default function QuestionGenerator() {
                             <option value="CQ">সৃজনশীল প্রশ্ন</option>
                             <option value="SQ">সংক্ষিপ্ত প্রশ্ন</option>
                         </select>
+                        <input
+                            type="text"
+                            placeholder="প্রশ্ন সেট নম্বর (ঐচ্ছিক)..."
+                            value={questionSetNumber}
+                            onChange={(e) => setQuestionSetNumber(e.target.value)}
+                            className="p-3 border border-gray-300 rounded-lg input-focus bangla-text"
+                            aria-label="প্রশ্ন সেট নম্বর"
+                        />
+                        <input
+                            type="text"
+                            placeholder="বিষয় কোড নম্বর (ঐচ্ছিক)..."
+                            value={subjectCodeNumber}
+                            onChange={(e) => setSubjectCodeNumber(e.target.value)}
+                            className="p-3 border border-gray-300 rounded-lg input-focus bangla-text"
+                            aria-label="বিষয় কোড নম্বর"
+                        />
+                        <textarea
+                            placeholder="তথ্য (ঐচ্ছিক)..."
+                            value={information}
+                            onChange={(e) => setInformation(e.target.value)}
+                            className="p-3 border border-gray-300 rounded-lg input-focus bangla-text col-span-2"
+                            rows="3"
+                            aria-label="তথ্য"
+                        />
                     </div>
                 </div>
 
@@ -441,41 +495,77 @@ export default function QuestionGenerator() {
 
                 {/* Preview Section */}
                 {preview && selectedQuestions.length > 0 && (
-                    <div className="mt-8 p-6 border border-gray-200 rounded-xl shadow-sm bg-white">
-                        <h2 className="text-2xl font-bold mb-2 text-center bangla-text">{schoolName}</h2>
-                        <p className="text-center text-gray-600 bangla-text">{schoolAddress}</p>
-                        <h3 className="text-xl font-semibold mb-2 text-center bangla-text">{examName}</h3>
-                        <p className="text-center text-gray-600 bangla-text">বিষয়: {subjectName}</p>
-                        <p className="text-center text-gray-600 bangla-text">সময়: {examTime} মিনিট</p>
-                        <p className="text-center text-gray-600 bangla-text">পূর্ণমান: {examMarks}</p>
-                        <h4 className="text-lg font-semibold mt-4 text-center bangla-text">বিভাগ: {segmentName}</h4>
-                        <div className="mt-6">
+                    <div className="mt-8 p-6 border border-gray-200 rounded-xl shadow-sm bg-white preview-container">
+                        <div className="flex justify-between items-start mb-2">
+                            <div>
+                                <h2 className="text-lg font-bold bangla-text">{schoolName}</h2>
+                                <p className="text-sm bangla-text">{schoolAddress}</p>
+                            </div>
+                            {(questionSetNumber || subjectCodeNumber) && (
+                                <div className="text-right text-sm bangla-text">
+                                    {questionSetNumber && <p>বিভাগ কোড: {questionSetNumber}</p>}
+                                    {subjectCodeNumber && <p>বিষয় কোড: {subjectCodeNumber}</p>}
+                                </div>
+                            )}
+                        </div>
+                        <h3 className="text-base font-semibold mb-1 text-center bangla-text">{examName}</h3>
+                        <p className="text-center text-sm bangla-text">বিষয়: {subjectName}</p>
+                        <div className="flex justify-between text-sm mb-2">
+                            <p className="bangla-text">সময়: {examTime} মিনিট</p>
+                            <p className="bangla-text">পূর্ণমান: {examMarks}</p>
+                        </div>
+                        {information && (
+                            <div className="mb-2 bangla-text">
+                                <p className="font-semibold text-sm">বিশেষ নির্দেশাবলী:</p>
+                                <p className="text-sm">{information}</p>
+                            </div>
+                        )}
+                        <h4 className="text-sm font-semibold text-center bangla-text mb-4">বিভাগ: {segmentName}</h4>
+                        <div>
                             {segmentName === "MCQ" && selectedQuestions.map((q, index) => (
-                                <div key={q._id} className="mb-6">
-                                    <p className="text-lg font-medium bangla-text">{index + 1}. <StaticMathField>{sanitizeContent(q.question)}</StaticMathField></p>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                        {q.options.map((opt, i) => (
-                                            <p key={i} className="bangla-text">
-                                                {String.fromCharCode(2453 + i)}) <StaticMathField>{sanitizeContent(opt)}</StaticMathField>
-                                            </p>
-                                        ))}
-                                    </div>
+                                <div key={q._id} className="mb-4">
+                                    <p className="text-sm bangla-text mb-1">{index + 1}. <StaticMathField>{sanitizeContent(q.question)}</StaticMathField></p>
+                                    {q.options.length > 4 ? (
+                                        <>
+                                            {q.options.slice(0, 3).map((opt, i) => (
+                                                <p key={i} className="text-xs bangla-text ml-4">
+                                                    {String.fromCharCode(2453 + i)}) <StaticMathField>{sanitizeContent(opt)}</StaticMathField>
+                                                </p>
+                                            ))}
+                                            <p className="text-xs bangla-text ml-4 mt-1">নিচের কোনটি সঠিক?</p>
+                                            <div className="mcq-options ml-4">
+                                                {q.options.slice(3).map((opt, i) => (
+                                                    <p key={i} className="text-xs bangla-text">
+                                                        {String.fromCharCode(2453 + i)}) <StaticMathField>{sanitizeContent(opt)}</StaticMathField>
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div className="mcq-options ml-4">
+                                            {q.options.map((opt, i) => (
+                                                <p key={i} className="text-xs bangla-text">
+                                                    {String.fromCharCode(2453 + i)}) <StaticMathField>{sanitizeContent(opt)}</StaticMathField>
+                                                </p>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                             {segmentName === "CQ" && selectedQuestions.map((q, index) => (
-                                <div key={q._id} className="mb-6">
-                                    <p className="text-lg font-medium bangla-text">প্রশ্ন {index + 1}:</p>
-                                    <p className="bangla-text">উদ্দীপক: <StaticMathField>{sanitizeContent(q.passage)}</StaticMathField></p>
+                                <div key={q._id} className="mb-4">
+                                    <p className="text-sm font-medium bangla-text">প্রশ্ন {index + 1}:</p>
+                                    <p className="text-xs bangla-text">উদ্দীপক: <StaticMathField>{sanitizeContent(q.passage)}</StaticMathField></p>
                                     {q.questions.map((ques, i) => (
-                                        <p key={i} className="mt-2 bangla-text">
+                                        <p key={i} className="mt-1 text-xs bangla-text">
                                             {String.fromCharCode(2453 + i)}) <StaticMathField>{sanitizeContent(ques)}</StaticMathField> ({q.marks[i]} নম্বর)
                                         </p>
                                     ))}
                                 </div>
                             ))}
                             {segmentName === "SQ" && selectedQuestions.map((q, index) => (
-                                <div key={q._id} className="mb-6">
-                                    <p className="text-lg font-medium bangla-text">{index + 1}. ({q.type}) <StaticMathField>{sanitizeContent(q.question)}</StaticMathField></p>
+                                <div key={q._id} className="mb-2">
+                                    <p className="text-sm bangla-text">{index + 1}. ({q.type}) <StaticMathField>{sanitizeContent(q.question)}</StaticMathField></p>
                                 </div>
                             ))}
                         </div>
