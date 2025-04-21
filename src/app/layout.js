@@ -2,6 +2,7 @@ import { Noto_Sans_Bengali } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 import Script from "next/script";
+import MathJaxProvider from "./MathJaxProvider"; // make sure this exists
 
 const notoBengali = Noto_Sans_Bengali({
   variable: "--font-noto-bengali",
@@ -19,14 +20,20 @@ export default function RootLayout({ children }) {
     <Providers>
       <html lang="bn">
         <body className={`${notoBengali.variable} antialiased`}>
-          {children}
-          {/* <Script strategy="afterInteractive">
+          <MathJaxProvider>
+            {children}
+          </MathJaxProvider>
+
+          {/* Uncomment if you want to disable right click */}
+          {/* 
+          <Script strategy="afterInteractive">
             {`
               document.addEventListener('contextmenu', function(e) {
                 e.preventDefault();
               });
             `}
-          </Script> */}
+          </Script> 
+          */}
         </body>
       </html>
     </Providers>
