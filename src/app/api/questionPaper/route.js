@@ -20,29 +20,32 @@ const sanitizeQuestion = (q, segmentName) => {
         sanitized.marks = Array.isArray(q.marks) ? q.marks.map(mark => mark || 0) : sanitized.questions.map(() => 0);
     } else if (segmentName === "SQ") {
         sanitized.question = q.question || "N/A";
-        sanitized.type = q.type || "sq";
+        sanitized.type = q.type || "N/A";
     }
     return sanitized;
 };
 
 const convertLatexToText = (latex) => {
     if (!latex) return "N/A";
-    let text = latex
-        .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "($1)/($2)")
+    return latex
+        .replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "($1)/($2)") // Fractions
         .replace(/\{([^}]+)\}/g, "$1")
-        .replace(/\^2/g, "²")
+        .replace(/\^2/g, "²") // Superscripts
         .replace(/\^3/g, "³")
         .replace(/\^(\d+)/g, "^$1")
-        .replace(/\\sqrt\{([^}]+)\}/g, "√($1)")
-        .replace(/\\times/g, "×")
-        .replace(/\\div/g, "÷")
-        .replace(/\\alpha/g, "α")
+        .replace(/\\sqrt\{([^}]+)\}/g, "√($1)") // Square roots
+        .replace(/\\times/g, "×") // Multiplication
+        .replace(/\\div/g, "÷") // Division
+        .replace(/\\alpha/g, "α") // Greek letters
         .replace(/\\beta/g, "β")
         .replace(/\\gamma/g, "γ")
         .replace(/\\pi/g, "π")
-        .replace(/\\infty/g, "∞");
-    text = text.replace(/\\[a-zA-Z]+/g, "");
-    return text;
+        .replace(/\\infty/g, "∞")
+        .replace(/\\leq/g, "≤") // Inequalities
+        .replace(/\\geq/g, "≥")
+        .replace(/\\neq/g, "≠")
+        .replace(/\\pm/g, "±")
+        .replace(/\\[a-zA-Z]+/g, ""); // Remove unsupported commands
 };
 
 export async function GET(req) {
@@ -236,15 +239,12 @@ export async function POST(req) {
             let xPosition = margin;
             if (options.x) {
                 xPosition = options.x;
-            } else {
-                for (const line of lines) {
-                    const lineWidth = font.widthOfTextAtSize(line, size);
-                    if (align === "center") {
-                        xPosition = margin + (contentWidth - lineWidth) / 2;
-                    } else if (align === "right") {
-                        xPosition = margin + contentWidth - lineWidth;
-                    }
-                }
+            } else if (align === "center") {
+                const lineWidth = font.widthOfTextAtSize(lines[0], size);
+                xPosition = margin + (contentWidth - lineWidth) / 2;
+            } else if (align === "right") {
+                const lineWidth = font.widthOfTextAtSize(lines[0], size);
+                xPosition = margin + contentWidth - lineWidth;
             }
 
             for (const line of lines) {
@@ -253,37 +253,36 @@ export async function POST(req) {
                     y: yPosition,
                     size: size,
                     font: font,
-                    color: rgb(0, 0, 0), // Black color for all text
+                    color: rgb(0, 0, 0),
                 });
-                yPosition -= size + 2;
+                yPosition -= size + 1;
             }
-            return lines.length * (size + 2);
+            return lines.length * (size + 1);
         };
 
         // Header
-        if (questionSetNumber || subjectCodeNumber) {
-            let codeText = "";
-            if (questionSetNumber) codeText += `বিভাগ কোড: ${questionSetNumber}`;
-            if (subjectCodeNumber) codeText += `${questionSetNumber ? "  " : ""}বিষয় কোড: ${subjectCodeNumber}`;
-            drawText(codeText, 10, { align: "right" });
-        }
-
         drawText(schoolName || "N/A", 14, { align: "center" });
         drawText(schoolAddress || "N/A", 10, { align: "center" });
         yPosition -= 5;
         drawText(examName || "N/A", 12, { align: "center" });
         drawText(`বিষয়: ${subjectName || "N/A"}`, 10, { align: "center" });
         yPosition -= 5;
-        drawText(`সময়: ${parsedExamTime} মিনিট`, 10, { x: margin });
-        drawText(`পূর্ণমান: ${parsedExamMarks}`, 10, { align: "right" });
+        if (questionSetNumber || subjectCodeNumber) {
+            let codeText = "";
+            if (questionSetNumber) codeText += `বিভাগ কোড: ${questionSetNumber}`;
+            if (subjectCodeNumber) codeText += `${questionSetNumber ? "  " : ""}বিষয় কোড: ${subjectCodeNumber}`;
+            drawText(codeText, 10, { align: "right" });
+        }
+        drawText(`সময়: ${examTime} মিনিট`, 10, { x: margin });
+        drawText(`পূর্ণমান: ${examMarks}`, 10, { align: "right" });
 
         if (information) {
             yPosition -= 5;
             drawText("বিশেষ নির্দেশাবলী:", 10);
             drawText(information, 9);
+            yPosition -= 5;
         }
 
-        yPosition -= 5;
         drawText(`বিভাগ: ${segmentName}`, 11, { align: "center" });
         yPosition -= 10;
 
@@ -296,54 +295,29 @@ export async function POST(req) {
 
             sanitizedQuestions.forEach((q, index) => {
                 const questionText = convertLatexToText(q.question);
-                const questionHeight = drawText(`${index + 1}. ${questionText}`, 9, { width: columnWidth, x: xPosition });
+                const questionHeight = drawText(`${index + 1}. ${questionText}`, 8, { width: columnWidth, x: xPosition });
 
                 let optionsHeight = 0;
-                if (q.options.length > 4) {
-                    for (let j = 0; j < 3 && j < q.options.length; j++) {
-                        const statement = convertLatexToText(q.options[j]);
-                        optionsHeight += drawText(`${String.fromCharCode(2453 + j)}. ${statement}`, 8, { width: columnWidth, x: xPosition });
-                    }
-                    optionsHeight += drawText("নিচের কোনটি সঠিক?", 8, { width: columnWidth, x: xPosition });
-
-                    const remainingOptions = q.options.slice(3);
-                    const optionPairs = [];
-                    for (let j = 0; j < remainingOptions.length; j += 2) {
-                        optionPairs.push(remainingOptions.slice(j, j + 2));
-                    }
-
-                    optionPairs.forEach((pair, pairIndex) => {
-                        const option1 = pair[0] ? `${String.fromCharCode(2453 + pairIndex * 2)}) ${convertLatexToText(pair[0])}` : "";
-                        const option2 = pair[1] ? `${String.fromCharCode(2453 + pairIndex * 2 + 1)}) ${convertLatexToText(pair[1])}` : "";
-                        if (option1) {
-                            optionsHeight += drawText(option1, 8, { width: columnWidth / 2 - 2, x: xPosition });
-                        }
-                        if (option2) {
-                            optionsHeight += drawText(option2, 8, { width: columnWidth / 2 - 2, x: xPosition + columnWidth / 2 + 2 });
-                        }
-                    });
-                } else {
-                    const optionPairs = [];
-                    for (let j = 0; j < q.options.length; j += 2) {
-                        optionPairs.push(q.options.slice(j, j + 2));
-                    }
-
-                    optionPairs.forEach((pair, pairIndex) => {
-                        const option1 = pair[0] ? `${String.fromCharCode(2453 + pairIndex * 2)}) ${convertLatexToText(pair[0])}` : "";
-                        const option2 = pair[1] ? `${String.fromCharCode(2453 + pairIndex * 2 + 1)}) ${convertLatexToText(pair[1])}` : "";
-                        if (option1) {
-                            optionsHeight += drawText(option1, 8, { width: columnWidth / 2 - 2, x: xPosition });
-                        }
-                        if (option2) {
-                            optionsHeight += drawText(option2, 8, { width: columnWidth / 2 - 2, x: xPosition + columnWidth / 2 + 2 });
-                        }
-                    });
+                const optionPairs = [];
+                for (let j = 0; j < (q.options || []).length; j += 2) {
+                    optionPairs.push(q.options.slice(j, j + 2));
                 }
 
-                const totalHeight = questionHeight + optionsHeight + 15;
+                optionPairs.forEach((pair, pairIndex) => {
+                    const option1 = pair[0] ? `${String.fromCharCode(2453 + pairIndex * 2)}) ${convertLatexToText(pair[0])}` : "";
+                    const option2 = pair[1] ? `${String.fromCharCode(2453 + pairIndex * 2 + 1)}) ${convertLatexToText(pair[1])}` : "";
+                    if (option1) {
+                        optionsHeight += drawText(option1, 7, { width: columnWidth / 2 - 2, x: xPosition });
+                    }
+                    if (option2) {
+                        optionsHeight += drawText(option2, 7, { width: columnWidth / 2 - 2, x: xPosition + columnWidth / 2 + 2 });
+                    }
+                });
+
+                const totalHeight = questionHeight + optionsHeight + 8;
                 columnHeight -= totalHeight;
 
-                if (columnHeight < margin + 50) {
+                if (columnHeight < margin + 40) {
                     currentColumn++;
                     if (currentColumn > 1) {
                         page = pdfDoc.addPage([595, 842]);
@@ -354,37 +328,37 @@ export async function POST(req) {
                     columnHeight = yPosition;
                     yPosition -= totalHeight;
                 } else {
-                    yPosition -= 15;
+                    yPosition -= 8;
                 }
             });
         } else if (segmentName === "CQ") {
             sanitizedQuestions.forEach((q, index) => {
-                if (yPosition < margin + 100) {
+                if (yPosition < margin + 80) {
                     page = pdfDoc.addPage([595, 842]);
                     yPosition = pageHeight - margin;
                 }
 
                 drawText(`প্রশ্ন ${index + 1}:`, 10);
-                yPosition -= 5;
+                yPosition -= 3;
                 drawText(`উদ্দীপক: ${convertLatexToText(q.passage)}`, 9);
                 yPosition -= 5;
 
-                q.questions.forEach((ques, i) => {
-                    drawText(`${String.fromCharCode(2453 + i)}) ${convertLatexToText(ques)} (${q.marks[i]} নম্বর)`, 9);
-                    yPosition -= 10;
+                (q.questions || []).forEach((ques, i) => {
+                    drawText(`${String.fromCharCode(2453 + i)}) ${convertLatexToText(ques)} (${q.marks[i] || 0} নম্বর)`, 9, { x: margin + 10 });
+                    yPosition -= 5;
                 });
 
                 yPosition -= 10;
             });
         } else if (segmentName === "SQ") {
             sanitizedQuestions.forEach((q, index) => {
-                if (yPosition < margin + 50) {
+                if (yPosition < margin + 40) {
                     page = pdfDoc.addPage([595, 842]);
                     yPosition = pageHeight - margin;
                 }
 
                 drawText(`${index + 1}. (${q.type}) ${convertLatexToText(q.question)}`, 9);
-                yPosition -= 12;
+                yPosition -= 8;
             });
         }
 
@@ -398,7 +372,7 @@ export async function POST(req) {
                 font: font,
                 color: rgb(0, 0, 0),
             });
-            p.drawText(`${examName} - ${subjectName}`, {
+            p.drawText(`${examName || "N/A"} - ${subjectName || "N/A"}`, {
                 x: margin,
                 y: margin - 10,
                 size: 8,
