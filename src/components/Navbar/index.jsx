@@ -31,7 +31,6 @@ const Navbar = () => {
         { name: "ভর্তি পরীক্ষা", link: "/admission" },
         { name: "প্রশ্নব্যাংক", link: "/questionBank" },
         { name: "পরীক্ষা তৈরি", link: "/createExam" },
-        { name: "পরীক্ষা দিন", link: "/takeExam" },
         { name: "অনলাইন পরীক্ষা", link: "/onlineExam" },
         { name: "প্যাকেজ", link: "/packages" },
     ];

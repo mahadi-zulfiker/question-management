@@ -7,10 +7,10 @@ function HowToUse() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Heading Section */}
         <div className="text-center mb-16">
-          <h1 className="text-4xl md:text-5xl font-bold text-blue-900 mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-700 mb-6">
             সফটওয়্যারটি কীভাবে ব্যবহার করবেন?
           </h1>
-          <p className="text-lg text-blue-700 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg text-gray-700 max-w-3xl mx-auto leading-relaxed">
             আমাদের সফটওয়্যারটি ব্যবহার করা খুবই সহজ! নিচের ধাপগুলো অনুসরণ করুন এবং দ্রুত শুরু করুন।
           </p>
         </div>
@@ -25,8 +25,8 @@ function HowToUse() {
                 ১
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-blue-900 mb-2">নিবন্ধন করুন</h3>
-                <p className="text-blue-600 leading-relaxed">
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">নিবন্ধন করুন</h3>
+                <p className="text-gray-600 leading-relaxed">
                   আমাদের ওয়েবসাইটে আপনার তথ্য দিয়ে নিবন্ধন করুন এবং একটি অ্যাকাউন্ট তৈরি করুন।
                 </p>
               </div>
@@ -38,8 +38,8 @@ function HowToUse() {
                 ২
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-blue-900 mb-2">বৈশিষ্ট্যগুলো জানুন</h3>
-                <p className="text-blue-600 leading-relaxed">
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">বৈশিষ্ট্যগুলো জানুন</h3>
+                <p className="text-gray-600 leading-relaxed">
                   আমাদের সফটওয়্যারের বিভিন্ন বৈশিষ্ট্যগুলো সম্পর্কে জানুন এবং কীভাবে সেগুলো ব্যবহার করবেন তা শিখুন।
                 </p>
               </div>
@@ -51,8 +51,8 @@ function HowToUse() {
                 ৩
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-blue-900 mb-2">প্রশ্ন তৈরি করুন</h3>
-                <p className="text-blue-600 leading-relaxed">
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">প্রশ্ন তৈরি করুন</h3>
+                <p className="text-gray-600 leading-relaxed">
                   আপনার প্রয়োজন অনুযায়ী প্রশ্ন তৈরি করুন এবং সেগুলো সংরক্ষণ করুন।
                 </p>
               </div>
@@ -64,8 +64,8 @@ function HowToUse() {
                 ৪
               </div>
               <div>
-                <h3 className="text-xl font-semibold text-blue-900 mb-2">পরীক্ষা দিন ও পরিচালনা করুন</h3>
-                <p className="text-blue-600 leading-relaxed">
+                <h3 className="text-xl font-semibold text-gray-700 mb-2">পরীক্ষা দিন ও পরিচালনা করুন</h3>
+                <p className="text-gray-600 leading-relaxed">
                   পরীক্ষা দিন এবং আপনার ছাত্রদের জন্য পরীক্ষা পরিচালনা করুন।
                 </p>
               </div>

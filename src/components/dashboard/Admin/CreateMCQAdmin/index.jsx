@@ -38,11 +38,13 @@ const processTextForLatex = (text) => {
   // Normalize and clean text
   text = normalizeText(text).replace(/[\u200B-\u200F\uFEFF]/g, "");
 
-  // Handle fractions (e.g., "1/2" → "\frac{1}{2}")
+  // Handle mixed fractions (e.g., "1 1/2" → "1\\ \\frac{1}{2}")
   text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
     const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
     return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
   });
+
+  // Handle fractions (e.g., "1/2" → "\frac{1}{2}")
   text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
     const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
     return `\\frac{${numerator}}{${denominator}}`;
@@ -87,7 +89,7 @@ const processTextForLatex = (text) => {
 
 // Render markdown and LaTeX in preview
 const renderLines = (text) => {
-  if (!text) return 'বিকল্প লিখুন';
+  if (!text) return 'প্রশ্ন বা বিকল্প লিখুন...';
 
   return text.split('\n').map((line, index) => {
     // Process markdown-style formatting
@@ -378,15 +380,15 @@ export default function CreateMCQAdmin() {
         "Chapter Number": 1,
         "Chapter Name": "Chapter 1",
         "MCQ Type": "higher",
-        Question: "\\frac{1}{2} + \\frac{1}{3} = ?",
+        Question: "1 1/2 + 1/3 = ?",
         "Option 1": "এক",
         "Option 2": "দুই",
         "Option 3": "তিন",
         "Option 4": "চার",
         "Option 5": "\\frac{5}{6}",
-        "Option 6": "\\frac{1}{6}",
+        "Option 6": "1\\ \\frac{5}{6}",
         "Option 7": "\\frac{2}{5}",
-        "Correct Answer": 4,
+        "Correct Answer": 6,
         "Image Alignment": "center",
         "Video Link": "",
       },
@@ -413,7 +415,7 @@ export default function CreateMCQAdmin() {
 
         if (data.length > 0) {
           const extractedQuestions = data.map((row) => ({
-            question: normalizeText(row.Question || ""),
+            question: processTextForLatex(normalizeText(row.Question || "")),
             classNumber: row.Class || selectedClass,
             subject: row.Subject || selectedSubject,
             chapterNumber: row["Chapter Number"] || selectedChapter,
@@ -421,15 +423,20 @@ export default function CreateMCQAdmin() {
             questionType: row["MCQ Type"] || questionType,
             options:
               row["MCQ Type"] === "general" || !row["MCQ Type"]
-                ? [row["Option 1"] || "", row["Option 2"] || "", row["Option 3"] || "", row["Option 4"] || ""]
+                ? [
+                    processTextForLatex(row["Option 1"] || ""),
+                    processTextForLatex(row["Option 2"] || ""),
+                    processTextForLatex(row["Option 3"] || ""),
+                    processTextForLatex(row["Option 4"] || ""),
+                  ]
                 : [
-                    row["Option 1"] || "",
-                    row["Option 2"] || "",
-                    row["Option 3"] || "",
-                    row["Option 4"] || "",
-                    row["Option 5"] || "",
-                    row["Option 6"] || "",
-                    row["Option 7"] || "",
+                    processTextForLatex(row["Option 1"] || ""),
+                    processTextForLatex(row["Option 2"] || ""),
+                    processTextForLatex(row["Option 3"] || ""),
+                    processTextForLatex(row["Option 4"] || ""),
+                    processTextForLatex(row["Option 5"] || ""),
+                    processTextForLatex(row["Option 6"] || ""),
+                    processTextForLatex(row["Option 7"] || ""),
                   ],
             correctAnswer: row["Correct Answer"] || null,
             imageAlignment: row["Image Alignment"] || "center",
@@ -437,7 +444,7 @@ export default function CreateMCQAdmin() {
           }));
 
           const response = await fetch("/api/mcq/import", {
-            method: "POST",
+            method: "POST:",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ questions: extractedQuestions }),
           });
@@ -764,7 +771,7 @@ export default function CreateMCQAdmin() {
                       onFormat={handleFormat}
                     />
                     <p className="text-sm text-gray-500 mt-1 bangla-text">
-                      * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                      * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: 1 1/2, \\frac{1}{2})
                     </p>
                   </div>
 
@@ -842,7 +849,7 @@ export default function CreateMCQAdmin() {
                         </div>
                       ))}
                       <p className="text-sm text-gray-500 mt-1 bangla-text">
-                        * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                        * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: 1 1/2, \\frac{1}{2})
                       </p>
                     </>
                   )}
@@ -894,7 +901,7 @@ export default function CreateMCQAdmin() {
                         </div>
                       ))}
                       <p className="text-sm text-gray-500 mt-1 bangla-text">
-                        * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                        * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: 1 1/2, \\frac{1}{2})
                       </p>
                     </>
                   )}
@@ -975,7 +982,7 @@ export default function CreateMCQAdmin() {
                         key={i}
                         className={`p-2 rounded-lg ${q.correctAnswer === i ? "bg-green-100 font-bold text-green-800" : "text-gray-700"} bangla-text`}
                       >
-                        {String.fromCharCode(2453 + i)}. {renderLines(opt || "বিকল্প লিখুন")}
+                        {String.fromCharCode(2453 + i)}. {renderLines(opt || "প্রশ্ন বা বিকল্প লিখুন...")}
                       </p>
                     ))}
                   </div>
@@ -984,7 +991,7 @@ export default function CreateMCQAdmin() {
                     <div className="mb-3 text-gray-700">
                       {q.higherOptions.slice(0, 3).map((opt, i) => (
                         <p key={i} className="bangla-text">
-                          {String.fromCharCode(2453 + i)}. {renderLines(opt || "বিকল্প লিখুন")}
+                          {String.fromCharCode(2453 + i)}. {renderLines(opt || "প্রশ্ন বা বিকল্প লিখুন...")}
                         </p>
                       ))}
                     </div>
@@ -995,7 +1002,7 @@ export default function CreateMCQAdmin() {
                           key={i + 3}
                           className={`p-2 rounded-lg ${q.higherCorrectAnswer === i + 3 ? "bg-green-100 font-bold text-green-800" : "text-gray-700"} bangla-text`}
                         >
-                          {String.fromCharCode(2453 + i)}. {renderLines(opt || "অপশন লিখুন")}
+                          {String.fromCharCode(2453 + i)}. {renderLines(opt || "প্রশ্ন বা বিকল্প লিখুন...")}
                         </p>
                       ))}
                     </div>

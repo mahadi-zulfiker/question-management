@@ -6,7 +6,7 @@ const FormatToolbar = ({ position, onFormat }) => {
   const toolbarStyle = {
     position: 'absolute',
     left: position.x,
-    top: position.y - 40, // Position above the selection
+    top: position.y - 5, // Position above the selection
     backgroundColor: 'white',
     border: '1px solid #ccc',
     borderRadius: '4px',
