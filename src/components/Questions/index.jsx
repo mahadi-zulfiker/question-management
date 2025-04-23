@@ -24,7 +24,7 @@ function Questions() {
     <div className="bg-gradient-to-b from-gray-50 to-white py-24">
       <div className="max-w-6xl mx-auto px-6">
         <div className="text-center mb-16">
-          <h1 className="text-5xl font-extrabold text-gray-800 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-700">
+          <h1 className="text-5xl font-extrabold text-gray-700">
             প্রশ্নের উত্তর জানতে চান?
           </h1>
           <p className="text-xl text-gray-600 mt-6 max-w-2xl mx-auto">

@@ -4,22 +4,22 @@ import { BookOpen, Edit, Users, FileText, Search, Award, MessageCircle, Download
 export default function FeaturesSection() {
   const studentFeatures = [
     {
-      icon: <BookOpen className="w-10 h-10 text-blue-600" />,
+      icon: <BookOpen className="w-10 h-10 text-gray-600" />,
       title: "পরীক্ষা দিন",
       description: "অনলাইনে মডেল টেস্ট এবং ভর্তি পরীক্ষায় অংশ নিন, আপনার প্রস্তুতি যাচাই করুন।",
     },
     {
-      icon: <Search className="w-10 h-10 text-blue-600" />,
+      icon: <Search className="w-10 h-10 text-gray-600" />,
       title: "প্রশ্ন ব্যাংক",
       description: "বিশাল প্রশ্ন ব্যাংক থেকে এমসিকিউ, সৃজনশীল এবং সংক্ষিপ্ত প্রশ্ন দেখুন এবং অনুশীলন করুন।",
     },
     {
-      icon: <MessageCircle className="w-10 h-10 text-blue-600" />,
+      icon: <MessageCircle className="w-10 h-10 text-gray-600" />,
       title: "শিক্ষকের সাথে পরামর্শ",
       description: "শিক্ষকদের সাথে সরাসরি যোগাযোগ করুন, পরামর্শ নিন এবং আপনার প্রশ্নের সমাধান পান।",
     },
     {
-      icon: <Award className="w-10 h-10 text-blue-600" />,
+      icon: <Award className="w-10 h-10 text-gray-600" />,
       title: "মডেল ও ভর্তি টেস্ট",
       description: "বিভিন্ন মডেল টেস্ট এবং ভর্তি পরীক্ষার প্রশ্ন দিয়ে নিজেকে প্রস্তুত করুন।",
     },
@@ -27,22 +27,22 @@ export default function FeaturesSection() {
 
   const teacherFeatures = [
     {
-      icon: <Edit className="w-10 h-10 text-green-600" />,
+      icon: <Edit className="w-10 h-10 text-gray-600" />,
       title: "পরীক্ষা তৈরি",
       description: "প্রাক-নির্ধারিত প্রশ্ন থেকে সহজেই পরীক্ষা তৈরি করুন এবং কাস্টম প্রশ্ন যোগ করুন।",
     },
     {
-      icon: <Download className="w-10 h-10 text-green-600" />,
+      icon: <Download className="w-10 h-10 text-gray-600" />,
       title: "প্রশ্নপত্র ডাউনলোড",
       description: "পরীক্ষার প্রশ্নপত্র তৈরি করে পিডিএফ হিসেবে ডাউনলোড করুন, সহজে শেয়ার করুন।",
     },
     {
-      icon: <Users className="w-10 h-10 text-green-600" />,
+      icon: <Users className="w-10 h-10 text-gray-600" />,
       title: "ছাত্র সার্কেল",
       description: "ছাত্রদের ব্যাচ পরিচালনা করুন, তাদের অগ্রগতি ট্র্যাক করুন এবং নম্বর দিন।",
     },
     {
-      icon: <FileText className="w-10 h-10 text-green-600" />,
+      icon: <FileText className="w-10 h-10 text-gray-600" />,
       title: "প্রিমিয়াম প্রশ্ন",
       description: "বিশাল প্রশ্নের সংগ্রহে অ্যাক্সেস পান, প্রিমিয়াম প্ল্যানের মাধ্যমে আরও সুবিধা।",
     },
@@ -79,7 +79,7 @@ export default function FeaturesSection() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Section Header */}
           <div className="text-center mb-12">
-            <h2 className="text-4xl md:text-5xl font-extrabold text-blue-800 bangla-text">
+            <h2 className="text-4xl md:text-5xl font-extrabold text-gray-800 bangla-text">
               আমাদের বৈশিষ্ট্যসমূহ
             </h2>
             <p className="mt-4 text-lg md:text-xl text-gray-600 bangla-text">
@@ -89,7 +89,7 @@ export default function FeaturesSection() {
 
           {/* Student Features */}
           <div className="mb-16">
-            <h3 className="text-2xl md:text-3xl font-bold text-blue-700 mb-8 text-center bangla-text">
+            <h3 className="text-2xl md:text-3xl font-bold text-gray-700 mb-8 text-center bangla-text">
               ছাত্রদের জন্য
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -111,7 +111,7 @@ export default function FeaturesSection() {
 
           {/* Teacher Features */}
           <div>
-            <h3 className="text-2xl md:text-3xl font-bold text-green-700 mb-8 text-center bangla-text">
+            <h3 className="text-2xl md:text-3xl font-bold text-gray-700 mb-8 text-center bangla-text">
               শিক্ষকদের জন্য
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

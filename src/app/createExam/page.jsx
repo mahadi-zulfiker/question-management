@@ -5,7 +5,49 @@ import Navbar from "@/components/Navbar";
 import { useEffect, useState } from "react";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
+import { MathJax } from "better-react-mathjax";
+
+// Process text for LaTeX conversion
+const processTextForLatex = (text) => {
+  if (!text) return "";
+  // Handle fractions (e.g., "1/2" → "\frac{1}{2}")
+  text = text.replace(/(\d+)\/(\d+)/g, "\\frac{$1}{$2}");
+  // Handle superscripts (e.g., "x^2" → "x^{2}")
+  text = text.replace(/(\w+)\^(\d+)/g, "$1^{$2}");
+  // Handle square roots (e.g., "sqrt(x)" → "\sqrt{x}")
+  text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
+  // Handle common symbols
+  text = text.replace(/≥/g, "\\geq");
+  text = text.replace(/≤/g, "\\leq");
+  text = text.replace(/≠/g, "\\neq");
+  return text;
+};
+
+// Render markdown and LaTeX in preview
+const renderLines = (text) => {
+  if (!text) return "No content";
+
+  try {
+    let processedLine = processTextForLatex(text);
+    if (processedLine.match(/[\\{}^_]/) && !processedLine.startsWith("$") && !processedLine.endsWith("$")) {
+      processedLine = `$${processedLine}$`;
+    }
+
+    return (
+      <MathJax>
+        <span dangerouslySetInnerHTML={{ __html: processedLine }} />
+      </MathJax>
+    );
+  } catch (error) {
+    return (
+      <span className="text-red-500">
+        LaTeX Error: Invalid format
+        <span className="text-gray-700 ml-2">{text}</span>
+      </span>
+    );
+  }
+};
 
 export default function CreateExam() {
   const [examTitle, setExamTitle] = useState("");
@@ -22,6 +64,7 @@ export default function CreateExam() {
   const [selectedQuestions, setSelectedQuestions] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     async function fetchClasses() {
@@ -29,7 +72,7 @@ export default function CreateExam() {
         const response = await fetch("/api/exam/classes");
         const data = await response.json();
         if (response.ok) setClasses(data.classes || []);
-        else toast.error("❌ Failed to load classes!");
+        else toast.error(data.error || "❌ Failed to load classes!");
       } catch (error) {
         toast.error("❌ Error fetching classes!");
       }
@@ -42,6 +85,8 @@ export default function CreateExam() {
       setSubjects([]);
       setChapters([]);
       setQuestions([]);
+      setFilteredQuestions([]);
+      setSelectedQuestions([]);
       return;
     }
     async function fetchSubjects() {
@@ -51,7 +96,7 @@ export default function CreateExam() {
         if (response.ok) {
           const uniqueSubjects = [...new Set(data.classes.map((c) => c.subject))];
           setSubjects(uniqueSubjects);
-        } else toast.error("❌ Failed to load subjects!");
+        } else toast.error(data.error || "❌ Failed to load subjects!");
       } catch (error) {
         toast.error("❌ Error fetching subjects!");
       }
@@ -63,6 +108,8 @@ export default function CreateExam() {
     if (!classNumber || !subject) {
       setChapters([]);
       setQuestions([]);
+      setFilteredQuestions([]);
+      setSelectedQuestions([]);
       return;
     }
     async function fetchChapters() {
@@ -72,7 +119,7 @@ export default function CreateExam() {
         if (response.ok) {
           const uniqueChapters = [...new Set(data.classes.map((c) => c.chapterNumber))];
           setChapters(uniqueChapters);
-        } else toast.error("❌ Failed to load chapters!");
+        } else toast.error(data.error || "❌ Failed to load chapters!");
       } catch (error) {
         toast.error("❌ Error fetching chapters!");
       }
@@ -100,7 +147,8 @@ export default function CreateExam() {
           setFilteredQuestions(fetchedQuestions);
         } else {
           toast.error(
-            `❌ No questions found for Class ${classNumber}, Subject ${subject}, Chapter ${chapterNumber}, Type ${examType}!`
+            data.error ||
+              `❌ No questions found for Class ${classNumber}, Subject ${subject}, Chapter ${chapterNumber}, Type ${examType}!`
           );
         }
       } catch (error) {
@@ -115,9 +163,10 @@ export default function CreateExam() {
   useEffect(() => {
     const filtered = questions.filter((q) => {
       if (!q) return false;
-      if (examType === "MCQ") return q.question?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
-      if (examType === "CQ") return q.passage?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
-      if (examType === "SQ") return q.question?.toLowerCase().includes(searchQuery.toLowerCase()) || false;
+      const query = searchQuery.toLowerCase();
+      if (examType === "MCQ") return q.question?.toLowerCase().includes(query) || false;
+      if (examType === "CQ") return q.passage?.toLowerCase().includes(query) || false;
+      if (examType === "SQ") return q.question?.toLowerCase().includes(query) || false;
       return false;
     });
     setFilteredQuestions(filtered);
@@ -135,7 +184,8 @@ export default function CreateExam() {
     e.preventDefault();
     if (!examTitle.trim()) return toast.error("❌ Exam title is required!");
     if (!examType) return toast.error("❌ Exam type is required!");
-    if (!duration || duration <= 0) return toast.error("❌ Duration must be positive!");
+    const parsedDuration = parseInt(duration);
+    if (!duration || parsedDuration <= 0) return toast.error("❌ Duration must be a positive integer!");
     if (!classNumber) return toast.error("❌ Class is required!");
     if (!subject) return toast.error("❌ Subject is required!");
     if (!chapterNumber) return toast.error("❌ Chapter is required!");
@@ -144,13 +194,14 @@ export default function CreateExam() {
     const examData = {
       title: examTitle,
       type: examType,
-      duration: parseInt(duration),
+      duration: parsedDuration,
       classNumber,
       subject,
       chapterNumber,
       questions: selectedQuestions,
     };
 
+    setSubmitting(true);
     try {
       const response = await fetch("/api/exam", {
         method: "POST",
@@ -158,12 +209,17 @@ export default function CreateExam() {
         body: JSON.stringify(examData),
       });
 
+      const data = await response.json();
       if (response.ok) {
-        toast.success("✅ Exam created successfully!");
+        toast.success(data.message || "✅ Exam created successfully!");
         resetForm();
-      } else toast.error("❌ Failed to create exam!");
+      } else {
+        toast.error(data.error || "❌ Failed to create exam!");
+      }
     } catch (error) {
       toast.error("❌ Submission error!");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -178,6 +234,18 @@ export default function CreateExam() {
     setFilteredQuestions([]);
     setSelectedQuestions([]);
     setSearchQuery("");
+    // Reset dropdowns to initial state
+    document.querySelectorAll("select").forEach((select) => (select.value = ""));
+  };
+
+  // Calculate total marks (assuming questions have a marks field)
+  const calculateTotalMarks = () => {
+    return selectedQuestions.reduce((total, q) => {
+      if (examType === "MCQ") return total + (q.marks || 1); // Default to 1 if marks not specified
+      if (examType === "CQ") return total + (q.marks || 10); // Default to 10 for CQ
+      if (examType === "SQ") return total + (q.marks || 2); // Default to 2 for SQ
+      return total;
+    }, 0);
   };
 
   return (
@@ -204,7 +272,9 @@ export default function CreateExam() {
             <form onSubmit={handleSubmit} className="space-y-10">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-800 mb-2">Exam Title</label>
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">
+                    Exam Title <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     placeholder="Enter exam title"
@@ -215,22 +285,31 @@ export default function CreateExam() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-800 mb-2">Duration (minutes)</label>
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">
+                    Duration (minutes) <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="number"
                     placeholder="e.g., 60"
-                    className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-gray-50 transition-all"
+                    className={`w-full p-4 border rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-gray-50 transition-all ${
+                      duration && parseInt(duration) <= 0 ? "border-red-500" : "border-gray-200"
+                    }`}
                     value={duration}
                     onChange={(e) => setDuration(e.target.value)}
                     min="1"
                     required
                   />
+                  {duration && parseInt(duration) <= 0 && (
+                    <p className="text-red-500 text-sm mt-1">Duration must be a positive integer</p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-800 mb-2">Class</label>
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">
+                    Class <span className="text-red-500">*</span>
+                  </label>
                   <select
                     className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-gray-50 transition-all"
                     value={classNumber}
@@ -240,13 +319,15 @@ export default function CreateExam() {
                     <option value="">Select Class</option>
                     {classes.map((cls) => (
                       <option key={cls._id} value={cls.classNumber}>
-                        ক্লাস {cls.classNumber} ({cls.level})
+                        Class {cls.classNumber} ({cls.level})
                       </option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-800 mb-2">Subject</label>
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">
+                    Subject <span className="text-red-500">*</span>
+                  </label>
                   <select
                     className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-gray-50 transition-all disabled:bg-gray-100"
                     value={subject}
@@ -263,7 +344,9 @@ export default function CreateExam() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-800 mb-2">Chapter</label>
+                  <label className="block text-sm font-semibold text-gray-800 mb-2">
+                    Chapter <span className="text-red-500">*</span>
+                  </label>
                   <select
                     className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-gray-50 transition-all disabled:bg-gray-100"
                     value={chapterNumber}
@@ -274,7 +357,7 @@ export default function CreateExam() {
                     <option value="">Select Chapter</option>
                     {chapters.map((chap) => (
                       <option key={chap} value={chap}>
-                        অধ্যায় {chap}
+                        Chapter {chap}
                       </option>
                     ))}
                   </select>
@@ -282,7 +365,9 @@ export default function CreateExam() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-800 mb-2">Exam Type</label>
+                <label className="block text-sm font-semibold text-gray-800 mb-2">
+                  Exam Type <span className="text-red-500">*</span>
+                </label>
                 <select
                   className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-400 focus:border-blue-400 bg-gray-50 transition-all"
                   value={examType}
@@ -339,27 +424,31 @@ export default function CreateExam() {
                               className="mt-1 h-5 w-5 text-indigo-600 rounded focus:ring-indigo-500"
                             />
                             <div className="flex-1">
-                              {examType === "MCQ" && (
+                              {examType === "MCQ" && q.question && (
                                 <>
-                                  <p className="font-semibold text-gray-900">{q.question}</p>
+                                  <p className="font-semibold text-gray-900">{renderLines(q.question)}</p>
                                   <ul className="list-disc ml-6 text-sm text-gray-700 mt-2">
-                                    {q.options?.map((opt, idx) => (
-                                      <li key={idx}>{opt}</li>
-                                    ))}
+                                    {Array.isArray(q.options) &&
+                                      q.options.map((opt, idx) => (
+                                        <li key={idx}>{renderLines(opt)}</li>
+                                      ))}
                                   </ul>
                                 </>
                               )}
-                              {examType === "CQ" && (
+                              {examType === "CQ" && q.passage && (
                                 <>
-                                  <p className="font-semibold text-gray-900">{q.passage}</p>
+                                  <p className="font-semibold text-gray-900">{renderLines(q.passage)}</p>
                                   <ul className="list-disc ml-6 text-sm text-gray-700 mt-2">
-                                    {q.questions?.map((cq, idx) => (
-                                      <li key={idx}>{cq}</li>
-                                    ))}
+                                    {Array.isArray(q.questions) &&
+                                      q.questions.map((cq, idx) => (
+                                        <li key={idx}>{renderLines(cq)}</li>
+                                      ))}
                                   </ul>
                                 </>
                               )}
-                              {examType === "SQ" && <p className="font-semibold text-gray-900">{q.question}</p>}
+                              {examType === "SQ" && q.question && (
+                                <p className="font-semibold text-gray-900">{renderLines(q.question)}</p>
+                              )}
                             </div>
                           </label>
                         </div>
@@ -373,7 +462,14 @@ export default function CreateExam() {
 
               {selectedQuestions.length > 0 && (
                 <div className="mt-10 bg-green-50 p-6 rounded-2xl shadow-inner">
-                  <h3 className="text-2xl font-semibold text-green-800 mb-6">👀 Selected Questions Preview</h3>
+                  <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-2xl font-semibold text-green-800">
+                      👀 Selected Questions Preview ({selectedQuestions.length} questions)
+                    </h3>
+                    <p className="text-lg font-medium text-green-800">
+                      Total Marks: {calculateTotalMarks()}
+                    </p>
+                  </div>
                   <div className="space-y-4 max-h-72 overflow-y-auto pr-2 custom-scrollbar">
                     {selectedQuestions.map((q) => (
                       <div
@@ -381,9 +477,15 @@ export default function CreateExam() {
                         className="border border-green-200 p-5 rounded-xl bg-white shadow-md flex justify-between items-center"
                       >
                         <div>
-                          {examType === "MCQ" && <p className="font-semibold text-gray-900">{q.question}</p>}
-                          {examType === "CQ" && <p className="font-semibold text-gray-900">{q.passage}</p>}
-                          {examType === "SQ" && <p className="font-semibold text-gray-900">{q.question}</p>}
+                          {examType === "MCQ" && q.question && (
+                            <p className="font-semibold text-gray-900">{renderLines(q.question)}</p>
+                          )}
+                          {examType === "CQ" && q.passage && (
+                            <p className="font-semibold text-gray-900">{renderLines(q.passage)}</p>
+                          )}
+                          {examType === "SQ" && q.question && (
+                            <p className="font-semibold text-gray-900">{renderLines(q.question)}</p>
+                          )}
                         </div>
                         <button
                           onClick={() => handleSelect(q)}
@@ -399,10 +501,17 @@ export default function CreateExam() {
 
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white py-4 mt-10 rounded-xl hover:from-blue-600 hover:to-blue-800 transition-all font-semibold shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed transform hover:-translate-y-1"
-                disabled={loading}
+                className="w-full bg-gradient-to-r from-blue-500 to-blue-700 text-white py-4 mt-10 rounded-xl hover:from-blue-600 hover:to-blue-800 transition-all font-semibold shadow-lg disabled:bg-gray-400 disabled:cursor-not-allowed transform hover:-translate-y-1 flex items-center justify-center"
+                disabled={loading || submitting}
               >
-                ✅ Create Exam Now
+                {submitting ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    Creating Exam...
+                  </>
+                ) : (
+                  "✅ Create Exam Now"
+                )}
               </button>
             </form>
           </div>

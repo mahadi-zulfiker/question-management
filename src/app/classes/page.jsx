@@ -269,16 +269,39 @@ export default function SubjectsList() {
                                         </a>
                                       </div>
                                     )}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
-                                      {(q.options || []).map((opt, i) => (
-                                        <p
-                                          key={i}
-                                          className={`text-gray-700 bangla-text ${q.correctOption === i ? "font-bold text-green-600" : ""}`}
-                                        >
-                                          {String.fromCharCode(2453 + i)}. <StaticMathField>{opt || "N/A"}</StaticMathField>
-                                        </p>
-                                      ))}
-                                    </div>
+                                    {(q.options || []).length === 4 ? (
+                                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                        {(q.options || []).map((opt, i) => (
+                                          <p
+                                            key={i}
+                                            className={`text-gray-700 bangla-text ${q.correctOption === i ? "font-bold text-gray-900" : ""}`}
+                                          >
+                                            {String.fromCharCode(2453 + i)}. <StaticMathField>{opt || "N/A"}</StaticMathField>
+                                          </p>
+                                        ))}
+                                      </div>
+                                    ) : (
+                                      <div className="mt-2">
+                                        <div className="mb-3">
+                                          {(q.options || []).slice(0, 3).map((opt, i) => (
+                                            <p key={i} className="text-gray-700 bangla-text">
+                                              {String.fromCharCode(2453 + i)}. <StaticMathField>{opt || "N/A"}</StaticMathField>
+                                            </p>
+                                          ))}
+                                        </div>
+                                        <p className="font-bold mb-2 text-gray-900 bangla-text">নিচের কোনটি সঠিক?</p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                          {(q.options || []).slice(3).map((opt, i) => (
+                                            <p
+                                              key={i + 3}
+                                              className={`text-gray-700 bangla-text ${q.correctOption === i + 3 ? "font-bold text-gray-900" : ""}`}
+                                            >
+                                              {String.fromCharCode(2453 + i)}. <StaticMathField>{opt || "N/A"}</StaticMathField>
+                                            </p>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
                                     <p className="text-sm text-gray-500 mt-2 bangla-text">
                                       অধ্যায়: {q.chapterName || "N/A"} | প্রশ্নের ধরণ: {q.questionType || "N/A"}
                                     </p>

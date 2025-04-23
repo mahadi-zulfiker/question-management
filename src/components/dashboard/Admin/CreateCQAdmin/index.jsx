@@ -33,6 +33,34 @@ const simplifyFraction = (numerator, denominator) => {
   };
 };
 
+// Balance braces in a string
+const balanceBraces = (text) => {
+  let openBraces = 0;
+  let result = "";
+  
+  for (let char of text) {
+    if (char === "{") {
+      openBraces++;
+      result += char;
+    } else if (char === "}") {
+      if (openBraces > 0) {
+        openBraces--;
+        result += char;
+      }
+    } else {
+      result += char;
+    }
+  }
+  
+  // Add missing closing braces
+  while (openBraces > 0) {
+    result += "}";
+    openBraces--;
+  }
+  
+  return result;
+};
+
 // Process text for LaTeX conversion
 const processTextForLatex = (text) => {
   // Normalize and clean text
@@ -82,6 +110,9 @@ const processTextForLatex = (text) => {
     }
   );
 
+  // Balance braces before returning
+  text = balanceBraces(text);
+
   return text;
 };
 
@@ -89,26 +120,35 @@ const processTextForLatex = (text) => {
 const renderLines = (text) => {
   if (!text) return 'টেক্সট লিখুন';
 
-  return text.split('\n').map((line, index) => {
-    // Process markdown-style formatting
-    let processedLine = line
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/__(.*?)__/g, '<u>$1</u>');
+  try {
+    return text.split('\n').map((line, index) => {
+      // Process markdown-style formatting
+      let processedLine = line
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/__(.*?)__/g, '<u>$1</u>');
 
-    // If the line contains LaTeX (e.g., \frac, ^, _), ensure it's rendered as math
-    if (processedLine.match(/[\\{}^_]/) && !processedLine.startsWith('$') && !processedLine.endsWith('$')) {
-      processedLine = `$${processedLine}$`;
-    }
+      // If the line contains LaTeX (e.g., \frac, ^, _), ensure it's rendered as math
+      if (processedLine.match(/[\\{}^_]/) && !processedLine.startsWith('$') && !processedLine.endsWith('$')) {
+        processedLine = `$${processedLine}$`;
+      }
 
+      return (
+        <div key={index}>
+          <MathJax>
+            <div dangerouslySetInnerHTML={{ __html: processedLine }} />
+          </MathJax>
+        </div>
+      );
+    });
+  } catch (error) {
     return (
-      <div key={index}>
-        <MathJax>
-          <div dangerouslySetInnerHTML={{ __html: processedLine }} />
-        </MathJax>
+      <div className="text-red-500 bangla-text">
+        LaTeX ত্রুটি: অসম্পূর্ণ বা ভুল ফরম্যাট। অনুগ্রহ করে সঠিকভাবে লিখুন।
+        <div className="text-gray-700 mt-2">{text}</div>
       </div>
     );
-  });
+  }
 };
 
 // Main CreateCQAdmin Component
@@ -423,7 +463,7 @@ export default function CreateCQAdmin() {
 
         if (data.length > 0) {
           const extractedQuestions = data.map((row) => ({
-            passage: normalizeText(row.Passage || ""),
+            passage: processTextForLatex(normalizeText(row.Passage || "")),
             classNumber: row.Class || selectedClass,
             subject: row.Subject || selectedSubject,
             chapterNumber: row["Chapter Number"] || selectedChapter,
@@ -432,28 +472,28 @@ export default function CreateCQAdmin() {
             questions:
               row["CQ Type"] === "generalCQ"
                 ? [
-                    normalizeText(row["Knowledge Question"] || ""),
-                    normalizeText(row["Comprehension Question"] || ""),
-                    normalizeText(row["Application Question"] || ""),
-                    normalizeText(row["Higher Skills Question"] || ""),
+                    processTextForLatex(normalizeText(row["Knowledge Question"] || "")),
+                    processTextForLatex(normalizeText(row["Comprehension Question"] || "")),
+                    processTextForLatex(normalizeText(row["Application Question"] || "")),
+                    processTextForLatex(normalizeText(row["Higher Skills Question"] || "")),
                   ]
                 : [
-                    normalizeText(row["Knowledge Question"] || ""),
-                    normalizeText(row["Application Question"] || ""),
-                    normalizeText(row["Higher Skills Question"] || ""),
+                    processTextForLatex(normalizeText(row["Knowledge Question"] || "")),
+                    processTextForLatex(normalizeText(row["Application Question"] || "")),
+                    processTextForLatex(normalizeText(row["Higher Skills Question"] || "")),
                   ],
             answers:
               row["CQ Type"] === "generalCQ"
                 ? [
-                    normalizeText(row["Knowledge Answer"] || ""),
-                    normalizeText(row["Comprehension Answer"] || ""),
-                    normalizeText(row["Application Answer"] || ""),
-                    normalizeText(row["Higher Skills Answer"] || ""),
+                    processTextForLatex(normalizeText(row["Knowledge Answer"] || "")),
+                    processTextForLatex(normalizeText(row["Comprehension Answer"] || "")),
+                    processTextForLatex(normalizeText(row["Application Answer"] || "")),
+                    processTextForLatex(normalizeText(row["Higher Skills Answer"] || "")),
                   ]
                 : [
-                    normalizeText(row["Knowledge Answer"] || ""),
-                    normalizeText(row["Application Answer"] || ""),
-                    normalizeText(row["Higher Skills Answer"] || ""),
+                    processTextForLatex(normalizeText(row["Knowledge Answer"] || "")),
+                    processTextForLatex(normalizeText(row["Application Answer"] || "")),
+                    processTextForLatex(normalizeText(row["Higher Skills Answer"] || "")),
                   ],
             imageAlignment: row["Image Alignment"] || "center",
             videoLink: row["Video Link"] || "",

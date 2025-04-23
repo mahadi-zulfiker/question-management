@@ -27,13 +27,13 @@ function Services() {
     <div className="bg-gradient-to-b from-gray-50 to-white py-24">
       <div className="max-w-6xl mx-auto px-6">
         <div className="text-center mb-16">
-          <h1 className="text-5xl font-extrabold text-gray-800 bg-clip-text text-transparent bg-gradient-to-r from-blue-500 to-blue-700">
+          <h1 className="text-5xl font-extrabold text-gray-700">
             আমাদের সাথে পড়াশোনা শুরু করুন
           </h1>
         </div>
 
         <div className="bg-white/80 backdrop-blur-md rounded-2xl p-10 border border-gray-100/50 shadow-xl">
-          <h2 className="text-4xl font-bold text-gray-800 mb-10 text-center">
+          <h2 className="text-4xl font-bold text-gray-700 mb-10 text-center">
             প্রশ্নব্যাংকের বিশেষ সুবিধা
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
