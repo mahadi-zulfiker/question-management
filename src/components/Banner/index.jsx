@@ -24,16 +24,16 @@ const Banner = () => {
         {/* Left Side: Text */}
         <div className="md:w-1/2 text-center md:text-left animate-fadeInUp">
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-extrabold leading-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-blue-500 drop-shadow-md">
-            দেশের প্রথম স্মার্ট এবং কাগজবিহীন<br className="hidden md:inline" /> প্রশ্নব্যাংক!
+            দেশের প্রথম স্মার্ট ও কাগজবিহীন<br className="hidden md:inline" /> প্রশ্নব্যাংক!
           </h1>
           <p className="mt-8 text-xl text-gray-200 leading-relaxed max-w-lg mx-auto md:mx-0">
-            প্রযুক্তির সাথে তাল মিলিয়ে শেখার নতুন অভিজ্ঞতা উপভোগ করুন। আমাদের প্ল্যাটফর্মে পাবেন দ্রুত, নির্ভরযোগ্য ও বুদ্ধিবৃত্তিক সমাধান।
+            প্রযুক্তির সাথে তাল মিলিয়ে শিক্ষার নতুন অভিজ্ঞতা উপভোগ করুন। আমাদের প্ল্যাটফর্মে পাবেন দ্রুত, নির্ভরযোগ্য এবং বুদ্ধিবৃত্তিক সমাধান।
           </p>
           <ul className="mt-8 text-lg text-gray-200 space-y-4 list-disc list-inside max-w-lg mx-auto md:mx-0">
             <li>সহজ ও দ্রুত প্রশ্ন অনুসন্ধান</li>
-            <li>বিশ্বাসযোগ্য ও সঠিক উত্তর</li>
+            <li>নির্ভরযোগ্য এবং সঠিক উত্তর</li>
             <li>বুদ্ধিবৃত্তিক বিশ্লেষণ ও ব্যাখ্যা</li>
-            <li>শিক্ষার্থীদের জন্য কাস্টমাইজড লার্নিং অভিজ্ঞতা</li>
+            <li>শিক্ষার্থীদের জন্য ব্যক্তিগতকৃত শিক্ষার অভিজ্ঞতা</li>
           </ul>
           <div className="mt-12 flex justify-center md:justify-start space-x-8">
             <a

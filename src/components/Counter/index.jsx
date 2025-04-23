@@ -6,12 +6,12 @@ const stats = [
   {
     icon: <Users className="text-blue-600 w-10 h-10" />,
     count: 5000,
-    label: "সন্তুষ্ট শিক্ষার্থী",
+    label: "খুশি শিক্ষার্থী",
   },
   {
     icon: <GraduationCap className="text-blue-600 w-10 h-10" />,
     count: 200,
-    label: "মোট শিক্ষক",
+    label: "বিশেষজ্ঞ শিক্ষক",
   },
   {
     icon: <BookOpen className="text-blue-600 w-10 h-10" />,
@@ -21,7 +21,7 @@ const stats = [
   {
     icon: <Star className="text-blue-600 w-10 h-10" />,
     count: 98,
-    label: "পজিটিভ রেটিং (%)",
+    label: "ইতিবাচক রেটিং (%)",
   },
   {
     icon: <HelpCircle className="text-blue-600 w-10 h-10" />,
@@ -38,7 +38,7 @@ function Counter() {
           আমাদের অর্জন
         </h2>
         <p className="mt-6 text-xl text-gray-600 max-w-2xl mx-auto">
-          আমরা শিক্ষার্থীদের সাফল্যের জন্য কাজ করছি।
+          আমরা শিক্ষার্থীদের সাফল্য ও শিক্ষার উন্নতির জন্য নিবেদিত।
         </p>
 
         <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-12">
