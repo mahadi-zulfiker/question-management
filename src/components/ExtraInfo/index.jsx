@@ -2,10 +2,10 @@ import React from "react";
 
 function ExtraInfo() {
   const steps = [
-    { number: "১", text: "কাস্টমাইজড লার্নিং পাথ" },
-    { number: "২", text: "বিশেষজ্ঞ প্রশিক্ষকবৃন্দ" },
+    { number: "১", text: "ব্যক্তিগতকৃত শিক্ষার পথ" },
+    { number: "২", text: "বিশেষজ্ঞ শিক্ষকবৃন্দ" },
     { number: "৩", text: "ইন্টারেক্টিভ কুইজ এবং অ্যাসাইনমেন্ট" },
-    { number: "৪", text: "কমিউনিটি সাপোর্ট" },
+    { number: "৪", text: "সম্প্রদায়ের সহায়তা" },
   ];
 
   return (
@@ -36,7 +36,7 @@ function ExtraInfo() {
         <div className="flex-1">
           <div className="bg-blue-50 backdrop-blur-md rounded-xl p-6 border border-blue-200 shadow-md">
             <p className="text-gray-700 text-center text-lg">
-              আমাদের প্ল্যাটফর্মে আপনাকে স্বাগতম! আমরা বিভিন্ন কোর্স অফার করি যা আপনার শেখার অভিজ্ঞতা উন্নত করতে সহায়তা করবে।
+              আমাদের প্ল্যাটফর্মে আপনাকে স্বাগত জানাই! আমরা বৈচিত্র্যময় কোর্স এবং সংস্থান প্রদান করি যা আপনার শিক্ষার অভিজ্ঞতাকে আরও সমৃদ্ধ ও কার্যকর করবে।
             </p>
             <div className="mt-6 flex justify-center">
               <a

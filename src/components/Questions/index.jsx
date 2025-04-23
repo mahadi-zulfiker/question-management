@@ -4,17 +4,17 @@ import { HelpCircle, Users, CheckCircle } from "lucide-react";
 const questions = [
   {
     title: "আনলিমিটেড প্রশ্ন",
-    description: "প্রতি উত্তরের জন্য টিকেট দিয়ে সহজে কাজ করা যাবে হারাধ।",
+    description: "আপনার প্রশ্ন জমা দিন এবং সীমাহীনভাবে দ্রুত ও সঠিক উত্তর পান।",
     icon: <HelpCircle className="text-blue-600 w-10 h-10" />,
   },
   {
-    title: "আগ্রহী উত্তর পাবে",
-    description: "প্রশ্নের কল সেবা দিয়ে তাৎক্ষণিক উত্তর পাবে তুমি।",
+    title: "তাৎক্ষণিক উত্তর",
+    description: "আপনার প্রশ্নের জন্য দ্রুত এবং নির্ভরযোগ্য উত্তর পান আমাদের সহায়তা দলের মাধ্যমে।",
     icon: <Users className="text-blue-600 w-10 h-10" />,
   },
   {
     title: "নির্দিষ্ট প্রশ্ন ও সমাধান",
-    description: "সকল প্রশ্নের জন্য নির্দিষ্ট ও সঠিক সমাধান রয়েছে সঙ্গে সায়ান।",
+    description: "প্রতিটি প্রশ্নের জন্য সুনির্দিষ্ট এবং নির্ভুল সমাধান পান আমাদের প্ল্যাটফর্মে।",
     icon: <CheckCircle className="text-blue-600 w-10 h-10" />,
   },
 ];
@@ -28,7 +28,7 @@ function Questions() {
             প্রশ্নের উত্তর জানতে চান?
           </h1>
           <p className="text-xl text-gray-600 mt-6 max-w-2xl mx-auto">
-            পারিপার্শ্বিক ও কার্যক্ষেত্রের আগ্রহী সম্পর্কে তথ্য। আপনি কি নির্দিষ্ট বা মোটা আকারে তথ্যি করতে চান? আপনি উত্তরের সঙ্গে ৩০ দিন রিটার্ন পলিসি বা হার টার্গেট করে কাজ করতে পারেন।
+            আমাদের প্ল্যাটফর্মে আপনার প্রশ্নের স্পষ্ট এবং নির্ভরযোগ্য উত্তর পান। যেকোনো বিষয়ে জানতে আমাদের সাথে যোগাযোগ করুন।
           </p>
           <button className="mt-8 bg-gradient-to-r from-blue-500 to-blue-700 text-white px-10 py-5 rounded-full font-semibold hover:scale-105 hover:shadow-lg transition-all duration-300">
             প্রশ্নের উত্তর জানুন
