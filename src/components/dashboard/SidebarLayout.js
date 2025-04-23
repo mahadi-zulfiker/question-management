@@ -135,9 +135,9 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         {
           section: "Content Creation",
           items: [
-            { href: "/dashboard/teacher/createMCQTeacher", icon: <IoMdCreate className="text-xl mr-2" />, label: "Create MCQ" },
-            { href: "/dashboard/teacher/createCQTeacher", icon: <RiFileEditLine className="text-xl mr-2" />, label: "Create CQ" },
-            { href: "/dashboard/teacher/createSQTeacher", icon: <AiOutlineFileAdd className="text-xl mr-2" />, label: "Create SQ" },
+            // { href: "/dashboard/teacher/createMCQTeacher", icon: <IoMdCreate className="text-xl mr-2" />, label: "Create MCQ" },
+            // { href: "/dashboard/teacher/createCQTeacher", icon: <RiFileEditLine className="text-xl mr-2" />, label: "Create CQ" },
+            // { href: "/dashboard/teacher/createSQTeacher", icon: <AiOutlineFileAdd className="text-xl mr-2" />, label: "Create SQ" },
             { href: "/dashboard/teacher/createCertificate", icon: <FaCertificate className="text-xl mr-2" />, label: "Create Certificate" },
             { href: "/dashboard/teacher/questionGenerator", icon: <FaCertificate className="text-xl mr-2" />, label: "Question Generator" },
           ],
@@ -154,7 +154,7 @@ const Sidebar = ({ isSidebarOpen, toggleSidebar }) => {
         {
           section: "Resources",
           items: [
-            { href: "/dashboard/teacher/viewQuestions", icon: <RiQuestionnaireLine className="text-xl mr-2" />, label: "View Questions" },
+            // { href: "/dashboard/teacher/viewQuestions", icon: <RiQuestionnaireLine className="text-xl mr-2" />, label: "View Questions" },
             { href: "/dashboard/teacher/viewCertificate", icon: <IoMdEye className="text-xl mr-2" />, label: "View Certificates" },
           ],
         },

@@ -1,17 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from "xlsx";
 import Head from "next/head";
-import dynamic from "next/dynamic";
-import { convert } from "mathml-to-latex";
-
-// Dynamically import react-mathquill components
-const EditableMathField = dynamic(() => import("react-mathquill").then((mod) => mod.EditableMathField), { ssr: false });
-const StaticMathField = dynamic(() => import("react-mathquill").then((mod) => mod.StaticMathField), { ssr: false });
+import { MathJax } from "better-react-mathjax";
+import FormatToolbar from "../../../FormatToolbar/index";
 
 // Normalize text to Unicode NFC
 const normalizeText = (text) => text.normalize("NFC");
@@ -37,84 +33,39 @@ const simplifyFraction = (numerator, denominator) => {
   };
 };
 
-// Convert a repeating decimal to a fraction
-const repeatingDecimalToFraction = (decimalStr) => {
-  const match = decimalStr.match(/^(\d*)\.(\d*?)(\d*?)̇$/);
-  if (!match) return null;
+// Process text for LaTeX conversion
+const processTextForLatex = (text) => {
+  // Normalize and clean text
+  text = normalizeText(text).replace(/[\u200B-\u200F\uFEFF]/g, "");
 
-  const wholePart = match[1] ? parseInt(match[1]) : 0;
-  const nonRepeatingPart = match[2] || "";
-  const repeatingPart = match[3] || "";
-
-  const nonRepeatingLength = nonRepeatingPart.length;
-  const repeatingLength = repeatingPart.length;
-
-  if (repeatingLength === 0) {
-    if (nonRepeatingPart) {
-      const numerator = parseInt(nonRepeatingPart);
-      const denominator = Math.pow(10, nonRepeatingLength);
-      const { numerator: simplifiedNum, denominator: simplifiedDenom } = simplifyFraction(
-        numerator + wholePart * denominator,
-        denominator
-      );
-      return `\\frac{${simplifiedNum}}{${simplifiedDenom}}`;
-    }
-    return null;
-  }
-
-  let numerator = parseInt(repeatingPart);
-  let denominator = Math.pow(10, repeatingLength) - 1;
-
-  if (nonRepeatingLength > 0) {
-    const nonRepeatingValue = parseInt(nonRepeatingPart);
-    numerator += nonRepeatingValue * (Math.pow(10, repeatingLength) - 1);
-    denominator *= Math.pow(10, nonRepeatingLength);
-    numerator += wholePart * denominator;
-  } else {
-    numerator += wholePart * denominator;
-  }
-
-  const { numerator: simplifiedNum, denominator: simplifiedDenom } = simplifyFraction(numerator, denominator);
-  return `\\frac{${simplifiedNum}}{${simplifiedDenom}}`;
-};
-
-const cleanTextForLatex = (text) => {
-  // Step 1: Normalize text and replace special characters
-  text = text.replace(/[\u00A0\u202F]/g, " ").replace(/\u2044/g, "/").normalize("NFC");
-
-  // Step 2: Normalize multiple spaces to single space
-  text = text.replace(/\s+/g, " ");
-
-  // Step 3: Handle repeating decimals (e.g., "5.23457 ̇" where "7" has the dot)
-  text = text.replace(/(\d*\.\d+)( ̇)+/g, (match, number) => {
-    const parts = number.split(".");
-    const wholePart = parts[0];
-    const decimalPart = parts[1];
-    const dotCount = (match.match(/ ̇/g) || []).length;
-
-    // The last 'dotCount' digits have the dot over them
-    const repeatingStart = decimalPart.length - dotCount;
-    const nonRepeatingPart = decimalPart.slice(0, repeatingStart > 0 ? repeatingStart : 0);
-    const repeatingPart = decimalPart.slice(repeatingStart > 0 ? repeatingStart : 0);
-
-    if (repeatingPart) {
-      // Apply \dot{} to each repeating digit individually
-      const repeatingWithDots = repeatingPart
-        .split("")
-        .map((digit) => `\\dot{${digit}}`)
-        .join("");
-      return `${wholePart}.${nonRepeatingPart}${repeatingWithDots}`;
-    }
-    return number;
+  // Handle fractions (e.g., "1/2" → "\frac{1}{2}")
+  text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
+    const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
+    return `\\frac{${numerator}}{${denominator}}`;
   });
 
-  // Step 4: Add space between numbers and Bangla text
-  text = text.replace(
-    /(\d+\.\d*|\d+|\d*\.\d+\\dot\{\d+\})([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯])/g,
-    "$1\\ $2"
-  );
+  // Handle superscripts (e.g., "x^2" → "x^{2}", "[(x^2 + 3x + 1)]^2" → "[(x^{2} + 3x + 1)]^{2}")
+  text = text.replace(/\[(.*?)\]\^(\d+|\w+)/g, "[$1]^{$2}");
+  text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
+  text = text.replace(/(\w+)\^(\d+|\w+)/g, "$1^{$2}");
 
-  // Step 5: Wrap Bangla text in \text{}
+  // Handle square roots (e.g., "sqrt(x)" → "\sqrt{x}")
+  text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
+
+  // Handle common symbols
+  text = text.replace(/≥/g, "\\geq");
+  text = text.replace(/≤/g, "\\leq");
+  text = text.replace(/≠/g, "\\neq");
+  text = text.replace(/½/g, "\\frac{1}{2}");
+  text = text.replace(/²/g, "^{2}");
+  text = text.replace(/³/g, "^{3}");
+
+  // Preserve markdown formatting if present
+  text = text.replace(/\*\*(.*?)\*\*/g, "**$1**");
+  text = text.replace(/\*(.*?)\*/g, "*$1*");
+  text = text.replace(/__(.*?)__/g, "__$1__");
+
+  // Wrap Bangla text in \text{}
   text = text.replace(
     /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
     (match) => {
@@ -127,109 +78,37 @@ const cleanTextForLatex = (text) => {
     }
   );
 
-  // Step 6: Handle fractions and mixed numbers
-  text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
-    const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
-    return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
-  });
-  text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
-    const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
-    return `\\frac{${numerator}}{${denominator}}`;
-  });
-
-  // Step 7: Handle superscripts, roots, and symbols
-  text = text.replace(/\^(\d+|\w+)/g, "^{$1}");
-  text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
-  text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
-  text = text.replace(/½/g, "\\frac{1}{2}");
-  text = text.replace(/²/g, "^{2}");
-  text = text.replace(/³/g, "^{3}");
-  text = text.replace(/≥/g, "\\geq");
-  text = text.replace(/≤/g, "\\leq");
-  text = text.replace(/≠/g, "\\neq");
-
   return text;
 };
 
-// Function to extract fraction from HTML elements (e.g., <sup> and <sub>)
-const extractFractionFromHTML = (element) => {
-  const sup = element.querySelector("sup");
-  const sub = element.querySelector("sub");
-  if (sup && sub) {
-    const numerator = sup.textContent.trim();
-    const denominator = sub.textContent.trim();
-    if (numerator && denominator && !isNaN(numerator) && !isNaN(denominator)) {
-      return `${numerator}/${denominator}`;
-    }
-  }
-  return null;
-};
+// Render markdown and LaTeX in preview
+const renderLines = (text) => {
+  if (!text) return 'প্রশ্ন বা উত্তর লিখুন...';
 
-// Function to extract fraction from MathML <m:f> element
-const extractFractionFromMathML = (element) => {
-  const fractionElements = Array.from(element.querySelectorAll("*")).filter(
-    (el) => el.localName === "f" && el.namespaceURI === "http://schemas.microsoft.com/office/2004/12/omml"
-  );
-  if (fractionElements.length > 0) {
-    const fractionElement = fractionElements[0];
-    const numerator = fractionElement
-      .querySelector("*[local-name()='num'] *[local-name()='r']")
-      ?.textContent.trim();
-    const denominator = fractionElement
-      .querySelector("*[local-name()='den'] *[local-name()='r']")
-      ?.textContent.trim();
-    if (numerator && denominator && !isNaN(numerator) && !isNaN(denominator)) {
-      return `${numerator}/${denominator}`;
-    }
-  }
-  return null;
-};
+  return text.split('\n').map((line, index) => {
+    // Process markdown-style formatting
+    let processedLine = line
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/__(.*?)__/g, '<u>$1</u>');
 
-// Function to extract repeating decimal from MathML <m:acc> element
-const extractRepeatingDecimalFromMathML = (element) => {
-  const accElements = Array.from(element.querySelectorAll("*")).filter(
-    (el) => el.localName === "acc" && el.namespaceURI === "http://schemas.microsoft.com/office/2004/12/omml"
-  );
-  if (accElements.length > 0) {
-    let digits = "";
-    let dotCount = 0;
-    const parent = element.closest("*[local-name()='r']");
-    if (parent) {
-      const siblings = Array.from(parent.childNodes);
-      let currentDigits = "";
-      siblings.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE && node.localName === "acc") {
-          const chr = node.querySelector("*[local-name()='accPr'] *[local-name()='chr']")?.getAttribute("m:val");
-          const base = node.querySelector("*[local-name()='e'] *[local-name()='r']")?.textContent.trim();
-          if (chr === "̇" && base) {
-            currentDigits += base;
-            dotCount += 1;
-          }
-        } else if (node.nodeType === Node.ELEMENT_NODE && node.localName === "t") {
-          const text = node.textContent.trim();
-          if (text && /\d/.test(text)) {
-            currentDigits += text;
-          }
-        }
-      });
-      digits = currentDigits;
+    // If the line contains LaTeX (e.g., \frac, ^, _), ensure it's rendered as math
+    if (processedLine.match(/[\\{}^_]/) && !processedLine.startsWith('$') && !processedLine.endsWith('$')) {
+      processedLine = `$${processedLine}$`;
     }
-    if (digits) {
-      return `${digits}${dotCount > 0 ? " ̇".repeat(dotCount) : ""}`;
-    }
-  }
-  return null;
+
+    return (
+      <div key={index}>
+        <MathJax>
+          <div dangerouslySetInnerHTML={{ __html: processedLine }} />
+        </MathJax>
+      </div>
+    );
+  });
 };
 
 // Main CreateSQAdmin Component
 export default function CreateSQAdmin() {
-  useEffect(() => {
-    (async () => {
-      const { addStyles } = await import("react-mathquill");
-      addStyles();
-    })();
-  }, []);
-
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
   const [subjects, setSubjects] = useState([]);
@@ -240,7 +119,6 @@ export default function CreateSQAdmin() {
   const [selectedChapterNumber, setSelectedChapterNumber] = useState("");
   const [selectedChapterName, setSelectedChapterName] = useState("");
   const [isMultipleSQs, setIsMultipleSQs] = useState(false);
-
   const [sqs, setSQs] = useState([
     {
       type: "জ্ঞানমূলক",
@@ -251,6 +129,9 @@ export default function CreateSQAdmin() {
       videoLink: "",
     },
   ]);
+  const [toolbarPosition, setToolbarPosition] = useState(null);
+  const [activeField, setActiveField] = useState(null); // Track which field (question/answer) and index
+  const textareaRefs = useRef({}); // Store refs for textareas
 
   useEffect(() => {
     async function fetchClasses() {
@@ -331,13 +212,13 @@ export default function CreateSQAdmin() {
 
   const handleQuestionChange = (index, value) => {
     const newSQs = [...sqs];
-    newSQs[index].question = value;
+    newSQs[index].question = processTextForLatex(value);
     setSQs(newSQs);
   };
 
   const handleAnswerChange = (index, value) => {
     const newSQs = [...sqs];
-    newSQs[index].answer = value;
+    newSQs[index].answer = processTextForLatex(value);
     setSQs(newSQs);
   };
 
@@ -359,152 +240,73 @@ export default function CreateSQAdmin() {
     setSQs(newSQs);
   };
 
-  const handlePaste = (index, fieldType, e) => {
-    e.preventDefault();
+  const handleSelection = (index, fieldType, e) => {
+    const textarea = textareaRefs.current[`${fieldType}-${index}`];
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
 
-    const clipboardData = e.clipboardData;
-    let pastedData = "";
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
 
-    const mathml = clipboardData.getData("application/mathml+xml");
-    if (mathml) {
-      try {
-        pastedData = convert(mathml);
-      } catch (error) {
-        toast.error("❌ MathML প্রক্রিয়া করা যায়নি। দয়া করে LaTeX ফরম্যাটে লিখুন।");
-      }
-    }
-
-    if (!pastedData) {
-      const html = clipboardData.getData("text/html");
-      if (html) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, "text/html");
-
-        const mathmlElement = doc.querySelector("math");
-        if (mathmlElement) {
-          try {
-            const mathmlString = new XMLSerializer().serializeToString(mathmlElement);
-            pastedData = convert(mathmlString);
-          } catch (error) {
-            toast.error("❌ HTML থেকে MathML প্রক্রিয়া করা যায়নি। দয়া করে LaTeX ফরম্যাটে লিখুন।");
-          }
-        } else {
-          const body = doc.body;
-          let textParts = [];
-          let currentNumber = "";
-
-          const traverseDOM = (node, visited = new Set()) => {
-            if (visited.has(node)) return;
-            visited.add(node);
-
-            if (node.nodeType === Node.TEXT_NODE) {
-              let text = node.textContent.trim();
-              if (text) {
-                text = text.replace(/[\u200B-\u200F\uFEFF]/g, "");
-                if (currentNumber && /[\d.]/.test(text)) {
-                  currentNumber += text;
-                } else {
-                  if (currentNumber) {
-                    textParts.push(currentNumber);
-                    currentNumber = "";
-                  }
-                  textParts.push(text);
-                }
-              }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-              if (node.tagName === "SPAN" || node.tagName === "P" || node.tagName === "DIV") {
-                let text = node.textContent.trim();
-                if (text && !node.querySelector("sup, sub, acc") && !visited.has(text)) {
-                  if (currentNumber) {
-                    textParts.push(currentNumber);
-                    currentNumber = "";
-                  }
-                  text = text.replace(/[\u200B-\u200F\uFEFF]/g, "");
-                  textParts.push(text);
-                  visited.add(text);
-                  return;
-                }
-              }
-
-              const fraction = extractFractionFromHTML(node);
-              if (fraction) {
-                if (currentNumber) {
-                  textParts.push(currentNumber);
-                  currentNumber = "";
-                }
-                textParts.push(fraction);
-              } else {
-                const mathMLFraction = extractFractionFromMathML(node);
-                if (mathMLFraction) {
-                  if (currentNumber) {
-                    textParts.push(currentNumber);
-                    currentNumber = "";
-                  }
-                  textParts.push(mathMLFraction);
-                } else {
-                  const repeatingDecimal = extractRepeatingDecimalFromMathML(node);
-                  if (repeatingDecimal) {
-                    const cleanRepeating = repeatingDecimal.replace(/( ̇)+$/, "").replace(/ ̇/g, "");
-                    if (currentNumber) {
-                      currentNumber += cleanRepeating;
-                    } else {
-                      currentNumber = cleanRepeating;
-                    }
-                  } else {
-                    if (node.tagName === "SPAN" && node.style.fontFamily.includes("Cambria Math")) {
-                      const text = node.textContent.trim();
-                      if (text) {
-                        if (currentNumber && /[\d.]/.test(text)) {
-                          currentNumber += text;
-                        } else {
-                          if (currentNumber) {
-                            textParts.push(currentNumber);
-                            currentNumber = "";
-                          }
-                          currentNumber = text;
-                        }
-                      }
-                    }
-                    node.childNodes.forEach((child) => traverseDOM(child, visited));
-                  }
-                }
-              }
-            }
-          };
-
-          traverseDOM(body);
-          if (currentNumber) {
-            textParts.push(currentNumber);
-          }
-          const extractedText = textParts.join(" ").trim();
-
-          const looksIncomplete = extractedText.match(/^\d+$/) || (!extractedText.includes("/") && !extractedText.includes("̇"));
-          if (extractedText && !looksIncomplete) {
-            pastedData = cleanTextForLatex(extractedText);
-          }
-        }
-      }
-    }
-
-    if (!pastedData) {
-      let plainText = clipboardData.getData("text/plain");
-      if (plainText) {
-        plainText = plainText.replace(/[\u200B-\u200F\uFEFF]/g, "");
-        pastedData = cleanTextForLatex(plainText);
-      }
-    }
-
-    if (pastedData) {
-      const newSQs = [...sqs];
-      if (fieldType === "question") {
-        newSQs[index].question = pastedData;
-      } else if (fieldType === "answer") {
-        newSQs[index].answer = pastedData;
-      }
-      setSQs(newSQs);
+    if (selection.toString().length > 0) {
+      setToolbarPosition({
+        x: rect.left + window.scrollX,
+        y: rect.top + window.scrollY,
+      });
+      setActiveField({ index, fieldType });
     } else {
-      toast.error("❌ পেস্ট করা ডেটা প্রক্রিয়া করা যায়নি। দয়া করে LaTeX ফরম্যাটে লিখুন।");
+      setToolbarPosition(null);
+      setActiveField(null);
     }
+  };
+
+  const handleFormat = (format, e) => {
+    e.preventDefault(); // Prevent form submission
+    if (!activeField) return;
+
+    const { index, fieldType } = activeField;
+    const newSQs = [...sqs];
+    const textarea = textareaRefs.current[`${fieldType}-${index}`];
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const currentText = fieldType === "question" ? newSQs[index].question : newSQs[index].answer;
+    const selectedText = currentText.substring(start, end);
+
+    if (!selectedText) return;
+
+    let formattedText = selectedText;
+    switch (format) {
+      case 'bold':
+        formattedText = `**${selectedText}**`;
+        break;
+      case 'italic':
+        formattedText = `*${selectedText}*`;
+        break;
+      case 'underline':
+        formattedText = `__${selectedText}__`;
+        break;
+      case 'math':
+        formattedText = `$${selectedText}$`;
+        break;
+    }
+
+    const updatedText = currentText.substring(0, start) + formattedText + currentText.substring(end);
+    if (fieldType === "question") {
+      newSQs[index].question = updatedText;
+    } else {
+      newSQs[index].answer = updatedText;
+    }
+
+    setSQs(newSQs);
+    setToolbarPosition(null);
+    setActiveField(null);
+
+    // Restore focus and cursor position
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + formattedText.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
   };
 
   const downloadExcelTemplate = () => {
@@ -689,7 +491,7 @@ export default function CreateSQAdmin() {
           unicode-bidi: embed;
         }
 
-        .mq-editable-field {
+        textarea.bangla-text {
           min-height: 50px !important;
           height: auto !important;
           overflow-y: auto !important;
@@ -704,20 +506,6 @@ export default function CreateSQAdmin() {
           border: 1px solid #d1d5db !important;
           border-radius: 6px !important;
           box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
-        }
-
-        .mq-editable-field .mq-root-block {
-          white-space: pre-wrap !important;
-          word-wrap: break-word !important;
-          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-        }
-
-        .mq-static-field {
-          white-space: pre-wrap !important;
-          word-wrap: break-word !important;
-          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-          font-size: 18px !important;
-          line-height: 1.5 !important;
         }
 
         .MathJax .mtext {
@@ -752,7 +540,7 @@ export default function CreateSQAdmin() {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
+            className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 relative"
           >
             <form onSubmit={handleSubmit}>
               <div className="mb-6">
@@ -875,7 +663,7 @@ export default function CreateSQAdmin() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="mt-6 p-5 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
+                  className="mt-6 p-5 bg-gray-50 rounded-lg shadow-sm border border-gray-200 relative"
                 >
                   <h3 className="text-lg font-semibold text-gray-800 mb-3 bangla-text">
                     সংক্ষিপ্ত প্রশ্ন <span>{index + 1}</span>
@@ -895,26 +683,40 @@ export default function CreateSQAdmin() {
                     </select>
                   </div>
 
-                  <div className="mb-4">
+                  <div className="mb-4 relative">
                     <label className="block text-gray-700 font-semibold mb-1 bangla-text">প্রশ্ন লিখুন</label>
-                    <EditableMathField
-                      latex={sq.question}
-                      onChange={(mathField) => handleQuestionChange(index, mathField.latex())}
-                      onPaste={(e) => handlePaste(index, "question", e)}
-                      className="border p-2 rounded-md w-full text-lg"
+                    <textarea
+                      className="w-full p-4 border rounded mb-4 font-mono bangla-text"
+                      value={sq.question}
+                      onChange={(e) => handleQuestionChange(index, e.target.value)}
+                      onMouseUp={(e) => handleSelection(index, "question", e)}
+                      onKeyUp={(e) => handleSelection(index, "question", e)}
+                      rows={4}
+                      ref={(el) => (textareaRefs.current[`question-${index}`] = el)}
+                    />
+                    <FormatToolbar
+                      position={toolbarPosition && activeField?.index === index && activeField?.fieldType === "question" ? toolbarPosition : null}
+                      onFormat={handleFormat}
                     />
                     <p className="text-sm text-gray-500 mt-1 bangla-text">
                       * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
                     </p>
                   </div>
 
-                  <div className="mb-4">
+                  <div className="mb-4 relative">
                     <label className="block text-gray-700 font-semibold mb-1 bangla-text">উত্তর লিখুন (ঐচ্ছিক)</label>
-                    <EditableMathField
-                      latex={sq.answer}
-                      onChange={(mathField) => handleAnswerChange(index, mathField.latex())}
-                      onPaste={(e) => handlePaste(index, "answer", e)}
-                      className="border p-2 rounded-md w-full text-lg"
+                    <textarea
+                      className="w-full p-4 border rounded mb-4 font-mono bangla-text"
+                      value={sq.answer}
+                      onChange={(e) => handleAnswerChange(index, e.target.value)}
+                      onMouseUp={(e) => handleSelection(index, "answer", e)}
+                      onKeyUp={(e) => handleSelection(index, "answer", e)}
+                      rows={4}
+                      ref={(el) => (textareaRefs.current[`answer-${index}`] = el)}
+                    />
+                    <FormatToolbar
+                      position={toolbarPosition && activeField?.index === index && activeField?.fieldType === "answer" ? toolbarPosition : null}
+                      onFormat={handleFormat}
                     />
                     <p className="text-sm text-gray-500 mt-1 bangla-text">
                       * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
@@ -1014,9 +816,9 @@ export default function CreateSQAdmin() {
                 <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text" style={{ padding: '0.25rem 0' }}>
                   প্রশ্ন: <span>{sq.type}</span>
                 </p>
-                <StaticMathField className="text-gray-700 mb-4">
-                  {sq.question || "প্রশ্ন লিখুন"}
-                </StaticMathField>
+                <div className="text-gray-700 mb-4 bangla-text">
+                  {renderLines(sq.question)}
+                </div>
 
                 {sq.videoLink && (
                   <div className="mb-4">
@@ -1046,9 +848,9 @@ export default function CreateSQAdmin() {
                 {sq.answer && (
                   <div className="text-gray-700 mb-4">
                     <p className="font-semibold bangla-text">উত্তর:</p>
-                    <StaticMathField className="text-gray-700">
-                      {sq.answer || "উত্তর লিখুন"}
-                    </StaticMathField>
+                    <div className="bangla-text">
+                      {renderLines(sq.answer)}
+                    </div>
                   </div>
                 )}
 
