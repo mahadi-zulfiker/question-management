@@ -1,19 +1,13 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from "xlsx";
 import Head from "next/head";
-import { createEditor, Editor, Transforms, Text } from "slate";
-import { Slate, Editable, withReact, useSlate } from "slate-react";
-import { withHistory } from "slate-history";
-import dynamic from "next/dynamic";
-import { convert } from "mathml-to-latex";
-
-const EditableMathField = dynamic(() => import("react-mathquill").then((mod) => mod.EditableMathField), { ssr: false });
-const StaticMathField = dynamic(() => import("react-mathquill").then((mod) => mod.StaticMathField), { ssr: false });
+import { MathJax } from "better-react-mathjax";
+import FormatToolbar from "../../../FormatToolbar/index";
 
 // Normalize text to Unicode NFC
 const normalizeText = (text) => text.normalize("NFC");
@@ -39,84 +33,43 @@ const simplifyFraction = (numerator, denominator) => {
   };
 };
 
-// Convert a repeating decimal to a fraction
-const repeatingDecimalToFraction = (decimalStr) => {
-  const match = decimalStr.match(/^(\d*)\.(\d*?)(\d*?)̇$/);
-  if (!match) return null;
+// Process text for LaTeX conversion
+const processTextForLatex = (text) => {
+  // Normalize and clean text
+  text = normalizeText(text).replace(/[\u200B-\u200F\uFEFF]/g, "");
 
-  const wholePart = match[1] ? parseInt(match[1]) : 0;
-  const nonRepeatingPart = match[2] || "";
-  const repeatingPart = match[3] || "";
-
-  const nonRepeatingLength = nonRepeatingPart.length;
-  const repeatingLength = repeatingPart.length;
-
-  if (repeatingLength === 0) {
-    if (nonRepeatingPart) {
-      const numerator = parseInt(nonRepeatingPart);
-      const denominator = Math.pow(10, nonRepeatingLength);
-      const { numerator: simplifiedNum, denominator: simplifiedDenom } = simplifyFraction(
-        numerator + wholePart * denominator,
-        denominator
-      );
-      return `\\frac{${simplifiedNum}}{${simplifiedDenom}}`;
-    }
-    return null;
-  }
-
-  let numerator = parseInt(repeatingPart);
-  let denominator = Math.pow(10, repeatingLength) - 1;
-
-  if (nonRepeatingLength > 0) {
-    const nonRepeatingValue = parseInt(nonRepeatingPart);
-    numerator += nonRepeatingValue * (Math.pow(10, repeatingLength) - 1);
-    denominator *= Math.pow(10, nonRepeatingLength);
-    numerator += wholePart * denominator;
-  } else {
-    numerator += wholePart * denominator;
-  }
-
-  const { numerator: simplifiedNum, denominator: simplifiedDenom } = simplifyFraction(numerator, denominator);
-  return `\\frac{${simplifiedNum}}{${simplifiedDenom}}`;
-};
-
-const cleanTextForLatex = (text) => {
-  // Step 1: Normalize text and replace special characters
-  text = text.replace(/[\u00A0\u202F]/g, " ").replace(/\u2044/g, "/").normalize("NFC");
-
-  // Step 2: Normalize multiple spaces to single space
-  text = text.replace(/\s+/g, " ");
-
-  // Step 3: Handle repeating decimals (e.g., "5.23457 ̇" where "7" has the dot)
-  text = text.replace(/(\d*\.\d+)( ̇)+/g, (match, number) => {
-    const parts = number.split(".");
-    const wholePart = parts[0];
-    const decimalPart = parts[1];
-    const dotCount = (match.match(/ ̇/g) || []).length;
-
-    // The last 'dotCount' digits have the dot over them
-    const repeatingStart = decimalPart.length - dotCount;
-    const nonRepeatingPart = decimalPart.slice(0, repeatingStart > 0 ? repeatingStart : 0);
-    const repeatingPart = decimalPart.slice(repeatingStart > 0 ? repeatingStart : 0);
-
-    if (repeatingPart) {
-      // Apply \dot{} to each repeating digit individually
-      const repeatingWithDots = repeatingPart
-        .split("")
-        .map((digit) => `\\dot{${digit}}`)
-        .join("");
-      return `${wholePart}.${nonRepeatingPart}${repeatingWithDots}`;
-    }
-    return number;
+  // Handle fractions (e.g., "1/2" → "\frac{1}{2}")
+  text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
+    const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
+    return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
+  });
+  text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
+    const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
+    return `\\frac{${numerator}}{${denominator}}`;
   });
 
-  // Step 4: Add space between numbers and Bangla text
-  text = text.replace(
-    /(\d+\.\d*|\d+|\d*\.\d+\\dot\{\d+\})([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯])/g,
-    "$1\\ $2"
-  );
+  // Handle superscripts (e.g., "x^2" → "x^{2}", "[(x^2 + 3x + 1)]^2" → "[(x^{2} + 3x + 1)]^{2}")
+  text = text.replace(/\[(.*?)\]\^(\d+|\w+)/g, "[$1]^{$2}");
+  text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
+  text = text.replace(/(\w+)\^(\d+|\w+)/g, "$1^{$2}");
 
-  // Step 5: Wrap Bangla text in \text{}
+  // Handle square roots (e.g., "sqrt(x)" → "\sqrt{x}")
+  text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
+
+  // Handle common symbols
+  text = text.replace(/≥/g, "\\geq");
+  text = text.replace(/≤/g, "\\leq");
+  text = text.replace(/≠/g, "\\neq");
+  text = text.replace(/½/g, "\\frac{1}{2}");
+  text = text.replace(/²/g, "^{2}");
+  text = text.replace(/³/g, "^{3}");
+
+  // Preserve markdown formatting if present
+  text = text.replace(/\*\*(.*?)\*\*/g, "**$1**");
+  text = text.replace(/\*(.*?)\*/g, "*$1*");
+  text = text.replace(/__(.*?)__/g, "__$1__");
+
+  // Wrap Bangla text in \text{}
   text = text.replace(
     /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
     (match) => {
@@ -129,247 +82,37 @@ const cleanTextForLatex = (text) => {
     }
   );
 
-  // Step 6: Handle fractions and mixed numbers
-  text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
-    const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
-    return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
-  });
-  text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
-    const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
-    return `\\frac{${numerator}}{${denominator}}`;
-  });
-
-  // Step 7: Handle superscripts, roots, and symbols
-  text = text.replace(/\^(\d+|\w+)/g, "^{$1}");
-  text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
-  text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
-  text = text.replace(/½/g, "\\frac{1}{2}");
-  text = text.replace(/²/g, "^{2}");
-  text = text.replace(/³/g, "^{3}");
-  text = text.replace(/≥/g, "\\geq");
-  text = text.replace(/≤/g, "\\leq");
-  text = text.replace(/≠/g, "\\neq");
-
   return text;
 };
 
-// Function to extract fraction from HTML elements (e.g., <sup> and <sub>)
-const extractFractionFromHTML = (element) => {
-  const sup = element.querySelector("sup");
-  const sub = element.querySelector("sub");
-  if (sup && sub) {
-    const numerator = sup.textContent.trim();
-    const denominator = sub.textContent.trim();
-    if (numerator && denominator && !isNaN(numerator) && !isNaN(denominator)) {
-      return `${numerator}/${denominator}`;
+// Render markdown and LaTeX in preview
+const renderLines = (text) => {
+  if (!text) return 'টেক্সট লিখুন';
+
+  return text.split('\n').map((line, index) => {
+    // Process markdown-style formatting
+    let processedLine = line
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/__(.*?)__/g, '<u>$1</u>');
+
+    // If the line contains LaTeX (e.g., \frac, ^, _), ensure it's rendered as math
+    if (processedLine.match(/[\\{}^_]/) && !processedLine.startsWith('$') && !processedLine.endsWith('$')) {
+      processedLine = `$${processedLine}$`;
     }
-  }
-  return null;
+
+    return (
+      <div key={index}>
+        <MathJax>
+          <div dangerouslySetInnerHTML={{ __html: processedLine }} />
+        </MathJax>
+      </div>
+    );
+  });
 };
 
-// Function to extract fraction from MathML <m:f> element
-const extractFractionFromMathML = (element) => {
-  const fractionElements = Array.from(element.querySelectorAll("*")).filter(
-    (el) => el.localName === "f" && el.namespaceURI === "http://schemas.microsoft.com/office/2004/12/omml"
-  );
-  if (fractionElements.length > 0) {
-    const fractionElement = fractionElements[0];
-    const numerator = fractionElement
-      .querySelector("*[local-name()='num'] *[local-name()='r']")
-      ?.textContent.trim();
-    const denominator = fractionElement
-      .querySelector("*[local-name()='den'] *[local-name()='r']")
-      ?.textContent.trim();
-    if (numerator && denominator && !isNaN(numerator) && !isNaN(denominator)) {
-      return `${numerator}/${denominator}`;
-    }
-  }
-  return null;
-};
-
-// Function to extract repeating decimal from MathML <m:acc> element
-const extractRepeatingDecimalFromMathML = (element) => {
-  const accElements = Array.from(element.querySelectorAll("*")).filter(
-    (el) => el.localName === "acc" && el.namespaceURI === "http://schemas.microsoft.com/office/2004/12/omml"
-  );
-  if (accElements.length > 0) {
-    let digits = "";
-    let dotCount = 0;
-    const parent = element.closest("*[local-name()='r']");
-    if (parent) {
-      const siblings = Array.from(parent.childNodes);
-      let currentDigits = "";
-      siblings.forEach((node) => {
-        if (node.nodeType === Node.ELEMENT_NODE && node.localName === "acc") {
-          const chr = node.querySelector("*[local-name()='accPr'] *[local-name()='chr']")?.getAttribute("m:val");
-          const base = node.querySelector("*[local-name()='e'] *[local-name()='r']")?.textContent.trim();
-          if (chr === "̇" && base) {
-            currentDigits += base;
-            dotCount += 1;
-          }
-        } else if (node.nodeType === Node.ELEMENT_NODE && node.localName === "t") {
-          const text = node.textContent.trim();
-          if (text && /\d/.test(text)) {
-            currentDigits += text;
-          }
-        }
-      });
-      digits = currentDigits;
-    }
-    if (digits) {
-      return `${digits}${dotCount > 0 ? " ̇".repeat(dotCount) : ""}`;
-    }
-  }
-  return null;
-};
-
-// Custom Leaf component
-const Leaf = ({ attributes, children, leaf }) => {
-  let styledChildren = children;
-  if (leaf.math) {
-    return <span {...attributes} className="mathjax" dangerouslySetInnerHTML={{ __html: `\\(${leaf.text}\\)` }} />;
-  }
-  if (leaf.bold) styledChildren = <strong>{styledChildren}</strong>;
-  if (leaf.italic) styledChildren = <em>{styledChildren}</em>;
-  if (leaf.underline) styledChildren = <u>{styledChildren}</u>;
-  if (leaf.strikethrough) styledChildren = <del>{styledChildren}</del>;
-  return <span {...attributes} className="bangla-text">{styledChildren}</span>;
-};
-
-// Custom Element component
-const Element = ({ attributes, children, element }) => {
-  switch (element.type) {
-    case "bulleted-list": return <ul {...attributes} className="list-disc pl-5">{children}</ul>;
-    case "numbered-list": return <ol {...attributes} className="list-decimal pl-5">{children}</ol>;
-    case "list-item": return <li {...attributes}>{children}</li>;
-    case "heading-one": return <h1 {...attributes} className="text-2xl font-bold">{children}</h1>;
-    case "heading-two": return <h2 {...attributes} className="text-xl font-semibold">{children}</h2>;
-    case "heading-three": return <h3 {...attributes} className="text-lg font-medium">{children}</h3>;
-    default: return <p {...attributes}>{children}</p>;
-  }
-};
-
-// Toolbar Button
-const ToolbarButton = ({ format, icon, label, tooltip }) => {
-  const editor = useSlate();
-  const isActive = isMarkActive(editor, format) || isBlockActive(editor, format);
-
-  const toggleFormat = () => {
-    if (["bold", "italic", "underline", "strikethrough", "math"].includes(format)) {
-      toggleMark(editor, format);
-    } else {
-      toggleBlock(editor, format);
-    }
-  };
-
-  return (
-    <button
-      type="button"
-      onMouseDown={(event) => {
-        event.preventDefault();
-        toggleFormat();
-      }}
-      className={`px-2 py-1 mx-1 rounded ${isActive ? "bg-blue-500 text-white" : "bg-gray-200 text-gray-700"} hover:bg-blue-400 hover:text-white transition`}
-      title={tooltip}
-    >
-      {icon || label}
-    </button>
-  );
-};
-
-// Mark and Block utilities
-const isMarkActive = (editor, format) => Editor.marks(editor)?.[format] === true;
-const isBlockActive = (editor, format) => !!Editor.nodes(editor, { match: (n) => n.type === format })[0];
-const toggleMark = (editor, format) => {
-  const isActive = isMarkActive(editor, format);
-  isActive ? Editor.removeMark(editor, format) : Editor.addMark(editor, format, true);
-};
-const toggleBlock = (editor, format) => {
-  const isActive = isBlockActive(editor, format);
-  const isList = ["bulleted-list", "numbered-list"].includes(format);
-  Transforms.unwrapNodes(editor, { match: (n) => ["bulleted-list", "numbered-list"].includes(n.type), split: true });
-  Transforms.setNodes(editor, { type: isActive ? "paragraph" : isList ? "list-item" : format });
-  if (!isActive && isList) Transforms.wrapNodes(editor, { type: format, children: [] });
-};
-
-// Custom Slate Editor with Paste Handling
-const CustomEditor = ({ value, onChange, placeholder, onPaste }) => {
-  const editor = useMemo(() => withHistory(withReact(createEditor())), []);
-  const renderElement = useCallback((props) => <Element {...props} />, []);
-  const renderLeaf = useCallback((props) => <Leaf {...props} />, []);
-
-  return (
-    <div className="slate-editor border rounded-lg mb-4">
-      <Slate editor={editor} initialValue={value} onChange={onChange}>
-        <div className="toolbar p-2 border-b bg-gray-100 rounded-t-lg flex flex-wrap gap-1">
-          <ToolbarButton format="bold" icon="B" tooltip="Bold (Ctrl+B)" />
-          <ToolbarButton format="italic" icon="I" tooltip="Italic (Ctrl+I)" />
-          <ToolbarButton format="underline" icon="U" tooltip="Underline (Ctrl+U)" />
-          <ToolbarButton format="strikethrough" icon="S" tooltip="Strikethrough" />
-          <ToolbarButton format="math" icon="∑" tooltip="Math Mode (Ctrl+M)" />
-          <ToolbarButton format="heading-one" label="H1" tooltip="Heading 1" />
-          <ToolbarButton format="heading-two" label="H2" tooltip="Heading 2" />
-          <ToolbarButton format="heading-three" label="H3" tooltip="Heading 3" />
-          <ToolbarButton format="bulleted-list" icon="•" tooltip="Bulleted List" />
-          <ToolbarButton format="numbered-list" icon="1." tooltip="Numbered List" />
-        </div>
-        <Editable
-          renderElement={renderElement}
-          renderLeaf={renderLeaf}
-          placeholder={placeholder}
-          className="p-3 min-h-[120px] max-h-[200px] overflow-y-auto bangla-text"
-          onKeyDown={(event) => {
-            if (event.ctrlKey || event.metaKey) {
-              switch (event.key) {
-                case "b": event.preventDefault(); toggleMark(editor, "bold"); break;
-                case "i": event.preventDefault(); toggleMark(editor, "italic"); break;
-                case "u": event.preventDefault(); toggleMark(editor, "underline"); break;
-                case "m": event.preventDefault(); toggleMark(editor, "math"); break;
-              }
-            }
-          }}
-          onPaste={onPaste}
-        />
-      </Slate>
-    </div>
-  );
-};
-
-// Serialize and Deserialize
-const serializeToHtml = (nodes) => {
-  return nodes
-    .map((node) => {
-      if (Text.isText(node)) {
-        let text = normalizeText(node.text);
-        if (node.math) return `<span class="mathjax">\\(${text}\\)</span>`;
-        if (node.bold) text = `<strong>${text}</strong>`;
-        if (node.italic) text = `<em>${text}</em>`;
-        if (node.underline) text = `<u>${text}</u>`;
-        if (node.strikethrough) text = `<del>${text}</del>`;
-        return text;
-      }
-      const children = serializeToHtml(node.children);
-      switch (node.type) {
-        case "heading-one": return `<h1>${children}</h1>`;
-        case "heading-two": return `<h2>${children}</h2>`;
-        case "heading-three": return `<h3>${children}</h3>`;
-        case "bulleted-list": return `<ul>${children}</ul>`;
-        case "numbered-list": return `<ol>${children}</ol>`;
-        case "list-item": return `<li>${children}</li>`;
-        default: return `<p>${children}</p>`;
-      }
-    })
-    .join("");
-};
-
+// Main CreateCQAdmin Component
 export default function CreateCQAdmin() {
-  useEffect(() => {
-    (async () => {
-      const { addStyles } = await import("react-mathquill");
-      addStyles();
-    })();
-  }, []);
-
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
   const [subjects, setSubjects] = useState([]);
@@ -381,21 +124,23 @@ export default function CreateCQAdmin() {
   const [selectedSubjectPart, setSelectedSubjectPart] = useState("");
   const [cqType, setCQType] = useState("");
   const [isMultipleCQs, setIsMultipleCQs] = useState(false);
-  const initialSlateValue = [{ type: "paragraph", children: [{ text: "" }] }];
 
   const [cqs, setCQs] = useState([
     {
-      passage: initialSlateValue,
-      questions: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
-      answers: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
-      latexQuestions: ["", "", ""],
+      passage: "",
+      questions: ["", "", "", ""], // Knowledge, Comprehension, Application, Higher Skills for generalCQ
+      answers: ["", "", "", ""],
+      latexQuestions: ["", "", ""], // Knowledge, Application, Higher Skills for mathCQ
       latexAnswers: ["", "", ""],
       image: null,
       imageAlignment: "center",
       videoLink: "",
-      latexPassage: "",
     },
   ]);
+
+  const [toolbarPosition, setToolbarPosition] = useState(null);
+  const [activeField, setActiveField] = useState(null); // Track which field (passage/question/answer) and indices
+  const textareaRefs = useRef({}); // Store refs for textareas
 
   useEffect(() => {
     async function fetchClasses() {
@@ -412,7 +157,17 @@ export default function CreateCQAdmin() {
 
   useEffect(() => {
     async function fetchClassData() {
-      if (!selectedClass) return;
+      if (!selectedClass) {
+        setSubjects([]);
+        setSubjectParts([]);
+        setChapters([]);
+        setSelectedSubject("");
+        setSelectedSubjectPart("");
+        setSelectedChapter("");
+        setSelectedChapterName("");
+        return;
+      }
+
       try {
         const res = await fetch(`/api/cq?classNumber=${selectedClass}`);
         const data = await res.json();
@@ -425,6 +180,11 @@ export default function CreateCQAdmin() {
             if (!chapterMap.has(key)) chapterMap.set(key, { number: item.chapterNumber, name: item.chapterName });
           });
           setChapters(Array.from(chapterMap.values()));
+        } else {
+          setSubjects([]);
+          setSubjectParts([]);
+          setChapters([]);
+          toast.info("⚠️ এই ক্লাসের জন্য কোনো ডেটা নেই।");
         }
       } catch (error) {
         toast.error("ক্লাস ডেটা লোড করতে ব্যর্থ");
@@ -437,52 +197,41 @@ export default function CreateCQAdmin() {
     setCQs([
       ...cqs,
       {
-        passage: initialSlateValue,
-        questions: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
-        answers: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
+        passage: "",
+        questions: ["", "", "", ""],
+        answers: ["", "", "", ""],
         latexQuestions: ["", "", ""],
         latexAnswers: ["", "", ""],
         image: null,
         imageAlignment: "center",
         videoLink: "",
-        latexPassage: "",
       },
     ]);
   };
 
   const handlePassageChange = (cqIndex, value) => {
     const newCQs = [...cqs];
-    newCQs[cqIndex].passage = value;
+    newCQs[cqIndex].passage = processTextForLatex(value);
     setCQs(newCQs);
   };
 
-  const handleMathCQChange = (cqIndex, latexValue) => {
+  const handleQuestionChange = (cqIndex, qIndex, value, type = "generalCQ") => {
     const newCQs = [...cqs];
-    newCQs[cqIndex].latexPassage = latexValue;
+    if (type === "generalCQ") {
+      newCQs[cqIndex].questions[qIndex] = processTextForLatex(value);
+    } else {
+      newCQs[cqIndex].latexQuestions[qIndex] = processTextForLatex(value);
+    }
     setCQs(newCQs);
   };
 
-  const handleQuestionChange = (cqIndex, qIndex, value) => {
+  const handleAnswerChange = (cqIndex, qIndex, value, type = "generalCQ") => {
     const newCQs = [...cqs];
-    newCQs[cqIndex].questions[qIndex] = value;
-    setCQs(newCQs);
-  };
-
-  const handleAnswerChange = (cqIndex, qIndex, value) => {
-    const newCQs = [...cqs];
-    newCQs[cqIndex].answers[qIndex] = value;
-    setCQs(newCQs);
-  };
-
-  const handleMathQuestionChange = (cqIndex, qIndex, latexValue) => {
-    const newCQs = [...cqs];
-    newCQs[cqIndex].latexQuestions[qIndex] = latexValue;
-    setCQs(newCQs);
-  };
-
-  const handleMathAnswerChange = (cqIndex, qIndex, latexValue) => {
-    const newCQs = [...cqs];
-    newCQs[cqIndex].latexAnswers[qIndex] = latexValue;
+    if (type === "generalCQ") {
+      newCQs[cqIndex].answers[qIndex] = processTextForLatex(value);
+    } else {
+      newCQs[cqIndex].latexAnswers[qIndex] = processTextForLatex(value);
+    }
     setCQs(newCQs);
   };
 
@@ -504,186 +253,95 @@ export default function CreateCQAdmin() {
     setCQs(newCQs);
   };
 
-  const handlePaste = (cqIndex, fieldType, index, e) => {
-    e.preventDefault();
+  const handleSelection = (cqIndex, fieldType, index, e) => {
+    const textarea = textareaRefs.current[`${fieldType}-${cqIndex}-${index ?? ''}`];
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
 
-    const clipboardData = e.clipboardData;
-    let pastedData = "";
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
 
-    const mathml = clipboardData.getData("application/mathml+xml");
-    if (mathml) {
-      try {
-        pastedData = convert(mathml);
-      } catch (error) {
-        toast.error("❌ MathML প্রক্রিয়া করা যায়নি। দয়া করে LaTeX ফরম্যাটে লিখুন।");
-      }
-    }
-
-    if (!pastedData) {
-      const html = clipboardData.getData("text/html");
-      if (html) {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(html, "text/html");
-
-        const mathmlElement = doc.querySelector("math");
-        if (mathmlElement) {
-          try {
-            const mathmlString = new XMLSerializer().serializeToString(mathmlElement);
-            pastedData = convert(mathmlString);
-          } catch (error) {
-            toast.error("❌ HTML থেকে MathML প্রক্রিয়া করা যায়নি। দয়া করে LaTeX ফরম্যাটে লিখুন।");
-          }
-        } else {
-          const body = doc.body;
-          let textParts = [];
-          let currentNumber = "";
-
-          const traverseDOM = (node, visited = new Set()) => {
-            if (visited.has(node)) return;
-            visited.add(node);
-
-            if (node.nodeType === Node.TEXT_NODE) {
-              let text = node.textContent.trim();
-              if (text) {
-                text = text.replace(/[\u200B-\u200F\uFEFF]/g, "");
-                if (currentNumber && /[\d.]/.test(text)) {
-                  currentNumber += text;
-                } else {
-                  if (currentNumber) {
-                    textParts.push(currentNumber);
-                    currentNumber = "";
-                  }
-                  textParts.push(text);
-                }
-              }
-            } else if (node.nodeType === Node.ELEMENT_NODE) {
-              if (node.tagName === "SPAN" || node.tagName === "P" || node.tagName === "DIV") {
-                let text = node.textContent.trim();
-                if (text && !node.querySelector("sup, sub, acc") && !visited.has(text)) {
-                  if (currentNumber) {
-                    textParts.push(currentNumber);
-                    currentNumber = "";
-                  }
-                  text = text.replace(/[\u200B-\u200F\uFEFF]/g, "");
-                  textParts.push(text);
-                  visited.add(text);
-                  return;
-                }
-              }
-
-              const fraction = extractFractionFromHTML(node);
-              if (fraction) {
-                if (currentNumber) {
-                  textParts.push(currentNumber);
-                  currentNumber = "";
-                }
-                textParts.push(fraction);
-              } else {
-                const mathMLFraction = extractFractionFromMathML(node);
-                if (mathMLFraction) {
-                  if (currentNumber) {
-                    textParts.push(currentNumber);
-                    currentNumber = "";
-                  }
-                  textParts.push(mathMLFraction);
-                } else {
-                  const repeatingDecimal = extractRepeatingDecimalFromMathML(node);
-                  if (repeatingDecimal) {
-                    const cleanRepeating = repeatingDecimal.replace(/( ̇)+$/, "").replace(/ ̇/g, "");
-                    if (currentNumber) {
-                      currentNumber += cleanRepeating;
-                    } else {
-                      currentNumber = cleanRepeating;
-                    }
-                  } else {
-                    if (node.tagName === "SPAN" && node.style.fontFamily.includes("Cambria Math")) {
-                      const text = node.textContent.trim();
-                      if (text) {
-                        if (currentNumber && /[\d.]/.test(text)) {
-                          currentNumber += text;
-                        } else {
-                          if (currentNumber) {
-                            textParts.push(currentNumber);
-                            currentNumber = "";
-                          }
-                          currentNumber = text;
-                        }
-                      }
-                    }
-                    node.childNodes.forEach((child) => traverseDOM(child, visited));
-                  }
-                }
-              }
-            }
-          };
-
-          traverseDOM(body);
-          if (currentNumber) {
-            textParts.push(currentNumber);
-          }
-          const extractedText = textParts.join(" ").trim();
-
-          const looksIncomplete = extractedText.match(/^\d+$/) || (!extractedText.includes("/") && !extractedText.includes("̇"));
-          if (extractedText && !looksIncomplete) {
-            pastedData = cleanTextForLatex(extractedText);
-          }
-        }
-      }
-    }
-
-    if (!pastedData) {
-      let plainText = clipboardData.getData("text/plain");
-      if (plainText) {
-        plainText = plainText.replace(/[\u200B-\u200F\uFEFF]/g, "");
-        pastedData = cleanTextForLatex(plainText);
-      }
-    }
-
-    if (pastedData) {
-      const newCQs = [...cqs];
-      if (fieldType === "passage") {
-        if (cqType === "generalCQ") {
-          // For Slate editor, insert the text with math formatting
-          const newNodes = [
-            {
-              type: "paragraph",
-              children: [{ text: "", math: true }, { text: pastedData, math: true }],
-            },
-          ];
-          newCQs[cqIndex].passage = newNodes;
-        } else {
-          // For mathCQ passage
-          newCQs[cqIndex].latexPassage = pastedData;
-        }
-      } else if (fieldType === "question") {
-        if (cqType === "generalCQ") {
-          const newNodes = [
-            {
-              type: "paragraph",
-              children: [{ text: "", math: true }, { text: pastedData, math: true }],
-            },
-          ];
-          newCQs[cqIndex].questions[index] = newNodes;
-        } else {
-          newCQs[cqIndex].latexQuestions[index] = pastedData;
-        }
-      } else if (fieldType === "answer") {
-        if (cqType === "generalCQ") {
-          const newNodes = [
-            {
-              type: "paragraph",
-              children: [{ text: "", math: true }, { text: pastedData, math: true }],
-            },
-          ];
-          newCQs[cqIndex].answers[index] = newNodes;
-        } else {
-          newCQs[cqIndex].latexAnswers[index] = pastedData;
-        }
-      }
-      setCQs(newCQs);
+    if (selection.toString().length > 0) {
+      setToolbarPosition({
+        x: rect.left + window.scrollX,
+        y: rect.top + window.scrollY,
+      });
+      setActiveField({ cqIndex, fieldType, index });
     } else {
-      toast.error("❌ পেস্ট করা ডেটা প্রক্রিয়া করা যায়নি। দয়া করে LaTeX ফরম্যাটে লিখুন।");
+      setToolbarPosition(null);
+      setActiveField(null);
     }
+  };
+
+  const handleFormat = (format, e) => {
+    e.preventDefault(); // Prevent form submission
+    if (!activeField) return;
+
+    const { cqIndex, fieldType, index } = activeField;
+    const newCQs = [...cqs];
+    const textarea = textareaRefs.current[`${fieldType}-${cqIndex}-${index ?? ''}`];
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+
+    let currentText;
+    if (fieldType === "passage") {
+      currentText = newCQs[cqIndex].passage;
+    } else if (fieldType === "question") {
+      currentText = cqType === "generalCQ"
+        ? newCQs[cqIndex].questions[index]
+        : newCQs[cqIndex].latexQuestions[index];
+    } else if (fieldType === "answer") {
+      currentText = cqType === "generalCQ"
+        ? newCQs[cqIndex].answers[index]
+        : newCQs[cqIndex].latexAnswers[index];
+    }
+
+    const selectedText = currentText.substring(start, end);
+    if (!selectedText) return;
+
+    let formattedText = selectedText;
+    switch (format) {
+      case 'bold':
+        formattedText = `**${selectedText}**`;
+        break;
+      case 'italic':
+        formattedText = `*${selectedText}*`;
+        break;
+      case 'underline':
+        formattedText = `__${selectedText}__`;
+        break;
+      case 'math':
+        formattedText = `$${selectedText}$`;
+        break;
+    }
+
+    const updatedText = currentText.substring(0, start) + formattedText + currentText.substring(end);
+    if (fieldType === "passage") {
+      newCQs[cqIndex].passage = updatedText;
+    } else if (fieldType === "question") {
+      if (cqType === "generalCQ") {
+        newCQs[cqIndex].questions[index] = updatedText;
+      } else {
+        newCQs[cqIndex].latexQuestions[index] = updatedText;
+      }
+    } else if (fieldType === "answer") {
+      if (cqType === "generalCQ") {
+        newCQs[cqIndex].answers[index] = updatedText;
+      } else {
+        newCQs[cqIndex].latexAnswers[index] = updatedText;
+      }
+    }
+
+    setCQs(newCQs);
+    setToolbarPosition(null);
+    setActiveField(null);
+
+    // Restore focus and cursor position
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + formattedText.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
   };
 
   const downloadExcelTemplate = () => {
@@ -723,6 +381,24 @@ export default function CreateCQAdmin() {
         "Higher Skills Answer": "Solar energy reduces carbon emissions.",
         "Image Alignment": "center",
         "Video Link": "https://drive.google.com/file/d/example",
+      },
+      {
+        Class: 9,
+        Subject: "General Math",
+        "Chapter Number": 1,
+        "Chapter Name": "Chapter 1",
+        "CQ Type": "mathCQ",
+        Passage: "\\frac{1}{2} + \\frac{1}{3} = ?",
+        "Knowledge Question": "Simplify the expression.",
+        "Knowledge Answer": "\\frac{5}{6}",
+        "Comprehension Question": "",
+        "Comprehension Answer": "",
+        "Application Question": "Apply this to a real-world problem.",
+        "Application Answer": "\\frac{5}{6} of a total amount.",
+        "Higher Skills Question": "Derive a general formula.",
+        "Higher Skills Answer": "\\frac{a}{b} + \\frac{c}{d} = \\frac{ad + bc}{bd}",
+        "Image Alignment": "center",
+        "Video Link": "",
       },
     ];
 
@@ -789,12 +465,15 @@ export default function CreateCQAdmin() {
             body: JSON.stringify({ questions: extractedQuestions }),
           });
 
-          if (response.ok) toast.success("প্রশ্ন সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!");
-          else {
+          if (response.ok) {
+            toast.success("প্রশ্ন সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!");
+          } else {
             const errorData = await response.json();
             toast.error(`❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ: ${errorData.error}`);
           }
-        } else toast.error("❌ এক্সেল ফাইল খালি বা ভুল ফরম্যাটে আছে!");
+        } else {
+          toast.error("❌ এক্সেল ফাইল খালি বা ভুল ফরম্যাটে আছে!");
+        }
       } catch (error) {
         toast.error("❌ ফাইল প্রসেসিংয়ে ত্রুটি!");
       }
@@ -812,17 +491,17 @@ export default function CreateCQAdmin() {
     setSubjectParts([]);
     setSelectedSubjectPart("");
     setCQType("");
+    setIsMultipleCQs(false);
     setCQs([
       {
-        passage: initialSlateValue,
-        questions: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
-        answers: [initialSlateValue, initialSlateValue, initialSlateValue, initialSlateValue],
+        passage: "",
+        questions: ["", "", "", ""],
+        answers: ["", "", "", ""],
         latexQuestions: ["", "", ""],
         latexAnswers: ["", "", ""],
         image: null,
         imageAlignment: "center",
         videoLink: "",
-        latexPassage: "",
       },
     ]);
   };
@@ -840,13 +519,13 @@ export default function CreateCQAdmin() {
     formData.append("cqType", cqType);
 
     cqs.forEach((cq, index) => {
-      const passageHtml = cqType === "generalCQ" ? serializeToHtml(cq.passage) : cq.latexPassage;
-      const questionsHtml = cqType === "generalCQ" ? cq.questions.map(serializeToHtml) : cq.latexQuestions;
-      const answersHtml = cqType === "generalCQ" ? cq.answers.map(serializeToHtml) : cq.latexAnswers;
+      const passageText = cq.passage;
+      const questionsText = cqType === "generalCQ" ? cq.questions : cq.latexQuestions;
+      const answersText = cqType === "generalCQ" ? cq.answers : cq.latexAnswers;
 
-      formData.append(`cqs[${index}][passage]`, passageHtml);
-      formData.append(`cqs[${index}][questions]`, JSON.stringify(questionsHtml));
-      formData.append(`cqs[${index}][answers]`, JSON.stringify(answersHtml));
+      formData.append(`cqs[${index}][passage]`, passageText);
+      formData.append(`cqs[${index}][questions]`, JSON.stringify(questionsText));
+      formData.append(`cqs[${index}][answers]`, JSON.stringify(answersText));
       if (cq.image) formData.append(`cqs[${index}][image]`, cq.image);
       formData.append(`cqs[${index}][imageAlignment]`, cq.imageAlignment);
       formData.append(`cqs[${index}][videoLink]`, cq.videoLink);
@@ -858,7 +537,9 @@ export default function CreateCQAdmin() {
       if (response.ok) {
         toast.success(`✅ ${cqs.length}টি সৃজনশীল প্রশ্ন সফলভাবে যোগ করা হয়েছে!`);
         resetForm();
-      } else toast.error(`❌ ${responseData.error || "কিছু সমস্যা হয়েছে!"}`);
+      } else {
+        toast.error(`❌ ${responseData.error || "কিছু সমস্যা হয়েছে!"}`);
+      }
     } catch (error) {
       toast.error("❌ সার্ভারের সাথে সংযোগে সমস্যা!");
     }
@@ -884,83 +565,60 @@ export default function CreateCQAdmin() {
           `}
         </script>
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
-        <style jsx global>{`
-          .bangla-text {
-            font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-            direction: ltr;
-            unicode-bidi: embed;
-          }
-          .video-link {
-            color: #1a73e8;
-            text-decoration: underline;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.5rem;
-            border-radius: 0.375rem;
-            transition: background-color 0.2s;
-          }
-          .video-link:hover {
-            background-color: #e8f0fe;
-          }
-          .slate-editor {
-            border: 1px solid #d1d5db;
-            border-radius: 0.5rem;
-            margin-bottom: 1.5rem;
-          }
-          .slate-editor .toolbar {
-            border-bottom: 1px solid #d1d5db;
-            background-color: #f7fafc;
-            border-top-left-radius: 0.5rem;
-            border-top-right-radius: 0.5rem;
-          }
-          .form-section, .preview-section {
-            min-height: 80vh;
-          }
-          .mq-editable-field {
-            min-height: 50px !important;
-            height: auto !important;
-            overflow-y: auto !important;
-            max-height: 200px !important;
-            white-space: pre-wrap !important;
-            word-wrap: break-word !important;
-            padding: 12px !important;
-            box-sizing: border-box !important;
-            font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-            font-size: 18px !important;
-            line-height: 1.5 !important;
-            border: 1px solid #d1d5db !important;
-            border-radius: 6px !important;
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
-          }
-          .mq-editable-field .mq-root-block {
-            white-space: pre-wrap !important;
-            word-wrap: break-word !important;
-            font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-          }
-          .mq-static-field {
-            white-space: pre-wrap !important;
-            word-wrap: break-word !important;
-            font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-            font-size: 18px !important;
-            line-height: 1.5 !important;
-          }
-          .MathJax .mtext {
-            font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-            white-space: pre-wrap !important;
-            margin-right: 0.25em !important;
-            margin-left: 0.25em !important;
-          }
-          .MathJax .mspace {
-            width: 0.5em !important;
-          }
-          .MathJax .mo {
-            font-size: 1.2em !important;
-            vertical-align: top !important;
-          }
-        `}</style>
       </Head>
+      <style jsx global>{`
+        .bangla-text {
+          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
+          direction: ltr;
+          unicode-bidi: embed;
+        }
+        .video-link {
+          color: #1a73e8;
+          text-decoration: underline;
+          cursor: pointer;
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.5rem;
+          border-radius: 0.375rem;
+          transition: background-color 0.2s;
+        }
+        .video-link:hover {
+          background-color: #e8f0fe;
+        }
+        .form-section, .preview-section {
+          min-height: 80vh;
+        }
+        textarea.bangla-text {
+          min-height: 50px !important;
+          height: auto !important;
+          overflow-y: auto !important;
+          max-height: 200px !important;
+          white-space: pre-wrap !important;
+          word-wrap: break-word !important;
+          padding: 12px !important;
+          box-sizing: border-box !important;
+          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
+          font-size: 18px !important;
+          line-height: 1.5 !important;
+          border: 1px solid #d1d5db !important;
+          border-radius: 6px !important;
+          box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+        }
+        .MathJax .mtext {
+          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
+          white-space: pre-wrap !important;
+          margin-right: 0.25em !important;
+          margin-left: 0.25em !important;
+        }
+        .MathJax .mspace {
+          width: 0.5em !important;
+        }
+        .MathJax .mo {
+          font-size: 1.2em !important;
+          vertical-align: top !important;
+        }
+      `}</style>
       <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 p-8">
         <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
         <motion.h1
@@ -1120,32 +778,26 @@ export default function CreateCQAdmin() {
                   <h3 className="text-xl font-semibold text-gray-800 mb-4 bangla-text">
                     সৃজনশীল প্রশ্ন {cqIndex + 1}
                   </h3>
-                  <label className="block text-gray-700 font-semibold mb-2 bangla-text">উদ্দীপক</label>
-                  {cqType === "generalCQ" ? (
-                    <>
-                      <CustomEditor
-                        value={cq.passage}
-                        onChange={(value) => handlePassageChange(cqIndex, value)}
-                        placeholder="🔹 অনুচ্ছেদ লিখুন"
-                        onPaste={(e) => handlePaste(cqIndex, "passage", null, e)}
-                      />
-                      <p className="text-sm text-gray-500 mt-1 bangla-text">
-                        * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <EditableMathField
-                        latex={cq.latexPassage || ""}
-                        onChange={(mathField) => handleMathCQChange(cqIndex, mathField.latex())}
-                        onPaste={(e) => handlePaste(cqIndex, "passage", null, e)}
-                        className="border p-3 rounded-lg w-full text-lg shadow-sm"
-                      />
-                      <p className="text-sm text-gray-500 mt-1 bangla-text">
-                        * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                      </p>
-                    </>
-                  )}
+                  <div className="mb-4 relative">
+                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">উদ্দীপক</label>
+                    <textarea
+                      className="w-full p-4 border rounded mb-4 font-mono bangla-text"
+                      value={cq.passage}
+                      onChange={(e) => handlePassageChange(cqIndex, e.target.value)}
+                      onMouseUp={(e) => handleSelection(cqIndex, "passage", null, e)}
+                      onKeyUp={(e) => handleSelection(cqIndex, "passage", null, e)}
+                      rows={4}
+                      placeholder="🔹 অনুচ্ছেদ লিখুন"
+                      ref={(el) => (textareaRefs.current[`passage-${cqIndex}-`] = el)}
+                    />
+                    <FormatToolbar
+                      position={toolbarPosition && activeField?.cqIndex === cqIndex && activeField?.fieldType === "passage" ? toolbarPosition : null}
+                      onFormat={handleFormat}
+                    />
+                    <p className="text-sm text-gray-500 mt-1 bangla-text">
+                      * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                    </p>
+                  </div>
 
                   <div className="mb-6">
                     <label className="block text-gray-700 font-semibold mb-2 bangla-text">
@@ -1197,27 +849,47 @@ export default function CreateCQAdmin() {
                   {cqType === "generalCQ" &&
                     cq.questions.map((question, i) => (
                       <div key={i} className="mb-4">
-                        <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                          {i === 0 ? "জ্ঞানমূলক প্রশ্ন" : i === 1 ? "অনুধাবনমূলক প্রশ্ন" : i === 2 ? "প্রয়োগ প্রশ্ন" : "উচ্চতর দক্ষতা"}
-                        </label>
-                        <CustomEditor
-                          value={question}
-                          onChange={(value) => handleQuestionChange(cqIndex, i, value)}
-                          placeholder={
-                            i === 0 ? "জ্ঞানমূলক প্রশ্ন লিখুন" : i === 1 ? "অনুধাবনমূলক প্রশ্ন লিখুন" : i === 2 ? "প্রয়োগ প্রশ্ন লিখুন" : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
-                          }
-                          onPaste={(e) => handlePaste(cqIndex, "question", i, e)}
-                        />
+                        <div className="relative">
+                          <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+                            {i === 0 ? "জ্ঞানমূলক প্রশ্ন" : i === 1 ? "অনুধাবনমূলক প্রশ্ন" : i === 2 ? "প্রয়োগ প্রশ্ন" : "উচ্চতর দক্ষতা"}
+                          </label>
+                          <textarea
+                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                            value={question}
+                            onChange={(e) => handleQuestionChange(cqIndex, i, e.target.value)}
+                            onMouseUp={(e) => handleSelection(cqIndex, "question", i, e)}
+                            onKeyUp={(e) => handleSelection(cqIndex, "question", i, e)}
+                            rows={2}
+                            placeholder={
+                              i === 0 ? "জ্ঞানমূলক প্রশ্ন লিখুন" : i === 1 ? "অনুধাবনমূলক প্রশ্ন লিখুন" : i === 2 ? "প্রয়োগ প্রশ্ন লিখুন" : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
+                            }
+                            ref={(el) => (textareaRefs.current[`question-${cqIndex}-${i}`] = el)}
+                          />
+                          <FormatToolbar
+                            position={toolbarPosition && activeField?.cqIndex === cqIndex && activeField?.fieldType === "question" && activeField?.index === i ? toolbarPosition : null}
+                            onFormat={handleFormat}
+                          />
+                        </div>
                         <p className="text-sm text-gray-500 mt-1 bangla-text">
                           * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
                         </p>
-                        <label className="block text-gray-700 font-semibold mb-2 bangla-text">উত্তর (ঐচ্ছিক)</label>
-                        <CustomEditor
-                          value={cq.answers[i]}
-                          onChange={(value) => handleAnswerChange(cqIndex, i, value)}
-                          placeholder="উত্তর লিখুন"
-                          onPaste={(e) => handlePaste(cqIndex, "answer", i, e)}
-                        />
+                        <div className="relative mt-3">
+                          <label className="block text-gray-700 font-semibold mb-2 bangla-text">উত্তর (ঐচ্ছিক)</label>
+                          <textarea
+                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                            value={cq.answers[i]}
+                            onChange={(e) => handleAnswerChange(cqIndex, i, e.target.value)}
+                            onMouseUp={(e) => handleSelection(cqIndex, "answer", i, e)}
+                            onKeyUp={(e) => handleSelection(cqIndex, "answer", i, e)}
+                            rows={2}
+                            placeholder="উত্তর লিখুন"
+                            ref={(el) => (textareaRefs.current[`answer-${cqIndex}-${i}`] = el)}
+                          />
+                          <FormatToolbar
+                            position={toolbarPosition && activeField?.cqIndex === cqIndex && activeField?.fieldType === "answer" && activeField?.index === i ? toolbarPosition : null}
+                            onFormat={handleFormat}
+                          />
+                        </div>
                         <p className="text-sm text-gray-500 mt-1 bangla-text">
                           * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
                         </p>
@@ -1227,25 +899,47 @@ export default function CreateCQAdmin() {
                   {cqType === "mathCQ" &&
                     cq.latexQuestions.map((question, i) => (
                       <div key={i} className="mb-4">
-                        <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                          {i === 0 ? "জ্ঞানমূলক প্রশ্ন" : i === 1 ? "প্রয়োগ প্রশ্ন" : "উচ্চতর দক্ষতা"}
-                        </label>
-                        <EditableMathField
-                          latex={cq.latexQuestions[i] || ""}
-                          onChange={(mathField) => handleMathQuestionChange(cqIndex, i, mathField.latex())}
-                          onPaste={(e) => handlePaste(cqIndex, "question", i, e)}
-                          className="border p-3 rounded-lg w-full text-lg shadow-sm"
-                        />
+                        <div className="relative">
+                          <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+                            {i === 0 ? "জ্ঞানমূলক প্রশ্ন" : i === 1 ? "প্রয়োগ প্রশ্ন" : "উচ্চতর দক্ষতা"}
+                          </label>
+                          <textarea
+                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                            value={question}
+                            onChange={(e) => handleQuestionChange(cqIndex, i, e.target.value, "mathCQ")}
+                            onMouseUp={(e) => handleSelection(cqIndex, "question", i, e)}
+                            onKeyUp={(e) => handleSelection(cqIndex, "question", i, e)}
+                            rows={2}
+                            placeholder={
+                              i === 0 ? "জ্ঞানমূলক প্রশ্ন লিখুন" : i === 1 ? "প্রয়োগ প্রশ্ন লিখুন" : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
+                            }
+                            ref={(el) => (textareaRefs.current[`question-${cqIndex}-${i}`] = el)}
+                          />
+                          <FormatToolbar
+                            position={toolbarPosition && activeField?.cqIndex === cqIndex && activeField?.fieldType === "question" && activeField?.index === i ? toolbarPosition : null}
+                            onFormat={handleFormat}
+                          />
+                        </div>
                         <p className="text-sm text-gray-500 mt-1 bangla-text">
                           * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
                         </p>
-                        <label className="block text-gray-700 font-semibold mb-2 mt-3 bangla-text">উত্তর (ঐচ্ছিক)</label>
-                        <EditableMathField
-                          latex={cq.latexAnswers[i] || ""}
-                          onChange={(mathField) => handleMathAnswerChange(cqIndex, i, mathField.latex())}
-                          onPaste={(e) => handlePaste(cqIndex, "answer", i, e)}
-                          className="border p-3 rounded-lg w-full text-lg shadow-sm"
-                        />
+                        <div className="relative mt-3">
+                          <label className="block text-gray-700 font-semibold mb-2 bangla-text">উত্তর (ঐচ্ছিক)</label>
+                          <textarea
+                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                            value={cq.latexAnswers[i]}
+                            onChange={(e) => handleAnswerChange(cqIndex, i, e.target.value, "mathCQ")}
+                            onMouseUp={(e) => handleSelection(cqIndex, "answer", i, e)}
+                            onKeyUp={(e) => handleSelection(cqIndex, "answer", i, e)}
+                            rows={2}
+                            placeholder="উত্তর লিখুন"
+                            ref={(el) => (textareaRefs.current[`answer-${cqIndex}-${i}`] = el)}
+                          />
+                          <FormatToolbar
+                            position={toolbarPosition && activeField?.cqIndex === cqIndex && activeField?.fieldType === "answer" && activeField?.index === i ? toolbarPosition : null}
+                            onFormat={handleFormat}
+                          />
+                        </div>
                         <p className="text-sm text-gray-500 mt-1 bangla-text">
                           * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
                         </p>
@@ -1297,14 +991,9 @@ export default function CreateCQAdmin() {
                   CQ {cqIndex + 1}
                 </p>
                 <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">উদ্দীপক:</p>
-                {cqType === "generalCQ" ? (
-                  <div
-                    className="text-gray-700 mb-4 bangla-text"
-                    dangerouslySetInnerHTML={{ __html: serializeToHtml(cq.passage) || "অনুচ্ছেদ লিখুন" }}
-                  />
-                ) : (
-                  <StaticMathField className="text-gray-700 mb-4">{cq.latexPassage || "গাণিতিক উদ্দীপক লিখুন"}</StaticMathField>
-                )}
+                <div className="text-gray-700 mb-4 bangla-text">
+                  {renderLines(cq.passage || "অনুচ্ছেদ লিখুন")}
+                </div>
 
                 {cq.videoLink && (
                   <div className="mb-4">
@@ -1330,21 +1019,13 @@ export default function CreateCQAdmin() {
                   {(cqType === "generalCQ" ? cq.questions : cq.latexQuestions).map((ques, i) => (
                     <div key={i} className="mb-3">
                       <p className="bangla-text">
-                        {String.fromCharCode(2453 + i)}) {cqType === "generalCQ" ? (
-                          <span dangerouslySetInnerHTML={{ __html: serializeToHtml(ques) || "প্রশ্ন লিখুন" }} />
-                        ) : (
-                          <StaticMathField className="inline-block">{ques || "প্রশ্ন লিখুন"}</StaticMathField>
-                        )}{" "}
+                        {String.fromCharCode(2453 + i)}) {renderLines(ques || "প্রশ্ন লিখুন")}{" "}
                         {cqType === "generalCQ" ? `(${[1, 2, 3, 4][i]} নম্বর)` : `(${[3, 3, 4][i]} নম্বর)`}
                       </p>
                       {(cqType === "generalCQ" ? cq.answers[i] : cq.latexAnswers[i]) && (
                         <p className="text-gray-600 ml-6 bangla-text">
                           <span className="font-semibold">উত্তর:</span>{" "}
-                          {cqType === "generalCQ" ? (
-                            <span dangerouslySetInnerHTML={{ __html: serializeToHtml(cq.answers[i]) }} />
-                          ) : (
-                            <StaticMathField className="inline-block">{cq.latexAnswers[i]}</StaticMathField>
-                          )}
+                          {renderLines(cqType === "generalCQ" ? cq.answers[i] : cq.latexAnswers[i])}
                         </p>
                       )}
                     </div>
