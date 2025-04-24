@@ -1,13 +1,18 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from "xlsx";
 import Head from "next/head";
-import { MathJax } from "better-react-mathjax";
-import FormatToolbar from "../../../FormatToolbar/index";
+import FormatToolbar from "@/components/FormatToolbar";
+
+// Dynamically import MathJax to avoid SSR issues
+const MathJax = dynamic(() => import("better-react-mathjax").then((mod) => mod.MathJax), {
+  ssr: false,
+});
 
 // Normalize text to Unicode NFC
 const normalizeText = (text) => text.normalize("NFC");
@@ -33,115 +38,86 @@ const simplifyFraction = (numerator, denominator) => {
   };
 };
 
-// Balance braces in a string
-const balanceBraces = (text) => {
-  let openBraces = 0;
-  let result = "";
-  
-  for (let char of text) {
-    if (char === "{") {
-      openBraces++;
-      result += char;
-    } else if (char === "}") {
-      if (openBraces > 0) {
-        openBraces--;
-        result += char;
-      }
-    } else {
-      result += char;
-    }
-  }
-  
-  // Add missing closing braces
-  while (openBraces > 0) {
-    result += "}";
-    openBraces--;
-  }
-  
-  return result;
-};
-
-// Process text for LaTeX conversion
+// Process text for LaTeX conversion (aligned with SQ code)
 const processTextForLatex = (text) => {
-  // Normalize and clean text
+  if (!text) return "";
   text = normalizeText(text).replace(/[\u200B-\u200F\uFEFF]/g, "");
 
-  // Handle fractions (e.g., "1/2" → "\frac{1}{2}")
-  text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
-    const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
-    return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
-  });
-  text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
-    const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
-    return `\\frac{${numerator}}{${denominator}}`;
-  });
+  try {
+    // Handle fractions (e.g., "1/2" → "\frac{1}{2}")
+    text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
+      const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
+      return `\\frac{${numerator}}{${denominator}}`;
+    });
 
-  // Handle superscripts (e.g., "x^2" → "x^{2}", "[(x^2 + 3x + 1)]^2" → "[(x^{2} + 3x + 1)]^{2}")
-  text = text.replace(/\[(.*?)\]\^(\d+|\w+)/g, "[$1]^{$2}");
-  text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
-  text = text.replace(/(\w+)\^(\d+|\w+)/g, "$1^{$2}");
+    // Handle superscripts (e.g., "x^2" → "x^{2}")
+    text = text.replace(/\[(.*?)\]\^(\d+|\w+)/g, "[$1]^{$2}");
+    text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
+    text = text.replace(/(\w+)\^(\d+|\w+)/g, "$1^{$2}");
 
-  // Handle square roots (e.g., "sqrt(x)" → "\sqrt{x}")
-  text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
+    // Handle square roots (e.g., "sqrt(x)" → "\sqrt{x}")
+    text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
 
-  // Handle common symbols
-  text = text.replace(/≥/g, "\\geq");
-  text = text.replace(/≤/g, "\\leq");
-  text = text.replace(/≠/g, "\\neq");
-  text = text.replace(/½/g, "\\frac{1}{2}");
-  text = text.replace(/²/g, "^{2}");
-  text = text.replace(/³/g, "^{3}");
+    // Handle common symbols
+    text = text.replace(/≥/g, "\\geq");
+    text = text.replace(/≤/g, "\\leq");
+    text = text.replace(/≠/g, "\\neq");
+    text = text.replace(/½/g, "\\frac{1}{2}");
+    text = text.replace(/²/g, "^{2}");
+    text = text.replace(/³/g, "^{3}");
 
-  // Preserve markdown formatting if present
-  text = text.replace(/\*\*(.*?)\*\*/g, "**$1**");
-  text = text.replace(/\*(.*?)\*/g, "*$1*");
-  text = text.replace(/__(.*?)__/g, "__$1__");
+    // Preserve markdown formatting
+    text = text.replace(/\*\*(.*?)\*\*/g, "**$1**");
+    text = text.replace(/\*(.*?)\*/g, "*$1*");
+    text = text.replace(/__(.*?)__/g, "__$1__");
 
-  // Wrap Bangla text in \text{}
-  text = text.replace(
-    /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
-    (match) => {
-      const content = match.trim();
-      const trailing = match.slice(content.length);
-      if (!/^\d+$/.test(content) && !content.includes("/")) {
-        return `\\text{${content}}${trailing}`;
+    // Wrap Bangla text in \text{}
+    text = text.replace(
+      /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
+      (match) => {
+        const content = match.trim();
+        const trailing = match.slice(content.length);
+        if (!/^\d+$/.test(content) && !content.includes("/")) {
+          return `\\text{${content}}${trailing}`;
+        }
+        return match;
       }
-      return match;
-    }
-  );
-
-  // Balance braces before returning
-  text = balanceBraces(text);
+    );
+  } catch (error) {
+    console.error("LaTeX processing error:", error, "Input:", text);
+  }
 
   return text;
 };
 
-// Render markdown and LaTeX in preview
+// Render markdown and LaTeX in preview with enhanced error handling
 const renderLines = (text) => {
-  if (!text) return 'টেক্সট লিখুন';
+  if (!text) return <div className="bangla-text">টেক্সট লিখুন</div>;
 
   try {
     return text.split('\n').map((line, index) => {
-      // Process markdown-style formatting
       let processedLine = line
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g, '<em>$1</em>')
         .replace(/__(.*?)__/g, '<u>$1</u>');
 
-      // If the line contains LaTeX (e.g., \frac, ^, _), ensure it's rendered as math
+      // Ensure LaTeX is wrapped in math mode
       if (processedLine.match(/[\\{}^_]/) && !processedLine.startsWith('$') && !processedLine.endsWith('$')) {
         processedLine = `$${processedLine}$`;
       }
 
       return (
         <div key={index}>
-          <MathJax>
-            <div dangerouslySetInnerHTML={{ __html: processedLine }} />
-          </MathJax>
+          <Suspense fallback={<div>Rendering LaTeX...</div>}>
+            <MathJax>
+              <div dangerouslySetInnerHTML={{ __html: processedLine }} />
+            </MathJax>
+          </Suspense>
         </div>
       );
     });
   } catch (error) {
+    console.error("LaTeX rendering error:", error, "Input:", text);
     return (
       <div className="text-red-500 bangla-text">
         LaTeX ত্রুটি: অসম্পূর্ণ বা ভুল ফরম্যাট। অনুগ্রহ করে সঠিকভাবে লিখুন।
@@ -168,9 +144,9 @@ export default function CreateCQAdmin() {
   const [cqs, setCQs] = useState([
     {
       passage: "",
-      questions: ["", "", "", ""], // Knowledge, Comprehension, Application, Higher Skills for generalCQ
+      questions: ["", "", "", ""],
       answers: ["", "", "", ""],
-      latexQuestions: ["", "", ""], // Knowledge, Application, Higher Skills for mathCQ
+      latexQuestions: ["", "", ""],
       latexAnswers: ["", "", ""],
       image: null,
       imageAlignment: "center",
@@ -179,16 +155,18 @@ export default function CreateCQAdmin() {
   ]);
 
   const [toolbarPosition, setToolbarPosition] = useState(null);
-  const [activeField, setActiveField] = useState(null); // Track which field (passage/question/answer) and indices
-  const textareaRefs = useRef({}); // Store refs for textareas
+  const [activeField, setActiveField] = useState(null);
+  const textareaRefs = useRef({});
 
   useEffect(() => {
     async function fetchClasses() {
       try {
-        const res = await fetch("/api/cq");
+        const res = await fetch("/api/cq", { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
         setClasses(data);
       } catch (error) {
+        console.error("Error fetching classes:", error);
         toast.error("ক্লাস লোড করতে ব্যর্থ");
       }
     }
@@ -209,7 +187,8 @@ export default function CreateCQAdmin() {
       }
 
       try {
-        const res = await fetch(`/api/cq?classNumber=${selectedClass}`);
+        const res = await fetch(`/api/cq?classNumber=${selectedClass}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
         if (data.length > 0) {
           setSubjects([...new Set(data.map((item) => item.subject))]);
@@ -227,6 +206,7 @@ export default function CreateCQAdmin() {
           toast.info("⚠️ এই ক্লাসের জন্য কোনো ডেটা নেই।");
         }
       } catch (error) {
+        console.error("Error fetching class data:", error);
         toast.error("ক্লাস ডেটা লোড করতে ব্যর্থ");
       }
     }
@@ -314,7 +294,7 @@ export default function CreateCQAdmin() {
   };
 
   const handleFormat = (format, e) => {
-    e.preventDefault(); // Prevent form submission
+    e.preventDefault();
     if (!activeField) return;
 
     const { cqIndex, fieldType, index } = activeField;
@@ -376,7 +356,6 @@ export default function CreateCQAdmin() {
     setToolbarPosition(null);
     setActiveField(null);
 
-    // Restore focus and cursor position
     setTimeout(() => {
       textarea.focus();
       const newCursorPos = start + formattedText.length;
@@ -509,12 +488,14 @@ export default function CreateCQAdmin() {
             toast.success("প্রশ্ন সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!");
           } else {
             const errorData = await response.json();
-            toast.error(`❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ: ${errorData.error}`);
+            console.error("Import error:", errorData);
+            toast.error(`❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ: ${errorData.error || "Unknown error"}`);
           }
         } else {
           toast.error("❌ এক্সেল ফাইল খালি বা ভুল ফরম্যাটে আছে!");
         }
       } catch (error) {
+        console.error("File processing error:", error);
         toast.error("❌ ফাইল প্রসেসিংয়ে ত্রুটি!");
       }
     };
@@ -549,6 +530,11 @@ export default function CreateCQAdmin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!selectedClass || !selectedSubject || !selectedChapter || !cqType) {
+      toast.error("অনুগ্রহ করে সকল প্রয়োজনীয় ফিল্ড পূরণ করুন!");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("classNumber", selectedClass);
     formData.append("subject", selectedSubject);
@@ -559,7 +545,7 @@ export default function CreateCQAdmin() {
     formData.append("cqType", cqType);
 
     cqs.forEach((cq, index) => {
-      const passageText = cq.passage;
+      const passageText = cq.passage || "";
       const questionsText = cqType === "generalCQ" ? cq.questions : cq.latexQuestions;
       const answersText = cqType === "generalCQ" ? cq.answers : cq.latexAnswers;
 
@@ -568,7 +554,7 @@ export default function CreateCQAdmin() {
       formData.append(`cqs[${index}][answers]`, JSON.stringify(answersText));
       if (cq.image) formData.append(`cqs[${index}][image]`, cq.image);
       formData.append(`cqs[${index}][imageAlignment]`, cq.imageAlignment);
-      formData.append(`cqs[${index}][videoLink]`, cq.videoLink);
+      formData.append(`cqs[${index}][videoLink]`, cq.videoLink || "");
     });
 
     try {
@@ -578,9 +564,11 @@ export default function CreateCQAdmin() {
         toast.success(`✅ ${cqs.length}টি সৃজনশীল প্রশ্ন সফলভাবে যোগ করা হয়েছে!`);
         resetForm();
       } else {
+        console.error("Submit error:", responseData);
         toast.error(`❌ ${responseData.error || "কিছু সমস্যা হয়েছে!"}`);
       }
     } catch (error) {
+      console.error("Server connection error:", error);
       toast.error("❌ সার্ভারের সাথে সংযোগে সমস্যা!");
     }
   };
@@ -596,10 +584,14 @@ export default function CreateCQAdmin() {
               tex: {
                 inlineMath: [['$', '$'], ['\\(', '\\)']],
                 tags: 'ams',
+                packages: ['base', 'ams']
               },
               chtml: {
                 scale: 1.1,
                 mtextInheritFont: true,
+              },
+              loader: {
+                load: ['[tex]/ams']
               }
             };
           `}
@@ -671,7 +663,6 @@ export default function CreateCQAdmin() {
         </motion.h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 max-w-7xl mx-auto">
-          {/* Form Section */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -1011,7 +1002,6 @@ export default function CreateCQAdmin() {
             </form>
           </motion.div>
 
-          {/* Preview Section */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
