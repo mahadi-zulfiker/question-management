@@ -1,13 +1,19 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from "xlsx";
 import Head from "next/head";
-import { MathJax } from "better-react-mathjax";
+import { Loader2 } from "lucide-react";
 import FormatToolbar from "../../../FormatToolbar/index";
+
+// Dynamically import MathJax to avoid SSR issues
+const MathJax = dynamic(() => import("better-react-mathjax").then((mod) => mod.MathJax), {
+  ssr: false,
+});
 
 // Normalize text to Unicode NFC
 const normalizeText = (text) => text.normalize("NFC");
@@ -35,82 +41,109 @@ const simplifyFraction = (numerator, denominator) => {
 
 // Process text for LaTeX conversion
 const processTextForLatex = (text) => {
-  // Normalize and clean text
-  text = normalizeText(text).replace(/[\u200B-\u200F\uFEFF]/g, "");
+  if (!text || typeof text !== "string") return "";
 
-  // Handle mixed fractions (e.g., "1 1/2" → "1\\ \\frac{1}{2}")
-  text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
-    const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
-    return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
-  });
+  try {
+    // Normalize text and remove unwanted Unicode characters
+    text = normalizeText(text).replace(/[\u200B-\u200F\uFEFF]/g, "");
 
-  // Handle fractions (e.g., "1/2" → "\frac{1}{2}")
-  text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
-    const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
-    return `\\frac{${numerator}}{${denominator}}`;
-  });
+    // Handle mixed fractions (e.g., "1 1/2" → "1\\ \\frac{1}{2}")
+    text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
+      if (denom === "0") return match; // Avoid division by zero
+      const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
+      return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
+    });
 
-  // Handle superscripts (e.g., "x^2" → "x^{2}", "[(x^2 + 3x + 1)]^2" → "[(x^{2} + 3x + 1)]^{2}")
-  text = text.replace(/\[(.*?)\]\^(\d+|\w+)/g, "[$1]^{$2}");
-  text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
-  text = text.replace(/(\w+)\^(\d+|\w+)/g, "$1^{$2}");
+    // Handle fractions (e.g., "1/2" → "\frac{1}{2}")
+    text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
+      if (denom === "0") return match; // Avoid division by zero
+      const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
+      return `\\frac{${numerator}}{${denominator}}`;
+    });
 
-  // Handle square roots (e.g., "sqrt(x)" → "\sqrt{x}")
-  text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
+    // Handle superscripts (e.g., "x^2" → "x^{2}")
+    text = text.replace(/\[(.*?)\]\^(\d+|\w+)/g, "[$1]^{$2}");
+    text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
+    text = text.replace(/(\w+)\^(\d+|\w+)/g, "$1^{$2}");
 
-  // Handle common symbols
-  text = text.replace(/≥/g, "\\geq");
-  text = text.replace(/≤/g, "\\leq");
-  text = text.replace(/≠/g, "\\neq");
-  text = text.replace(/½/g, "\\frac{1}{2}");
-  text = text.replace(/²/g, "^{2}");
-  text = text.replace(/³/g, "^{3}");
+    // Handle square roots (e.g., "sqrt(x)" → "\sqrt{x}")
+    text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
 
-  // Preserve markdown formatting if present
-  text = text.replace(/\*\*(.*?)\*\*/g, "**$1**");
-  text = text.replace(/\*(.*?)\*/g, "*$1*");
-  text = text.replace(/__(.*?)__/g, "__$1__");
+    // Handle common symbols
+    text = text.replace(/≥/g, "\\geq");
+    text = text.replace(/≤/g, "\\leq");
+    text = text.replace(/≠/g, "\\neq");
+    text = text.replace(/½/g, "\\frac{1}{2}");
+    text = text.replace(/²/g, "^{2}");
+    text = text.replace(/³/g, "^{3}");
 
-  // Wrap Bangla text in \text{}
-  text = text.replace(
-    /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
-    (match) => {
-      const content = match.trim();
-      const trailing = match.slice(content.length);
-      if (!/^\d+$/.test(content) && !content.includes("/")) {
-        return `\\text{${content}}${trailing}`;
+    // Preserve markdown formatting
+    text = text.replace(/\*\*(.*?)\*\*/g, "**$1**");
+    text = text.replace(/\*(.*?)\*/g, "*$1*");
+    text = text.replace(/__(.*?)__/g, "__$1__");
+
+    // Wrap Bangla text in \text{}, excluding numbers and fractions
+    text = text.replace(
+      /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
+      (match) => {
+        const content = match.trim();
+        const trailing = match.slice(content.length);
+        if (!/^\d+$/.test(content) && !content.includes("/")) {
+          return `\\text{${content}}${trailing}`;
+        }
+        return match;
       }
-      return match;
-    }
-  );
+    );
 
-  return text;
+    // Ensure inline math is properly wrapped
+    text = text.replace(/(\$.*?\$)/g, (match) => match); // Preserve existing $...$
+    if (text.match(/[\\{}^_]/) && !text.startsWith("$") && !text.endsWith("$")) {
+      text = `$${text}$`;
+    }
+
+    return text;
+  } catch (error) {
+    console.error("LaTeX processing error:", error, "Input:", text);
+    return text; // Return original text as fallback
+  }
 };
 
-// Render markdown and LaTeX in preview
+// Render markdown and LaTeX in preview with enhanced error handling
 const renderLines = (text) => {
-  if (!text) return 'প্রশ্ন বা বিকল্প লিখুন...';
+  if (!text || typeof text !== "string") {
+    return <div className="bangla-text">প্রশ্ন বা বিকল্প লিখুন...</div>;
+  }
 
-  return text.split('\n').map((line, index) => {
-    // Process markdown-style formatting
-    let processedLine = line
+  try {
+    // Process markdown formatting
+    let processedText = text
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/__(.*?)__/g, '<u>$1</u>');
 
-    // If the line contains LaTeX (e.g., \frac, ^, _), ensure it's rendered as math
-    if (processedLine.match(/[\\{}^_]/) && !processedLine.startsWith('$') && !processedLine.endsWith('$')) {
-      processedLine = `$${processedLine}$`;
-    }
+    // Split into lines and render each
+    return processedText.split('\n').map((line, index) => {
+      // Ensure LaTeX is properly wrapped in math mode
+      const needsMathMode = line.match(/[\\{}^_]/) && !line.startsWith('$') && !line.endsWith('$');
+      const displayLine = needsMathMode ? `$${line}$` : line;
 
+      return (
+        <div key={index} className="bangla-text">
+          <MathJax dynamic>
+            <div dangerouslySetInnerHTML={{ __html: displayLine }} />
+          </MathJax>
+        </div>
+      );
+    });
+  } catch (error) {
+    console.error("LaTeX rendering error:", error, "Input:", text);
     return (
-      <div key={index}>
-        <MathJax>
-          <div dangerouslySetInnerHTML={{ __html: processedLine }} />
-        </MathJax>
+      <div className="text-red-500 bangla-text">
+        LaTeX ত্রুটি: অসম্পূর্ণ বা ভুল ফরম্যাট। অনুগ্রহ করে সঠিকভাবে লিখুন।
+        <div className="text-gray-700 mt-2">{text}</div>
       </div>
     );
-  });
+  }
 };
 
 // Main CreateMCQAdmin Component
@@ -126,6 +159,7 @@ export default function CreateMCQAdmin() {
   const [selectedSubjectPart, setSelectedSubjectPart] = useState("");
   const [questionType, setQuestionType] = useState("general");
   const [isMultipleQuestions, setIsMultipleQuestions] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [questions, setQuestions] = useState([
     {
@@ -141,16 +175,18 @@ export default function CreateMCQAdmin() {
   ]);
 
   const [toolbarPosition, setToolbarPosition] = useState(null);
-  const [activeField, setActiveField] = useState(null); // Track which field (question/option) and index
-  const textareaRefs = useRef({}); // Store refs for textareas
+  const [activeField, setActiveField] = useState(null);
+  const textareaRefs = useRef({});
 
   useEffect(() => {
     async function fetchClasses() {
       try {
-        const res = await fetch("/api/mcq");
+        const res = await fetch("/api/mcq", { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
         setClasses(data);
       } catch (error) {
+        console.error("Error fetching classes:", error);
         toast.error("ক্লাস লোড করতে ব্যর্থ");
       }
     }
@@ -171,7 +207,8 @@ export default function CreateMCQAdmin() {
       }
 
       try {
-        const res = await fetch(`/api/mcq?classNumber=${selectedClass}`);
+        const res = await fetch(`/api/mcq?classNumber=${selectedClass}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
         if (data.length > 0) {
           setSubjects([...new Set(data.map((item) => item.subject))]);
@@ -189,6 +226,7 @@ export default function CreateMCQAdmin() {
           toast.info("⚠️ এই ক্লাসের জন্য কোনো ডেটা নেই।");
         }
       } catch (error) {
+        console.error("Error fetching class data:", error);
         toast.error("ক্লাস ডেটা লোড করতে ব্যর্থ");
       }
     }
@@ -257,8 +295,14 @@ export default function CreateMCQAdmin() {
 
   const handleSelection = (qIndex, fieldType, oIndex, e) => {
     const textarea = textareaRefs.current[`${fieldType}-${qIndex}-${oIndex ?? ''}`];
+    if (!textarea) return;
+
     const selection = window.getSelection();
-    if (!selection.rangeCount) return;
+    if (!selection.rangeCount) {
+      setToolbarPosition(null);
+      setActiveField(null);
+      return;
+    }
 
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
@@ -266,7 +310,7 @@ export default function CreateMCQAdmin() {
     if (selection.toString().length > 0) {
       setToolbarPosition({
         x: rect.left + window.scrollX,
-        y: rect.top + window.scrollY,
+        y: rect.top + window.scrollY - 40, // Adjust for better positioning
       });
       setActiveField({ qIndex, fieldType, oIndex });
     } else {
@@ -276,12 +320,14 @@ export default function CreateMCQAdmin() {
   };
 
   const handleFormat = (format, e) => {
-    e.preventDefault(); // Prevent form submission
+    e.preventDefault();
     if (!activeField) return;
 
     const { qIndex, fieldType, oIndex } = activeField;
     const newQuestions = [...questions];
     const textarea = textareaRefs.current[`${fieldType}-${qIndex}-${oIndex ?? ''}`];
+    if (!textarea) return;
+
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
 
@@ -328,7 +374,6 @@ export default function CreateMCQAdmin() {
     setToolbarPosition(null);
     setActiveField(null);
 
-    // Restore focus and cursor position
     setTimeout(() => {
       textarea.focus();
       const newCursorPos = start + formattedText.length;
@@ -424,19 +469,19 @@ export default function CreateMCQAdmin() {
             options:
               row["MCQ Type"] === "general" || !row["MCQ Type"]
                 ? [
-                    processTextForLatex(row["Option 1"] || ""),
-                    processTextForLatex(row["Option 2"] || ""),
-                    processTextForLatex(row["Option 3"] || ""),
-                    processTextForLatex(row["Option 4"] || ""),
+                    processTextForLatex(normalizeText(row["Option 1"] || "")),
+                    processTextForLatex(normalizeText(row["Option 2"] || "")),
+                    processTextForLatex(normalizeText(row["Option 3"] || "")),
+                    processTextForLatex(normalizeText(row["Option 4"] || "")),
                   ]
                 : [
-                    processTextForLatex(row["Option 1"] || ""),
-                    processTextForLatex(row["Option 2"] || ""),
-                    processTextForLatex(row["Option 3"] || ""),
-                    processTextForLatex(row["Option 4"] || ""),
-                    processTextForLatex(row["Option 5"] || ""),
-                    processTextForLatex(row["Option 6"] || ""),
-                    processTextForLatex(row["Option 7"] || ""),
+                    processTextForLatex(normalizeText(row["Option 1"] || "")),
+                    processTextForLatex(normalizeText(row["Option 2"] || "")),
+                    processTextForLatex(normalizeText(row["Option 3"] || "")),
+                    processTextForLatex(normalizeText(row["Option 4"] || "")),
+                    processTextForLatex(normalizeText(row["Option 5"] || "")),
+                    processTextForLatex(normalizeText(row["Option 6"] || "")),
+                    processTextForLatex(normalizeText(row["Option 7"] || "")),
                   ],
             correctAnswer: row["Correct Answer"] || null,
             imageAlignment: row["Image Alignment"] || "center",
@@ -444,7 +489,7 @@ export default function CreateMCQAdmin() {
           }));
 
           const response = await fetch("/api/mcq/import", {
-            method: "POST:",
+            method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ questions: extractedQuestions }),
           });
@@ -452,12 +497,15 @@ export default function CreateMCQAdmin() {
           if (response.ok) {
             toast.success("প্রশ্ন সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!");
           } else {
-            toast.error("❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ হয়েছে!");
+            const errorData = await response.json();
+            console.error("Import error:", errorData);
+            toast.error(`❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ: ${errorData.error || "Unknown error"}`);
           }
         } else {
           toast.error("❌ এক্সেল ফাইল খালি বা ভুল ফরম্যাটে আছে!");
         }
       } catch (error) {
+        console.error("File processing error:", error);
         toast.error("❌ ফাইল প্রসেসিংয়ে ত্রুটি!");
       }
     };
@@ -466,9 +514,12 @@ export default function CreateMCQAdmin() {
 
   const resetForm = () => {
     setSelectedClass("");
+    setSubjects([]);
     setSelectedSubject("");
+    setChapters([]);
     setSelectedChapter("");
     setSelectedChapterName("");
+    setSubjectParts([]);
     setSelectedSubjectPart("");
     setQuestionType("general");
     setIsMultipleQuestions(false);
@@ -489,6 +540,13 @@ export default function CreateMCQAdmin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    if (!selectedClass || !selectedSubject || !selectedChapter || !questionType) {
+      toast.error("অনুগ্রহ করে সকল প্রয়োজনীয় ফিল্ড পূরণ করুন!");
+      return;
+    }
+
+    setIsSubmitting(true);
+
     const formData = new FormData();
     formData.append("classNumber", selectedClass);
     formData.append("subject", selectedSubject);
@@ -500,50 +558,69 @@ export default function CreateMCQAdmin() {
 
     questions.forEach((q, index) => {
       formData.append(`questions[${index}][question]`, q.question);
-      formData.append(`questions[${index}][options]`, JSON.stringify(questionType === "general" ? q.options : q.higherOptions));
-      formData.append(`questions[${index}][correctAnswer]`, questionType === "general" ? q.correctAnswer : q.higherCorrectAnswer);
+      formData.append(
+        `questions[${index}][options]`,
+        JSON.stringify(questionType === "general" ? q.options : q.higherOptions)
+      );
+      formData.append(
+        `questions[${index}][correctAnswer]`,
+        questionType === "general" ? q.correctAnswer : q.higherCorrectAnswer
+      );
       if (q.image) formData.append(`questions[${index}][image]`, q.image);
       formData.append(`questions[${index}][imageAlignment]`, q.imageAlignment);
-      formData.append(`questions[${index}][videoLink]`, q.videoLink);
+      formData.append(`questions[${index}][videoLink]`, q.videoLink || "");
     });
 
     try {
-      const response = await fetch("/api/mcq/import", {
-        method: "POST",
-        body: formData,
-      });
-
+      const response = await fetch("/api/mcq/import", { method: "POST", body: formData });
       const responseData = await response.json();
       if (response.ok) {
         toast.success(`✅ ${questions.length}টি এমসিকিউ সফলভাবে যোগ করা হয়েছে!`);
         resetForm();
       } else {
+        console.error("Submit error:", responseData);
         toast.error(`❌ ${responseData.error || "কিছু সমস্যা হয়েছে!"}`);
       }
     } catch (error) {
+      console.error("Server connection error:", error);
       toast.error("❌ সার্ভারের সাথে সংযোগে সমস্যা!");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <>
       <Head>
+        <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net;" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet" />
-        <script>
-          {`
-            MathJax = {
-              tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                tags: 'ams',
-              },
-              chtml: {
-                scale: 1.1,
-                mtextInheritFont: true,
-              }
-            };
-          `}
-        </script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              MathJax = {
+                tex: {
+                  inlineMath: [['$', '$'], ['\\(', '\\)']],
+                  displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                  tags: 'ams',
+                  processEscapes: true,
+                },
+                chtml: {
+                  scale: 1.1,
+                  mtextInheritFont: true,
+                },
+                startup: {
+                  ready: () => {
+                    MathJax.startup.defaultReady();
+                    MathJax.startup.promise.then(() => {
+                      window.dispatchEvent(new Event('mathjax-ready'));
+                    });
+                  }
+                }
+              };
+            `,
+          }}
+        />
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
       </Head>
       <style jsx global>{`
@@ -599,38 +676,37 @@ export default function CreateMCQAdmin() {
           vertical-align: top !important;
         }
       `}</style>
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 p-8">
         <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
         <motion.h1
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-4xl font-extrabold text-center text-blue-700 mb-8 bangla-text"
+          className="text-4xl font-extrabold text-center text-blue-700 mb-10 bangla-text"
         >
           📝 এমসিকিউ তৈরি করুন
         </motion.h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
-          {/* Form Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 form-section"
+            className="bg-white rounded-xl shadow-lg p-8 border border-gray-200 form-section"
           >
             <form onSubmit={handleSubmit}>
-              <div className="mb-6">
-                <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+              <div className="mb-8">
+                <label className="block text-gray-700 font-semibold text-lg mb-3 bangla-text">
                   এক্সেল ফাইল থেকে আমদানি
                 </label>
-                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
                   <input
                     type="file"
                     accept=".xlsx, .xls"
                     onChange={handleFileUpload}
                     className="absolute inset-0 opacity-0 cursor-pointer"
                   />
-                  <p className="text-center text-gray-500 bangla-text">
+                  <p className="text-center text-gray-500 text-lg bangla-text">
                     এক্সেল ফাইল টেনে আনুন বা ক্লিক করুন
                   </p>
                 </div>
@@ -639,20 +715,20 @@ export default function CreateMCQAdmin() {
                   onClick={downloadExcelTemplate}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="mt-2 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition shadow-md bangla-text"
+                  className="mt-4 w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition shadow-md text-lg bangla-text"
                 >
                   📥 এক্সেল টেমপ্লেট ডাউনলোড করুন
                 </motion.button>
               </div>
-              <p className="text-center text-gray-500 mb-4 bangla-text">অথবা</p>
+              <p className="text-center text-gray-500 mb-6 text-lg bangla-text">অথবা</p>
 
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
-                  <label className="block text-gray-700 font-semibold mb-1 bangla-text">প্রশ্নের ধরণ</label>
+                  <label className="block text-gray-700 font-semibold mb-2 bangla-text">প্রশ্নের ধরণ</label>
                   <select
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
                     value={questionType}
                     onChange={(e) => setQuestionType(e.target.value)}
-                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                     required
                   >
                     <option value="general">সাধারণ এমসিকিউ</option>
@@ -665,19 +741,19 @@ export default function CreateMCQAdmin() {
                     type="checkbox"
                     checked={isMultipleQuestions}
                     onChange={(e) => setIsMultipleQuestions(e.target.checked)}
-                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <label className="ml-2 text-gray-700 font-medium bangla-text">
+                  <label className="ml-3 text-gray-700 font-semibold text-lg bangla-text">
                     একাধিক প্রশ্ন যোগ করুন
                   </label>
                 </div>
 
                 <div>
-                  <label className="block text-gray-700 font-semibold mb-1 bangla-text">ক্লাস</label>
+                  <label className="block text-gray-700 font-semibold mb-2 bangla-text">ক্লাস</label>
                   <select
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
                     value={selectedClass}
-                    onChange={(e) => setSelectedClass(e.target.value)}
-                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                    onChange={(e) => setSelectedClass(Number(e.target.value))}
                     required
                   >
                     <option value="">ক্লাস নির্বাচন করুন</option>
@@ -691,11 +767,11 @@ export default function CreateMCQAdmin() {
 
                 {selectedClass && subjects.length > 0 && (
                   <div>
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">বিষয়</label>
+                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">বিষয়</label>
                     <select
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
                       value={selectedSubject}
                       onChange={(e) => setSelectedSubject(e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       required
                     >
                       <option value="">বিষয় নির্বাচন করুন</option>
@@ -708,11 +784,11 @@ export default function CreateMCQAdmin() {
 
                 {selectedSubject && subjectParts.length > 0 && (
                   <div>
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">বিষয়ের অংশ</label>
+                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">বিষয়ের অংশ</label>
                     <select
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
                       value={selectedSubjectPart}
                       onChange={(e) => setSelectedSubjectPart(e.target.value)}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                     >
                       <option value="">বিষয়ের অংশ (যদি থাকে)</option>
                       {subjectParts.map((part) => (
@@ -724,20 +800,22 @@ export default function CreateMCQAdmin() {
 
                 {selectedSubject && chapters.length > 0 && (
                   <div>
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">অধ্যায়</label>
+                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">অধ্যায়</label>
                     <select
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
                       value={selectedChapter}
                       onChange={(e) => {
                         const selected = chapters.find((chap) => chap.number === parseInt(e.target.value));
                         setSelectedChapter(e.target.value);
                         setSelectedChapterName(selected?.name || "");
                       }}
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       required
                     >
                       <option value="">অধ্যায় নির্বাচন করুন</option>
                       {chapters.map((chapter) => (
-                        <option key={chapter.number} value={chapter.number}>{chapter.name}</option>
+                        <option key={`${chapter.number}-${chapter.name}`} value={chapter.number}>
+                          {chapter.name}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -750,13 +828,13 @@ export default function CreateMCQAdmin() {
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="mt-6 p-5 bg-gray-50 rounded-lg shadow-sm border border-gray-200 relative"
+                  className="mt-8 p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
                 >
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3 bangla-text">
+                  <h3 className="text-xl font-semibold text-gray-800 mb-4 bangla-text">
                     প্রশ্ন {qIndex + 1}
                   </h3>
                   <div className="mb-4 relative">
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">প্রশ্ন লিখুন</label>
+                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">প্রশ্ন লিখুন</label>
                     <textarea
                       className="w-full p-4 border rounded mb-4 font-mono bangla-text"
                       value={q.question}
@@ -764,6 +842,7 @@ export default function CreateMCQAdmin() {
                       onMouseUp={(e) => handleSelection(qIndex, "question", null, e)}
                       onKeyUp={(e) => handleSelection(qIndex, "question", null, e)}
                       rows={4}
+                      placeholder="🔹 প্রশ্ন লিখুন"
                       ref={(el) => (textareaRefs.current[`question-${qIndex}-`] = el)}
                     />
                     <FormatToolbar
@@ -775,45 +854,45 @@ export default function CreateMCQAdmin() {
                     </p>
                   </div>
 
-                  <div className="mb-4">
+                  <div className="mb-6">
                     <label className="block text-gray-700 font-semibold mb-2 bangla-text">
                       ভিডিও লিঙ্ক যুক্ত করুন (ঐচ্ছিক)
                     </label>
                     <input
                       type="url"
                       placeholder="উদাহরণ: https://drive.google.com/file/d/..."
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
                       value={q.videoLink}
                       onChange={(e) => handleVideoLinkChange(qIndex, e.target.value)}
                     />
                   </div>
 
-                  <div className="mb-4">
+                  <div className="mb-6">
                     <label className="block text-gray-700 font-semibold mb-2 bangla-text">
                       ছবি যুক্ত করুন (ঐচ্ছিক)
                     </label>
-                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
                       <input
                         type="file"
                         accept="image/*"
                         onChange={(e) => handleImageChange(qIndex, e)}
                         className="absolute inset-0 opacity-0 cursor-pointer"
                       />
-                      <p className="text-center text-gray-500 bangla-text">
+                      <p className="text-center text-gray-500 text-lg bangla-text">
                         {q.image ? q.image.name : "ছবি টেনে আনুন বা ক্লিক করুন"}
                       </p>
                     </div>
                   </div>
 
                   {q.image && (
-                    <div className="mb-4">
+                    <div className="mb-6">
                       <label className="block text-gray-700 font-semibold mb-2 bangla-text">
                         ছবির অ্যালাইনমেন্ট
                       </label>
                       <select
                         value={q.imageAlignment}
                         onChange={(e) => handleImageAlignmentChange(qIndex, e.target.value)}
-                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
                       >
                         <option value="left">বামে</option>
                         <option value="center">মাঝে</option>
@@ -825,30 +904,33 @@ export default function CreateMCQAdmin() {
                   {questionType === "general" && (
                     <>
                       {q.options.map((option, i) => (
-                        <div key={i} className="flex items-center mb-3 relative">
-                          <textarea
-                            className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                            value={option}
-                            onChange={(e) => handleOptionChange(qIndex, i, e.target.value)}
-                            onMouseUp={(e) => handleSelection(qIndex, "option", i, e)}
-                            onKeyUp={(e) => handleSelection(qIndex, "option", i, e)}
-                            rows={2}
-                            ref={(el) => (textareaRefs.current[`option-${qIndex}-${i}`] = el)}
-                          />
-                          <FormatToolbar
-                            position={toolbarPosition && activeField?.qIndex === qIndex && activeField?.fieldType === "option" && activeField?.oIndex === i ? toolbarPosition : null}
-                            onFormat={handleFormat}
-                          />
+                        <div key={i} className="flex items-center mb-4 relative">
+                          <div className="flex-1 relative">
+                            <textarea
+                              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                              value={option}
+                              onChange={(e) => handleOptionChange(qIndex, i, e.target.value)}
+                              onMouseUp={(e) => handleSelection(qIndex, "option", i, e)}
+                              onKeyUp={(e) => handleSelection(qIndex, "option", i, e)}
+                              rows={2}
+                              placeholder={`বিকল্প ${i + 1} লিখুন`}
+                              ref={(el) => (textareaRefs.current[`option-${qIndex}-${i}`] = el)}
+                            />
+                            <FormatToolbar
+                              position={toolbarPosition && activeField?.qIndex === qIndex && activeField?.fieldType === "option" && activeField?.oIndex === i ? toolbarPosition : null}
+                              onFormat={handleFormat}
+                            />
+                          </div>
                           <input
                             type="radio"
                             name={`correct-${qIndex}`}
-                            className="ml-3 h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="ml-4 h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
                             onChange={() => handleCorrectAnswerChange(qIndex, i)}
                             checked={q.correctAnswer === i}
                           />
                         </div>
                       ))}
-                      <p className="text-sm text-gray-500 mt-1 bangla-text">
+                      <p className="text-sm text-gray-500 mt-2 bangla-text">
                         * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: 1 1/2, \\frac{1}{2})
                       </p>
                     </>
@@ -857,7 +939,7 @@ export default function CreateMCQAdmin() {
                   {questionType === "higher" && (
                     <>
                       {q.higherOptions.slice(0, 3).map((option, i) => (
-                        <div key={i} className="mb-3 relative">
+                        <div key={i} className="mb-4 relative">
                           <textarea
                             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                             value={option}
@@ -865,6 +947,7 @@ export default function CreateMCQAdmin() {
                             onMouseUp={(e) => handleSelection(qIndex, "option", i, e)}
                             onKeyUp={(e) => handleSelection(qIndex, "option", i, e)}
                             rows={2}
+                            placeholder={`বিকল্প ${i + 1} লিখুন`}
                             ref={(el) => (textareaRefs.current[`option-${qIndex}-${i}`] = el)}
                           />
                           <FormatToolbar
@@ -873,34 +956,37 @@ export default function CreateMCQAdmin() {
                           />
                         </div>
                       ))}
-                      <h3 className="mt-4 mb-2 text-md font-bold text-gray-700 bangla-text">
+                      <h3 className="mt-4 mb-3 text-lg font-semibold text-gray-700 bangla-text">
                         নিচের কোনটি সঠিক?
                       </h3>
                       {q.higherOptions.slice(3, 7).map((option, i) => (
-                        <div key={i + 3} className="flex items-center mb-3 relative">
-                          <textarea
-                            className="flex-1 p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                            value={option}
-                            onChange={(e) => handleOptionChange(qIndex, i + 3, e.target.value, "higher")}
-                            onMouseUp={(e) => handleSelection(qIndex, "option", i + 3, e)}
-                            onKeyUp={(e) => handleSelection(qIndex, "option", i + 3, e)}
-                            rows={2}
-                            ref={(el) => (textareaRefs.current[`option-${qIndex}-${i + 3}`] = el)}
-                          />
-                          <FormatToolbar
-                            position={toolbarPosition && activeField?.qIndex === qIndex && activeField?.fieldType === "option" && activeField?.oIndex === i + 3 ? toolbarPosition : null}
-                            onFormat={handleFormat}
-                          />
+                        <div key={i + 3} className="flex items-center mb-4 relative">
+                          <div className="flex-1 relative">
+                            <textarea
+                              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                              value={option}
+                              onChange={(e) => handleOptionChange(qIndex, i + 3, e.target.value, "higher")}
+                              onMouseUp={(e) => handleSelection(qIndex, "option", i + 3, e)}
+                              onKeyUp={(e) => handleSelection(qIndex, "option", i + 3, e)}
+                              rows={2}
+                              placeholder={`বিকল্প ${i + 4} লিখুন`}
+                              ref={(el) => (textareaRefs.current[`option-${qIndex}-${i + 3}`] = el)}
+                            />
+                            <FormatToolbar
+                              position={toolbarPosition && activeField?.qIndex === qIndex && activeField?.fieldType === "option" && activeField?.oIndex === i + 3 ? toolbarPosition : null}
+                              onFormat={handleFormat}
+                            />
+                          </div>
                           <input
                             type="radio"
                             name={`higherCorrect-${qIndex}`}
-                            className="ml-3 h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
+                            className="ml-4 h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
                             onChange={() => handleCorrectAnswerChange(qIndex, i + 3, "higher")}
                             checked={q.higherCorrectAnswer === i + 3}
                           />
                         </div>
                       ))}
-                      <p className="text-sm text-gray-500 mt-1 bangla-text">
+                      <p className="text-sm text-gray-500 mt-2 bangla-text">
                         * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: 1 1/2, \\frac{1}{2})
                       </p>
                     </>
@@ -914,7 +1000,7 @@ export default function CreateMCQAdmin() {
                   onClick={addNewQuestion}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-green-600 text-white py-3 mt-4 rounded-lg hover:bg-green-700 transition flex items-center justify-center shadow-md bangla-text"
+                  className="w-full bg-green-600 text-white py-3 mt-6 rounded-lg hover:bg-green-700 transition shadow-md text-lg bangla-text flex items-center justify-center"
                 >
                   <span className="text-xl mr-2">+</span> নতুন প্রশ্ন যোগ করুন
                 </motion.button>
@@ -924,14 +1010,23 @@ export default function CreateMCQAdmin() {
                 type="submit"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full bg-blue-600 text-white py-3 mt-6 rounded-lg hover:bg-blue-700 transition shadow-md bangla-text"
+                disabled={isSubmitting}
+                className={`w-full bg-blue-600 text-white py-3 mt-8 rounded-lg hover:bg-blue-700 transition shadow-md text-lg bangla-text flex items-center justify-center ${
+                  isSubmitting ? "opacity-75 cursor-not-allowed" : ""
+                }`}
               >
-                ✅ সাবমিট করুন
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="animate-spin h-5 w-5 mr-2 text-white" />
+                    সাবমিট হচ্ছে...
+                  </>
+                ) : (
+                  "✅ সাবমিট করুন"
+                )}
               </motion.button>
             </form>
           </motion.div>
 
-          {/* Preview Section */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -982,7 +1077,7 @@ export default function CreateMCQAdmin() {
                         key={i}
                         className={`p-2 rounded-lg ${q.correctAnswer === i ? "bg-green-100 font-bold text-green-800" : "text-gray-700"} bangla-text`}
                       >
-                        {String.fromCharCode(2453 + i)}. {renderLines(opt || "প্রশ্ন বা বিকল্প লিখুন...")}
+                        {String.fromCharCode(2453 + i)}. {renderLines(opt || "বিকল্প লিখুন...")}
                       </p>
                     ))}
                   </div>
@@ -991,7 +1086,7 @@ export default function CreateMCQAdmin() {
                     <div className="mb-3 text-gray-700">
                       {q.higherOptions.slice(0, 3).map((opt, i) => (
                         <p key={i} className="bangla-text">
-                          {String.fromCharCode(2453 + i)}. {renderLines(opt || "প্রশ্ন বা বিকল্প লিখুন...")}
+                          {String.fromCharCode(2453 + i)}. {renderLines(opt || "বিকল্প লিখুন...")}
                         </p>
                       ))}
                     </div>
@@ -1002,7 +1097,7 @@ export default function CreateMCQAdmin() {
                           key={i + 3}
                           className={`p-2 rounded-lg ${q.higherCorrectAnswer === i + 3 ? "bg-green-100 font-bold text-green-800" : "text-gray-700"} bangla-text`}
                         >
-                          {String.fromCharCode(2453 + i)}. {renderLines(opt || "প্রশ্ন বা বিকল্প লিখুন...")}
+                          {String.fromCharCode(2453 + i)}. {renderLines(opt || "বিকল্প লিখুন...")}
                         </p>
                       ))}
                     </div>
