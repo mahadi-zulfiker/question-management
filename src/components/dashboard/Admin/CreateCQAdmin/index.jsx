@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from "xlsx";
 import Head from "next/head";
+import { Loader2 } from "lucide-react";
 import FormatToolbar from "@/components/FormatToolbar";
 
 // Dynamically import MathJax to avoid SSR issues
@@ -38,14 +39,17 @@ const simplifyFraction = (numerator, denominator) => {
   };
 };
 
-// Process text for LaTeX conversion (aligned with SQ code)
+// Process text for LaTeX conversion
 const processTextForLatex = (text) => {
-  if (!text) return "";
-  text = normalizeText(text).replace(/[\u200B-\u200F\uFEFF]/g, "");
+  if (!text || typeof text !== "string") return "";
 
   try {
+    // Normalize text and remove unwanted Unicode characters
+    text = normalizeText(text).replace(/[\u200B-\u200F\uFEFF]/g, "");
+
     // Handle fractions (e.g., "1/2" → "\frac{1}{2}")
     text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
+      if (denom === "0") return match; // Avoid division by zero
       const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
       return `\\frac{${numerator}}{${denominator}}`;
     });
@@ -71,7 +75,7 @@ const processTextForLatex = (text) => {
     text = text.replace(/\*(.*?)\*/g, "*$1*");
     text = text.replace(/__(.*?)__/g, "__$1__");
 
-    // Wrap Bangla text in \text{}
+    // Wrap Bangla text in \text{}, excluding numbers and fractions
     text = text.replace(
       /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
       (match) => {
@@ -83,36 +87,44 @@ const processTextForLatex = (text) => {
         return match;
       }
     );
+
+    // Ensure inline math is properly wrapped
+    text = text.replace(/(\$.*?\$)/g, (match) => match); // Preserve existing $...$
+    if (text.match(/[\\{}^_]/) && !text.startsWith("$") && !text.endsWith("$")) {
+      text = `$${text}$`;
+    }
+
+    return text;
   } catch (error) {
     console.error("LaTeX processing error:", error, "Input:", text);
+    return text; // Return original text as fallback
   }
-
-  return text;
 };
 
 // Render markdown and LaTeX in preview with enhanced error handling
 const renderLines = (text) => {
-  if (!text) return <div className="bangla-text">টেক্সট লিখুন</div>;
+  if (!text || typeof text !== "string") {
+    return <div className="bangla-text">টেক্সট লিখুন</div>;
+  }
 
   try {
-    return text.split('\n').map((line, index) => {
-      let processedLine = line
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/__(.*?)__/g, '<u>$1</u>');
+    // Process markdown formatting
+    let processedText = text
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/__(.*?)__/g, '<u>$1</u>');
 
-      // Ensure LaTeX is wrapped in math mode
-      if (processedLine.match(/[\\{}^_]/) && !processedLine.startsWith('$') && !processedLine.endsWith('$')) {
-        processedLine = `$${processedLine}$`;
-      }
+    // Split into lines and render each
+    return processedText.split('\n').map((line, index) => {
+      // Ensure LaTeX is properly wrapped in math mode
+      const needsMathMode = line.match(/[\\{}^_]/) && !line.startsWith('$') && !line.endsWith('$');
+      const displayLine = needsMathMode ? `$${line}$` : line;
 
       return (
-        <div key={index}>
-          <Suspense fallback={<div>Rendering LaTeX...</div>}>
-            <MathJax>
-              <div dangerouslySetInnerHTML={{ __html: processedLine }} />
-            </MathJax>
-          </Suspense>
+        <div key={index} className="bangla-text">
+          <MathJax dynamic>
+            <div dangerouslySetInnerHTML={{ __html: displayLine }} />
+          </MathJax>
         </div>
       );
     });
@@ -140,6 +152,7 @@ export default function CreateCQAdmin() {
   const [selectedSubjectPart, setSelectedSubjectPart] = useState("");
   const [cqType, setCQType] = useState("");
   const [isMultipleCQs, setIsMultipleCQs] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [cqs, setCQs] = useState([
     {
@@ -275,8 +288,14 @@ export default function CreateCQAdmin() {
 
   const handleSelection = (cqIndex, fieldType, index, e) => {
     const textarea = textareaRefs.current[`${fieldType}-${cqIndex}-${index ?? ''}`];
+    if (!textarea) return;
+
     const selection = window.getSelection();
-    if (!selection.rangeCount) return;
+    if (!selection.rangeCount) {
+      setToolbarPosition(null);
+      setActiveField(null);
+      return;
+    }
 
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
@@ -284,7 +303,7 @@ export default function CreateCQAdmin() {
     if (selection.toString().length > 0) {
       setToolbarPosition({
         x: rect.left + window.scrollX,
-        y: rect.top + window.scrollY,
+        y: rect.top + window.scrollY - 40, // Adjust for better positioning
       });
       setActiveField({ cqIndex, fieldType, index });
     } else {
@@ -300,6 +319,8 @@ export default function CreateCQAdmin() {
     const { cqIndex, fieldType, index } = activeField;
     const newCQs = [...cqs];
     const textarea = textareaRefs.current[`${fieldType}-${cqIndex}-${index ?? ''}`];
+    if (!textarea) return;
+
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
 
@@ -535,6 +556,8 @@ export default function CreateCQAdmin() {
       return;
     }
 
+    setIsSubmitting(true);
+
     const formData = new FormData();
     formData.append("classNumber", selectedClass);
     formData.append("subject", selectedSubject);
@@ -570,32 +593,43 @@ export default function CreateCQAdmin() {
     } catch (error) {
       console.error("Server connection error:", error);
       toast.error("❌ সার্ভারের সাথে সংযোগে সমস্যা!");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <>
       <Head>
+        <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net;" />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet" />
-        <script>
-          {`
-            MathJax = {
-              tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                tags: 'ams',
-                packages: ['base', 'ams']
-              },
-              chtml: {
-                scale: 1.1,
-                mtextInheritFont: true,
-              },
-              loader: {
-                load: ['[tex]/ams']
-              }
-            };
-          `}
-        </script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              MathJax = {
+                tex: {
+                  inlineMath: [['$', '$'], ['\\(', '\\)']],
+                  displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                  tags: 'ams',
+                  processEscapes: true,
+                },
+                chtml: {
+                  scale: 1.1,
+                  mtextInheritFont: true,
+                },
+                startup: {
+                  ready: () => {
+                    MathJax.startup.defaultReady();
+                    MathJax.startup.promise.then(() => {
+                      window.dispatchEvent(new Event('mathjax-ready'));
+                    });
+                  }
+                }
+              };
+            `,
+          }}
+        />
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
       </Head>
       <style jsx global>{`
@@ -995,9 +1029,19 @@ export default function CreateCQAdmin() {
                 type="submit"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="w-full bg-blue-600 text-white py-3 mt-8 rounded-lg hover:bg-blue-700 transition shadow-md text-lg bangla-text"
+                disabled={isSubmitting}
+                className={`w-full bg-blue-600 text-white py-3 mt-8 rounded-lg hover:bg-blue-700 transition shadow-md text-lg bangla-text flex items-center justify-center ${
+                  isSubmitting ? "opacity-75 cursor-not-allowed" : ""
+                }`}
               >
-                ✅ সাবমিট করুন
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="animate-spin h-5 w-5 mr-2 text-white" />
+                    সাবমিট হচ্ছে...
+                  </>
+                ) : (
+                  "✅ সাবমিট করুন"
+                )}
               </motion.button>
             </form>
           </motion.div>
