@@ -233,9 +233,9 @@ export async function POST(req) {
     let page = pdfDoc.addPage([595, 842]); // A4 size
     pdfDoc.registerFontkit(fontkit);
 
-    // Load font from the public directory
+    // Load font from the /fonts directory
     let font;
-    const fontPath = path.join(process.cwd(), "public", "fonts", "Kalpurush.ttf");
+    const fontPath = path.join(process.cwd(), "fonts", "Kalpurush.ttf");
     try {
       console.log(`Attempting to load font from: ${fontPath}`);
       const fontBytes = await fs.readFile(fontPath);
@@ -245,7 +245,7 @@ export async function POST(req) {
       console.error("Failed to load Kalpurush font:", fontError);
       if (hasBengaliText) {
         return NextResponse.json(
-          { error: "Cannot generate PDF: Font required for Bengali text is missing. Please ensure Kalpurush.ttf is placed in the public/fonts directory." },
+          { error: "Cannot generate PDF: Font required for Bengali text is missing. Please ensure Kalpurush.ttf is placed in the /fonts directory." },
           { status: 500 }
         );
       }
