@@ -9,6 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@babel/core": "^7.26.10",
+    "@babel/preset-env": "^7.26.9",
+    "@babel/register": "^7.25.9",
     "@ckeditor/ckeditor5-alignment": "^45.0.0",
     "@ckeditor/ckeditor5-autoformat": "^45.0.0",
     "@ckeditor/ckeditor5-build-classic": "^41.4.2",
@@ -61,6 +64,7 @@
     "react-icons": "^5.5.0",
     "react-mathquill": "^1.0.3",
     "react-toastify": "^11.0.5",
+    "regenerator-runtime": "^0.14.1",
     "slate": "^0.112.0",
     "slate-history": "^0.113.1",
     "slate-react": "^0.112.1",
