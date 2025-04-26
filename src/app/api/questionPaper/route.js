@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { connectMongoDB } from "@/lib/mongodb";
 import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
-import fs from "fs/promises";
-import path from "path";
 
 // Sanitize question data based on segment type
 const sanitizeQuestion = (q, segmentName) => {
@@ -233,19 +231,23 @@ export async function POST(req) {
     let page = pdfDoc.addPage([595, 842]); // A4 size
     pdfDoc.registerFontkit(fontkit);
 
-    // Load font from the /fonts directory
+    // Load font dynamically from Google Drive
     let font;
-    const fontPath = path.join(process.cwd(), "fonts", "Kalpurush.ttf");
+    const fontUrl = "https://drive.google.com/uc?export=download&id=18qSzEkOu1ZuHRimR-MzSnljDsLJp-XE5";
     try {
-      console.log(`Attempting to load font from: ${fontPath}`);
-      const fontBytes = await fs.readFile(fontPath);
+      console.log(`Attempting to fetch font from: ${fontUrl}`);
+      const fontResponse = await fetch(fontUrl);
+      if (!fontResponse.ok) {
+        throw new Error(`Failed to fetch font: ${fontResponse.statusText}`);
+      }
+      const fontBytes = await fontResponse.arrayBuffer();
       font = await pdfDoc.embedFont(fontBytes, { subset: true });
-      console.log("Kalpurush font loaded successfully");
+      console.log("Noto Sans Bengali font loaded successfully");
     } catch (fontError) {
-      console.error("Failed to load Kalpurush font:", fontError);
+      console.error("Failed to load Noto Sans Bengali font:", fontError);
       if (hasBengaliText) {
         return NextResponse.json(
-          { error: "Cannot generate PDF: Font required for Bengali text is missing. Please ensure Kalpurush.ttf is placed in the /fonts directory." },
+          { error: "Cannot generate PDF: Font required for Bengali text could not be loaded." },
           { status: 500 }
         );
       }
@@ -308,7 +310,7 @@ export async function POST(req) {
         } catch (drawError) {
           console.error(`Error drawing text: "${line}"`, drawError);
           if (hasNonLatinCharacters(line)) {
-            throw new Error("Failed to render Bengali text. Ensure Kalpurush font is used.");
+            throw new Error("Failed to render Bengali text. Ensure Noto Sans Bengali font is used.");
           }
           // Skip problematic text but continue rendering
         }
