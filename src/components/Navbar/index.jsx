@@ -179,7 +179,7 @@ const Navbar = () => {
                                 </>
                             ) : (
                                 <Link
-                                    href="/signin"
+                                    href="/signIn"
                                     className="block w-full text-center px-4 py-4 bg-gradient-to-r from-blue-500 to-blue-700 text-white rounded-full font-semibold hover:shadow-lg transition-all duration-300"
                                 >
                                     Login

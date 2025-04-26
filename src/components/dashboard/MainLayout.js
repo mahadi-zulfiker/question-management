@@ -1,3 +1,4 @@
+// components/dashboard/MainLayout.jsx
 "use client";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
@@ -59,10 +60,9 @@ import QuestionGenerator from "./Teacher/QuestionGenerator";
 
 const MainLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const pathname = usePathname();
 
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
-
-  const pathname = usePathname();
 
   return (
     <div className="relative bg-[#f7f6f9] min-h-screen font-[sans-serif]">
