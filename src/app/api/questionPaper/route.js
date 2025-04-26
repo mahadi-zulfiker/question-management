@@ -4,10 +4,6 @@ import { PDFDocument, rgb } from "pdf-lib";
 import fontkit from "@pdf-lib/fontkit";
 import fs from "fs/promises";
 import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Sanitize question data based on segment type
 const sanitizeQuestion = (q, segmentName) => {
@@ -64,6 +60,12 @@ const convertLatexToText = (latex) => {
     console.error("Error converting LaTeX:", error);
     return latex;
   }
+};
+
+// Detect if text contains non-Latin characters
+const hasNonLatinCharacters = (text) => {
+  if (!text) return false;
+  return /[^-\u007F]/.test(text); // Matches any character outside ASCII range
 };
 
 // GET handler for fetching questions or filters
@@ -188,6 +190,26 @@ export async function POST(req) {
     // Sanitize questions
     const sanitizedQuestions = selectedQuestions.map((q) => sanitizeQuestion(q, segmentName));
 
+    // Check for non-Latin characters
+    const allTextFields = [
+      schoolName,
+      schoolAddress,
+      examName,
+      subjectName,
+      questionSetNumber,
+      subjectCodeNumber,
+      information,
+      ...sanitizedQuestions.flatMap((q) =>
+        segmentName === "MCQ"
+          ? [q.question, ...q.options]
+          : segmentName === "CQ"
+          ? [q.passage, ...q.questions]
+          : [q.question, q.type]
+      ),
+    ].filter(Boolean);
+
+    const hasBengaliText = allTextFields.some(hasNonLatinCharacters);
+
     // Save to database
     const db = await connectMongoDB();
     const formattedQuestionPaper = {
@@ -211,14 +233,23 @@ export async function POST(req) {
     let page = pdfDoc.addPage([595, 842]); // A4 size
     pdfDoc.registerFontkit(fontkit);
 
-    // Load font with fallback
+    // Load font from the public directory
     let font;
-    const fontPath = path.join(__dirname, "..", "..", "..", "..", "public", "fonts", "NotoSansBengali-VariableFont_wdth,wght.ttf");
+    const fontPath = path.join(process.cwd(), "public", "fonts", "Kalpurush.ttf");
     try {
+      console.log(`Attempting to load font from: ${fontPath}`);
       const fontBytes = await fs.readFile(fontPath);
       font = await pdfDoc.embedFont(fontBytes, { subset: true });
+      console.log("Kalpurush font loaded successfully");
     } catch (fontError) {
-      console.warn("Failed to load custom font, using Helvetica:", fontError);
+      console.error("Failed to load Kalpurush font:", fontError);
+      if (hasBengaliText) {
+        return NextResponse.json(
+          { error: "Cannot generate PDF: Font required for Bengali text is missing. Please ensure Kalpurush.ttf is placed in the public/fonts directory." },
+          { status: 500 }
+        );
+      }
+      console.warn("Falling back to Helvetica due to font loading failure");
       font = await pdfDoc.embedFont("Helvetica");
     }
 
@@ -266,13 +297,21 @@ export async function POST(req) {
       }
 
       for (const line of lines) {
-        page.drawText(line, {
-          x: xPosition,
-          y: yPosition,
-          size,
-          font,
-          color: rgb(0, 0, 0),
-        });
+        try {
+          page.drawText(line, {
+            x: xPosition,
+            y: yPosition,
+            size,
+            font,
+            color: rgb(0, 0, 0),
+          });
+        } catch (drawError) {
+          console.error(`Error drawing text: "${line}"`, drawError);
+          if (hasNonLatinCharacters(line)) {
+            throw new Error("Failed to render Bengali text. Ensure Kalpurush font is used.");
+          }
+          // Skip problematic text but continue rendering
+        }
         yPosition -= size + 2;
       }
       return lines.length * (size + 2);
