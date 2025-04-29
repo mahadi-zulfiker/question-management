@@ -12,7 +12,7 @@ import FormatToolbar from "../../../FormatToolbar/index";
 // Normalize text to Unicode NFC
 const normalizeText = (text) => text.normalize("NFC");
 
-// Compute the Greatest Common Divisor (GCD) using Euclidean algorithm
+// Compute GCD for fraction simplification
 const gcd = (a, b) => {
   a = Math.abs(a);
   b = Math.abs(b);
@@ -35,37 +35,24 @@ const simplifyFraction = (numerator, denominator) => {
 
 // Process text for LaTeX conversion
 const processTextForLatex = (text) => {
-  // Normalize and clean text
   text = normalizeText(text).replace(/[\u200B-\u200F\uFEFF]/g, "");
-
-  // Handle fractions (e.g., "1/2" → "\frac{1}{2}")
   text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
     const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
     return `\\frac{${numerator}}{${denominator}}`;
   });
-
-  // Handle superscripts (e.g., "x^2" → "x^{2}", "[(x^2 + 3x + 1)]^2" → "[(x^{2} + 3x + 1)]^{2}")
   text = text.replace(/\[(.*?)\]\^(\d+|\w+)/g, "[$1]^{$2}");
   text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
   text = text.replace(/(\w+)\^(\d+|\w+)/g, "$1^{$2}");
-
-  // Handle square roots (e.g., "sqrt(x)" → "\sqrt{x}")
   text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
-
-  // Handle common symbols
   text = text.replace(/≥/g, "\\geq");
   text = text.replace(/≤/g, "\\leq");
   text = text.replace(/≠/g, "\\neq");
   text = text.replace(/½/g, "\\frac{1}{2}");
   text = text.replace(/²/g, "^{2}");
   text = text.replace(/³/g, "^{3}");
-
-  // Preserve markdown formatting if present
   text = text.replace(/\*\*(.*?)\*\*/g, "**$1**");
   text = text.replace(/\*(.*?)\*/g, "*$1*");
   text = text.replace(/__(.*?)__/g, "__$1__");
-
-  // Wrap Bangla text in \text{}
   text = text.replace(
     /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
     (match) => {
@@ -77,26 +64,20 @@ const processTextForLatex = (text) => {
       return match;
     }
   );
-
   return text;
 };
 
 // Render markdown and LaTeX in preview
 const renderLines = (text) => {
-  if (!text) return 'প্রশ্ন বা উত্তর লিখুন...';
-
-  return text.split('\n').map((line, index) => {
-    // Process markdown-style formatting
+  if (!text) return "প্রশ্ন বা উত্তর লিখুন...";
+  return text.split("\n").map((line, index) => {
     let processedLine = line
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/__(.*?)__/g, '<u>$1</u>');
-
-    // If the line contains LaTeX (e.g., \frac, ^, _), ensure it's rendered as math
-    if (processedLine.match(/[\\{}^_]/) && !processedLine.startsWith('$') && !processedLine.endsWith('$')) {
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      .replace(/__(.*?)__/g, "<u>$1</u>");
+    if (processedLine.match(/[\\{}^_]/) && !processedLine.startsWith("$") && !processedLine.endsWith("$")) {
       processedLine = `$${processedLine}$`;
     }
-
     return (
       <div key={index}>
         <MathJax>
@@ -107,17 +88,20 @@ const renderLines = (text) => {
   });
 };
 
-// Main CreateSQAdmin Component
 export default function CreateSQAdmin() {
   const [classes, setClasses] = useState([]);
   const [selectedClass, setSelectedClass] = useState("");
   const [subjects, setSubjects] = useState([]);
   const [selectedSubject, setSelectedSubject] = useState("");
-  const [subjectParts, setSubjectParts] = useState([]);
-  const [selectedSubjectPart, setSelectedSubjectPart] = useState("");
+  const [subjectPapers, setSubjectPapers] = useState([]);
+  const [selectedSubjectPaper, setSelectedSubjectPaper] = useState("");
   const [chapters, setChapters] = useState([]);
   const [selectedChapterNumber, setSelectedChapterNumber] = useState("");
   const [selectedChapterName, setSelectedChapterName] = useState("");
+  const contentTypes = ["Examples", "Model Tests", "Admission Questions", "Practice Problems", "Theory", "Others"];
+  const [selectedContentType, setSelectedContentType] = useState("");
+  const [subChapters, setSubChapters] = useState([]);
+  const [selectedSubChapter, setSelectedSubChapter] = useState("");
   const [isMultipleSQs, setIsMultipleSQs] = useState(false);
   const [sqs, setSQs] = useState([
     {
@@ -130,8 +114,8 @@ export default function CreateSQAdmin() {
     },
   ]);
   const [toolbarPosition, setToolbarPosition] = useState(null);
-  const [activeField, setActiveField] = useState(null); // Track which field (question/answer) and index
-  const textareaRefs = useRef({}); // Store refs for textareas
+  const [activeField, setActiveField] = useState(null);
+  const textareaRefs = useRef({});
 
   useEffect(() => {
     async function fetchClasses() {
@@ -150,36 +134,40 @@ export default function CreateSQAdmin() {
     async function fetchClassData() {
       if (!selectedClass) {
         setSubjects([]);
-        setSubjectParts([]);
+        setSubjectPapers([]);
         setChapters([]);
         setSelectedSubject("");
-        setSelectedSubjectPart("");
+        setSelectedSubjectPaper("");
         setSelectedChapterNumber("");
         setSelectedChapterName("");
+        setSelectedContentType("");
+        setSubChapters([]);
+        setSelectedSubChapter("");
         return;
       }
 
       try {
         const res = await fetch(`/api/sq?classNumber=${selectedClass}`);
         const data = await res.json();
-
         if (data.length > 0) {
           const subjects = [...new Set(data.map((item) => item.subject))];
-          const subjectParts = [...new Set(data.map((item) => item.subjectPart).filter(Boolean))];
+          const subjectPapers = [...new Set(data.map((item) => item.subjectPart).filter(Boolean))];
           const chapters = [
             ...new Set(
               data.map((item) => ({
                 chapterNumber: item.chapterNumber,
                 chapterName: item.chapterName,
+                contentType: item.contentType,
+                subChapters: item.subChapters || [],
               }))
             ),
           ];
           setSubjects(subjects);
-          setSubjectParts(subjectParts);
+          setSubjectPapers(subjectPapers);
           setChapters(chapters);
         } else {
           setSubjects([]);
-          setSubjectParts([]);
+          setSubjectPapers([]);
           setChapters([]);
           toast.info("⚠️ এই ক্লাসের জন্য কোনো ডেটা নেই।");
         }
@@ -189,6 +177,18 @@ export default function CreateSQAdmin() {
     }
     fetchClassData();
   }, [selectedClass]);
+
+  useEffect(() => {
+    if (selectedChapterNumber) {
+      const selected = chapters.find((chap) => chap.chapterNumber === parseInt(selectedChapterNumber));
+      if (selected) {
+        setSelectedChapterName(selected.chapterName || "");
+        setSelectedContentType(selected.contentType || "");
+        setSubChapters(selected.subChapters || []);
+        setSelectedSubChapter("");
+      }
+    }
+  }, [selectedChapterNumber, chapters]);
 
   const addNewSQ = () => {
     setSQs([
@@ -244,15 +244,10 @@ export default function CreateSQAdmin() {
     const textarea = textareaRefs.current[`${fieldType}-${index}`];
     const selection = window.getSelection();
     if (!selection.rangeCount) return;
-
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
-
     if (selection.toString().length > 0) {
-      setToolbarPosition({
-        x: rect.left + window.scrollX,
-        y: rect.top + window.scrollY,
-      });
+      setToolbarPosition({ x: rect.left + window.scrollX, y: rect.top + window.scrollY });
       setActiveField({ index, fieldType });
     } else {
       setToolbarPosition(null);
@@ -261,9 +256,8 @@ export default function CreateSQAdmin() {
   };
 
   const handleFormat = (format, e) => {
-    e.preventDefault(); // Prevent form submission
+    e.preventDefault();
     if (!activeField) return;
-
     const { index, fieldType } = activeField;
     const newSQs = [...sqs];
     const textarea = textareaRefs.current[`${fieldType}-${index}`];
@@ -271,37 +265,31 @@ export default function CreateSQAdmin() {
     const end = textarea.selectionEnd;
     const currentText = fieldType === "question" ? newSQs[index].question : newSQs[index].answer;
     const selectedText = currentText.substring(start, end);
-
     if (!selectedText) return;
-
     let formattedText = selectedText;
     switch (format) {
-      case 'bold':
+      case "bold":
         formattedText = `**${selectedText}**`;
         break;
-      case 'italic':
+      case "italic":
         formattedText = `*${selectedText}*`;
         break;
-      case 'underline':
+      case "underline":
         formattedText = `__${selectedText}__`;
         break;
-      case 'math':
+      case "math":
         formattedText = `$${selectedText}$`;
         break;
     }
-
     const updatedText = currentText.substring(0, start) + formattedText + currentText.substring(end);
     if (fieldType === "question") {
       newSQs[index].question = updatedText;
     } else {
       newSQs[index].answer = updatedText;
     }
-
     setSQs(newSQs);
     setToolbarPosition(null);
     setActiveField(null);
-
-    // Restore focus and cursor position
     setTimeout(() => {
       textarea.focus();
       const newCursorPos = start + formattedText.length;
@@ -314,9 +302,11 @@ export default function CreateSQAdmin() {
       {
         Class: "",
         Subject: "",
-        "Subject Part": "",
+        "Subject Paper": "",
         "Chapter Number": "",
         "Chapter Name": "",
+        "Content Type": "",
+        "Sub Chapter": "",
         Type: "",
         Question: "",
         Answer: "",
@@ -326,9 +316,11 @@ export default function CreateSQAdmin() {
       {
         Class: 9,
         Subject: "General Science",
-        "Subject Part": "",
+        "Subject Paper": "",
         "Chapter Number": 1,
         "Chapter Name": "Chapter 1",
+        "Content Type": "Theory",
+        "Sub Chapter": "Exercise 1.1",
         Type: "জ্ঞানমূলক",
         Question: "প্রাথমিক শক্তির উৎস কী?",
         Answer: "সূর্য।",
@@ -338,9 +330,11 @@ export default function CreateSQAdmin() {
       {
         Class: 9,
         Subject: "General Science",
-        "Subject Part": "",
+        "Subject Paper": "",
         "Chapter Number": 1,
         "Chapter Name": "Chapter 1",
+        "Content Type": "Practice Problems",
+        "Sub Chapter": "",
         Type: "অনুধাবনমূলক",
         Question: "\\frac{1}{2} + \\frac{1}{3} = ?",
         Answer: "\\frac{5}{6}",
@@ -348,7 +342,6 @@ export default function CreateSQAdmin() {
         "Video Link": "",
       },
     ];
-
     const ws = XLSX.utils.json_to_sheet(templateData);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "SQ Template");
@@ -358,7 +351,6 @@ export default function CreateSQAdmin() {
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
@@ -367,7 +359,6 @@ export default function CreateSQAdmin() {
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const data = XLSX.utils.sheet_to_json(sheet);
-
         if (data.length > 0) {
           const extractedQuestions = data.map((row) => ({
             type: row.Type || "জ্ঞানমূলক",
@@ -375,21 +366,21 @@ export default function CreateSQAdmin() {
             answer: normalizeText(row.Answer || ""),
             classLevel: row.Class || selectedClass,
             subjectName: row.Subject || selectedSubject,
-            subjectPart: row["Subject Part"] || selectedSubjectPart,
+            subjectPaper: row["Subject Paper"] || selectedSubjectPaper,
             chapterNumber: row["Chapter Number"] || selectedChapterNumber,
             chapterName: row["Chapter Name"] || selectedChapterName,
+            contentType: row["Content Type"] || selectedContentType,
+            subChapters: row["Sub Chapter"] ? [row["Sub Chapter"]] : [],
             imageAlignment: row["Image Alignment"] || "center",
             videoLink: row["Video Link"] || "",
           }));
-
           const response = await fetch("/api/sq/import", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ questions: extractedQuestions }),
           });
-
           if (response.ok) {
-            toast.success("প্রশ্ন সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!");
+            toast.success("✅ প্রশ্ন সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!");
           } else {
             toast.error("❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ হয়েছে!");
           }
@@ -407,11 +398,14 @@ export default function CreateSQAdmin() {
     setSelectedClass("");
     setSubjects([]);
     setSelectedSubject("");
-    setSubjectParts([]);
-    setSelectedSubjectPart("");
+    setSubjectPapers([]);
+    setSelectedSubjectPaper("");
     setChapters([]);
     setSelectedChapterNumber("");
     setSelectedChapterName("");
+    setSelectedContentType("");
+    setSubChapters([]);
+    setSelectedSubChapter("");
     setIsMultipleSQs(false);
     setSQs([
       {
@@ -427,15 +421,15 @@ export default function CreateSQAdmin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const formData = new FormData();
     formData.append("classLevel", selectedClass);
     formData.append("subjectName", selectedSubject);
-    formData.append("subjectPart", selectedSubjectPart || "");
+    formData.append("subjectPaper", selectedSubjectPaper || "");
     formData.append("chapterNumber", selectedChapterNumber);
     formData.append("chapterName", selectedChapterName);
+    formData.append("contentType", selectedContentType);
+    formData.append("subChapters", JSON.stringify(selectedSubChapter ? [selectedSubChapter] : []));
     formData.append("teacherEmail", "admin");
-
     sqs.forEach((sq, index) => {
       formData.append(`sqs[${index}][type]`, sq.type);
       formData.append(`sqs[${index}][question]`, sq.question);
@@ -444,13 +438,11 @@ export default function CreateSQAdmin() {
       formData.append(`sqs[${index}][imageAlignment]`, sq.imageAlignment);
       formData.append(`sqs[${index}][videoLink]`, sq.videoLink || "");
     });
-
     try {
       const response = await fetch("/api/sq/import", {
         method: "POST",
         body: formData,
       });
-
       const responseData = await response.json();
       if (response.ok) {
         toast.success(`✅ ${sqs.length}টি সংক্ষিপ্ত প্রশ্ন সফলভাবে যোগ করা হয়েছে!`);
@@ -486,45 +478,49 @@ export default function CreateSQAdmin() {
       </Head>
       <style jsx global>{`
         .bangla-text {
-          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
+          font-family: "Kalpurush", "Noto Sans Bengali", sans-serif !important;
           direction: ltr;
           unicode-bidi: embed;
         }
-
         textarea.bangla-text {
-          min-height: 50px !important;
+          min-height: 80px !important;
           height: auto !important;
           overflow-y: auto !important;
-          max-height: 200px !important;
+          max-height: 250px !important;
           white-space: pre-wrap !important;
           word-wrap: break-word !important;
           padding: 12px !important;
           box-sizing: border-box !important;
-          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
-          font-size: 18px !important;
-          line-height: 1.5 !important;
-          border: 1px solid #d1d5db !important;
-          border-radius: 6px !important;
-          box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+          font-size: 16px !important;
+          line-height: 1.6 !important;
+          border: 1px solid #e2e8f0 !important;
+          border-radius: 8px !important;
+          transition: border-color 0.2s, box-shadow 0.2s;
         }
-
+        textarea.bangla-text:focus {
+          border-color: #3b82f6 !important;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+        }
         .MathJax .mtext {
-          font-family: 'Kalpurush', 'Noto Sans Bengali', sans-serif !important;
+          font-family: "Kalpurush", "Noto Sans Bengali", sans-serif !important;
           white-space: pre-wrap !important;
           margin-right: 0.25em !important;
           margin-left: 0.25em !important;
         }
-
-        .MathJax .mspace {
-          width: 0.5em !important;
+        .form-section {
+          border-left: 4px solid #3b82f6;
+          padding-left: 1rem;
+          margin-bottom: 2rem;
         }
-
-        .MathJax .mo {
-          font-size: 1.2em !important;
-          vertical-align: top !important;
+        select, input[type="file"] {
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        select:focus, input[type="file"]:focus {
+          border-color: #3b82f6 !important;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
         }
       `}</style>
-      <div className="min-h-screen bg-gradient-to-br from-gray-100 to-blue-50 p-6">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-100 p-6">
         <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
         <motion.h1
           initial={{ opacity: 0, y: -30 }}
@@ -532,18 +528,17 @@ export default function CreateSQAdmin() {
           transition={{ duration: 0.5 }}
           className="text-4xl font-extrabold text-center text-blue-700 mb-8 bangla-text"
         >
-          📝 সংক্ষিপ্ত প্রশ্ন তৈরি করুন
+          📝 সংক্ষিপ্ত প্রশ্ন তৈরি
         </motion.h1>
-
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 relative"
+            className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
           >
             <form onSubmit={handleSubmit}>
-              <div className="mb-6">
+              <div className="form-section">
                 <label className="block text-gray-700 font-semibold mb-2 bangla-text">
                   এক্সেল ফাইল থেকে আমদানি
                 </label>
@@ -565,65 +560,71 @@ export default function CreateSQAdmin() {
                   whileTap={{ scale: 0.98 }}
                   className="mt-2 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition shadow-md bangla-text"
                 >
-                  📥 এক্সেল টেমপ্লেট ডাউনলোড করুন
+                  📥 এক্সেল টেমপ্লেট ডাউনলোড
                 </motion.button>
               </div>
               <p className="text-center text-gray-500 mb-4 bangla-text">অথবা</p>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-gray-700 font-semibold mb-1 bangla-text">ক্লাস</label>
-                  <select
-                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                    value={selectedClass}
-                    onChange={(e) => setSelectedClass(Number(e.target.value))}
-                    required
-                  >
-                    <option value="">ক্লাস নির্বাচন করুন</option>
-                    {classes.map((cls) => (
-                      <option key={cls.classNumber} value={cls.classNumber}>
-                        ক্লাস <span>{cls.classNumber}</span>
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {selectedClass && subjects.length > 0 && (
+              <div className="form-section">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">বিষয়</label>
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                      ক্লাস <span className="text-red-500">*</span>
+                    </label>
                     <select
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                      value={selectedSubject}
-                      onChange={(e) => setSelectedSubject(e.target.value)}
+                      value={selectedClass}
+                      onChange={(e) => setSelectedClass(Number(e.target.value))}
                       required
                     >
-                      <option value="">বিষয় নির্বাচন করুন</option>
-                      {subjects.map((subject) => (
-                        <option key={subject} value={subject}>{subject}</option>
+                      <option value="">ক্লাস নির্বাচন করুন</option>
+                      {classes.map((cls) => (
+                        <option key={cls.classNumber} value={cls.classNumber}>
+                          ক্লাস {cls.classNumber}
+                        </option>
                       ))}
                     </select>
                   </div>
-                )}
-
-                {selectedSubject && subjectParts.length > 0 && (
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">বিষয়ের অংশ</label>
+                  {selectedClass && subjects.length > 0 && (
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                        বিষয় <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                        value={selectedSubject}
+                        onChange={(e) => setSelectedSubject(e.target.value)}
+                        required
+                      >
+                        <option value="">বিষয় নির্বাচন করুন</option>
+                        {subjects.map((subject) => (
+                          <option key={subject} value={subject}>{subject}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+                {selectedSubject && subjectPapers.length > 0 && (
+                  <div className="mt-4">
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                      বিষয়ের পেপার
+                    </label>
                     <select
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                      value={selectedSubjectPart}
-                      onChange={(e) => setSelectedSubjectPart(e.target.value)}
+                      value={selectedSubjectPaper}
+                      onChange={(e) => setSelectedSubjectPaper(e.target.value)}
                     >
-                      <option value="">বিষয়ের অংশ (যদি থাকে)</option>
-                      {subjectParts.map((part) => (
-                        <option key={part} value={part}>{part}</option>
+                      <option value="">পেপার নির্বাচন করুন (যদি থাকে)</option>
+                      {subjectPapers.map((paper) => (
+                        <option key={paper} value={paper}>{paper}</option>
                       ))}
                     </select>
                   </div>
                 )}
-
                 {selectedSubject && chapters.length > 0 && (
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">অধ্যায়</label>
+                  <div className="mt-4">
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                      অধ্যায় <span className="text-red-500">*</span>
+                    </label>
                     <select
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={selectedChapterNumber}
@@ -631,19 +632,64 @@ export default function CreateSQAdmin() {
                         const selected = chapters.find((chap) => chap.chapterNumber === parseInt(e.target.value));
                         setSelectedChapterNumber(e.target.value);
                         setSelectedChapterName(selected?.chapterName || "");
+                        setSelectedContentType(selected?.contentType || "");
+                        setSubChapters(selected?.subChapters || []);
+                        setSelectedSubChapter("");
                       }}
                       required
                     >
                       <option value="">অধ্যায় নির্বাচন করুন</option>
                       {chapters.map((chapter) => (
                         <option key={chapter.chapterNumber} value={chapter.chapterNumber}>
-                          <span>{chapter.chapterNumber}</span> - <span>{chapter.chapterName}</span>
+                          অধ্যায় {chapter.chapterNumber} - {chapter.chapterName}
                         </option>
                       ))}
                     </select>
                   </div>
                 )}
-
+                {selectedChapterNumber && (
+                  <div className="mt-4">
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                      কন্টেন্ট টাইপ <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                      value={selectedContentType}
+                      onChange={(e) => setSelectedContentType(e.target.value)}
+                      required
+                    >
+                      <option value="">কন্টেন্ট টাইপ নির্বাচন করুন</option>
+                      {contentTypes.map((type) => (
+                        <option key={type} value={type}>
+                          {type === "Examples" ? "উদাহরণ" :
+                           type === "Model Tests" ? "মডেল টেস্ট" :
+                           type === "Admission Questions" ? "ভর্তি প্রশ্ন" :
+                           type === "Practice Problems" ? "অভ্যাস সমস্যা" :
+                           type === "Theory" ? "তত্ত্ব" : "অন্যান্য"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {selectedChapterNumber && subChapters.length > 0 && (
+                  <div className="mt-4">
+                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                      উপ-অধ্যায় / অনুশীলন (ঐচ্ছিক)
+                    </label>
+                    <select
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                      value={selectedSubChapter}
+                      onChange={(e) => setSelectedSubChapter(e.target.value)}
+                    >
+                      <option value="">উপ-অধ্যায় নির্বাচন করুন</option>
+                      {subChapters.map((sub) => (
+                        <option key={sub} value={sub}>{sub}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+              <div className="form-section">
                 <div className="flex items-center">
                   <input
                     type="checkbox"
@@ -655,135 +701,142 @@ export default function CreateSQAdmin() {
                     একাধিক সংক্ষিপ্ত প্রশ্ন যোগ করুন
                   </label>
                 </div>
-              </div>
-
-              {sqs.map((sq, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3 }}
-                  className="mt-6 p-5 bg-gray-50 rounded-lg shadow-sm border border-gray-200 relative"
-                >
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3 bangla-text">
-                    সংক্ষিপ্ত প্রশ্ন <span>{index + 1}</span>
-                  </h3>
-                  <div>
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">প্রশ্নের ধরণ</label>
-                    <select
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm mb-4 bangla-text"
-                      value={sq.type}
-                      onChange={(e) => handleTypeChange(index, e.target.value)}
-                      required
-                    >
-                      <option value="জ্ঞানমূলক">জ্ঞানমূলক</option>
-                      <option value="অনুধাবনমূলক">অনুধাবনমূলক</option>
-                      <option value="প্রয়োগমূলক">প্রয়োগমূলক</option>
-                      <option value="উচ্চতর দক্ষতা">উচ্চতর দক্ষতা</option>
-                    </select>
-                  </div>
-
-                  <div className="mb-4 relative">
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">প্রশ্ন লিখুন</label>
-                    <textarea
-                      className="w-full p-4 border rounded mb-4 font-mono bangla-text"
-                      value={sq.question}
-                      onChange={(e) => handleQuestionChange(index, e.target.value)}
-                      onMouseUp={(e) => handleSelection(index, "question", e)}
-                      onKeyUp={(e) => handleSelection(index, "question", e)}
-                      rows={4}
-                      ref={(el) => (textareaRefs.current[`question-${index}`] = el)}
-                    />
-                    <FormatToolbar
-                      position={toolbarPosition && activeField?.index === index && activeField?.fieldType === "question" ? toolbarPosition : null}
-                      onFormat={handleFormat}
-                    />
-                    <p className="text-sm text-gray-500 mt-1 bangla-text">
-                      * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                    </p>
-                  </div>
-
-                  <div className="mb-4 relative">
-                    <label className="block text-gray-700 font-semibold mb-1 bangla-text">উত্তর লিখুন (ঐচ্ছিক)</label>
-                    <textarea
-                      className="w-full p-4 border rounded mb-4 font-mono bangla-text"
-                      value={sq.answer}
-                      onChange={(e) => handleAnswerChange(index, e.target.value)}
-                      onMouseUp={(e) => handleSelection(index, "answer", e)}
-                      onKeyUp={(e) => handleSelection(index, "answer", e)}
-                      rows={4}
-                      ref={(el) => (textareaRefs.current[`answer-${index}`] = el)}
-                    />
-                    <FormatToolbar
-                      position={toolbarPosition && activeField?.index === index && activeField?.fieldType === "answer" ? toolbarPosition : null}
-                      onFormat={handleFormat}
-                    />
-                    <p className="text-sm text-gray-500 mt-1 bangla-text">
-                      * Word থেকে পেস্ট করলে সঠিকভাবে না দেখালে LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                    </p>
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                      ভিডিও লিঙ্ক যুক্ত করুন (ঐচ্ছিক)
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="উদাহরণ: https://drive.google.com/file/d/..."
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                      value={sq.videoLink}
-                      onChange={(e) => handleVideoLinkChange(index, e.target.value)}
-                    />
-                  </div>
-
-                  <div className="mb-4">
-                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                      ছবি যুক্ত করুন (ঐচ্ছিক)
-                    </label>
-                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleImageChange(index, e)}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      <p className="text-center text-gray-500 bangla-text">
-                        {sq.image ? sq.image.name : "ছবি টেনে আনুন বা ক্লিক করুন"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {sq.image && (
-                    <div className="mb-4">
-                      <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                        ছবির অ্যালাইনমেন্ট
+                {sqs.map((sq, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="mt-6 p-5 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
+                  >
+                    <h3 className="text-lg font-semibold text-gray-800 mb-3 bangla-text">
+                      সংক্ষিপ্ত প্রশ্ন {index + 1}
+                    </h3>
+                    <div>
+                      <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                        প্রশ্নের ধরণ <span className="text-red-500">*</span>
                       </label>
                       <select
-                        value={sq.imageAlignment}
-                        onChange={(e) => handleImageAlignmentChange(index, e.target.value)}
                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                        value={sq.type}
+                        onChange={(e) => handleTypeChange(index, e.target.value)}
+                        required
                       >
-                        <option value="left">বামে</option>
-                        <option value="center">মাঝে</option>
-                        <option value="right">ডানে</option>
+                        <option value="জ্ঞানমূলক">জ্ঞানমূলক</option>
+                        <option value="অনুধাবনমূলক">অনুধাবনমূলক</option>
+                        <option value="প্রয়োগমূলক">প্রয়োগমূলক</option>
+                        <option value="উচ্চতর দক্ষতা">উচ্চতর দক্ষতা</option>
                       </select>
                     </div>
-                  )}
-                </motion.div>
-              ))}
-
-              {isMultipleSQs && (
-                <motion.button
-                  type="button"
-                  onClick={addNewSQ}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full bg-green-600 text-white py-3 mt-4 rounded-lg hover:bg-green-700 transition flex items-center justify-center shadow-md bangla-text"
-                >
-                  <span className="text-xl mr-2">+</span> নতুন সংক্ষিপ্ত প্রশ্ন যোগ করুন
-                </motion.button>
-              )}
-
+                    <div className="mt-4">
+                      <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                        প্রশ্ন লিখুন <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        className="w-full p-4 border rounded-lg bangla-text"
+                        value={sq.question}
+                        onChange={(e) => handleQuestionChange(index, e.target.value)}
+                        onMouseUp={(e) => handleSelection(index, "question", e)}
+                        onKeyUp={(e) => handleSelection(index, "question", e)}
+                        rows={4}
+                        ref={(el) => (textareaRefs.current[`question-${index}`] = el)}
+                        required
+                      />
+                      <FormatToolbar
+                        position={
+                          toolbarPosition && activeField?.index === index && activeField?.fieldType === "question"
+                            ? toolbarPosition
+                            : null
+                        }
+                        onFormat={handleFormat}
+                      />
+                      <p className="text-sm text-gray-500 mt-1 bangla-text">
+                        * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                      </p>
+                    </div>
+                    <div className="mt-4">
+                      <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                        উত্তর লিখুন (ঐচ্ছিক)
+                      </label>
+                      <textarea
+                        className="w-full p-4 border rounded-lg bangla-text"
+                        value={sq.answer}
+                        onChange={(e) => handleAnswerChange(index, e.target.value)}
+                        onMouseUp={(e) => handleSelection(index, "answer", e)}
+                        onKeyUp={(e) => handleSelection(index, "answer", e)}
+                        rows={4}
+                        ref={(el) => (textareaRefs.current[`answer-${index}`] = el)}
+                      />
+                      <FormatToolbar
+                        position={
+                          toolbarPosition && activeField?.index === index && activeField?.fieldType === "answer"
+                            ? toolbarPosition
+                            : null
+                        }
+                        onFormat={handleFormat}
+                      />
+                      <p className="text-sm text-gray-500 mt-1 bangla-text">
+                        * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                      </p>
+                    </div>
+                    <div className="mt-4">
+                      <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+                        ভিডিও লিঙ্ক (ঐচ্ছিক)
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://drive.google.com/file/d/..."
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                        value={sq.videoLink}
+                        onChange={(e) => handleVideoLinkChange(index, e.target.value)}
+                      />
+                    </div>
+                    <div className="mt-4">
+                      <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+                        ছবি যুক্ত করুন (ঐচ্ছিক)
+                      </label>
+                      <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleImageChange(index, e)}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                        <p className="text-center text-gray-500 bangla-text">
+                          {sq.image ? sq.image.name : "ছবি টেনে আনুন বা ক্লিক করুন"}
+                        </p>
+                      </div>
+                    </div>
+                    {sq.image && (
+                      <div className="mt-4">
+                        <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+                          ছবির অ্যালাইনমেন্ট
+                        </label>
+                        <select
+                          value={sq.imageAlignment}
+                          onChange={(e) => handleImageAlignmentChange(index, e.target.value)}
+                          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                        >
+                          <option value="left">বামে</option>
+                          <option value="center">মাঝে</option>
+                          <option value="right">ডানে</option>
+                        </select>
+                      </div>
+                    )}
+                  </motion.div>
+                ))}
+                {isMultipleSQs && (
+                  <motion.button
+                    type="button"
+                    onClick={addNewSQ}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full bg-green-600 text-white py-3 mt-4 rounded-lg hover:bg-green-700 transition flex items-center justify-center shadow-md bangla-text"
+                  >
+                    <span className="text-xl mr-2">+</span> নতুন প্রশ্ন যোগ করুন
+                  </motion.button>
+                )}
+              </div>
               <motion.button
                 type="submit"
                 whileHover={{ scale: 1.02 }}
@@ -794,12 +847,11 @@ export default function CreateSQAdmin() {
               </motion.button>
             </form>
           </motion.div>
-
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-lg p-8 border border-gray-200"
+            className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
           >
             <h2 className="text-2xl font-bold text-blue-700 mb-6 bangla-text">প্রিভিউ</h2>
             {sqs.map((sq, index) => (
@@ -811,15 +863,12 @@ export default function CreateSQAdmin() {
                 className="mb-6 p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-100"
               >
                 <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-3 bangla-text">
-                  SQ <span>{index + 1}</span>
+                  প্রশ্ন {index + 1}
                 </p>
-                <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text" style={{ padding: '0.25rem 0' }}>
-                  প্রশ্ন: <span>{sq.type}</span>
+                <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">
+                  ধরণ: {sq.type}
                 </p>
-                <div className="text-gray-700 mb-4 bangla-text">
-                  {renderLines(sq.question)}
-                </div>
-
+                <div className="text-gray-700 mb-4 bangla-text">{renderLines(sq.question)}</div>
                 {sq.videoLink && (
                   <div className="mb-4">
                     <a
@@ -832,7 +881,6 @@ export default function CreateSQAdmin() {
                     </a>
                   </div>
                 )}
-
                 {sq.image && (
                   <div
                     className={`mb-4 ${sq.imageAlignment === "left" ? "text-left" : sq.imageAlignment === "right" ? "text-right" : "text-center"}`}
@@ -844,18 +892,14 @@ export default function CreateSQAdmin() {
                     />
                   </div>
                 )}
-
                 {sq.answer && (
                   <div className="text-gray-700 mb-4">
                     <p className="font-semibold bangla-text">উত্তর:</p>
-                    <div className="bangla-text">
-                      {renderLines(sq.answer)}
-                    </div>
+                    <div className="bangla-text">{renderLines(sq.answer)}</div>
                   </div>
                 )}
-
                 <p className="text-sm text-gray-500 mt-4 bangla-text">
-                  ক্লাস: <span>{selectedClass || "N/A"}</span> | বিষয়: <span>{selectedSubject || "N/A"}</span> | অংশ: <span>{selectedSubjectPart || "N/A"}</span> | অধ্যায়: <span>{selectedChapterName || "N/A"}</span>
+                  ক্লাস: {selectedClass || "N/A"} | বিষয়: {selectedSubject || "N/A"} | পেপার: {selectedSubjectPaper || "N/A"} | অধ্যায়: {selectedChapterName || "N/A"} | কন্টেন্ট: {selectedContentType || "N/A"} | উপ-অধ্যায়: {selectedSubChapter || "N/A"}
                 </p>
               </motion.div>
             ))}
