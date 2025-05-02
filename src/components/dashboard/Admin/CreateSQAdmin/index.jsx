@@ -1,18 +1,24 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
 import { motion } from "framer-motion";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from "xlsx";
 import Head from "next/head";
-import { MathJax } from "better-react-mathjax";
+import FormatToolbar from "../../../FormatToolbar/index";
 import { marked } from "marked";
 import DOMPurify from "dompurify";
-import FormatToolbar from "../../../FormatToolbar/index";
+
+// Dynamically import MathJax to avoid SSR issues
+const MathJax = dynamic(() => import("better-react-mathjax").then((mod) => mod.MathJax), {
+  ssr: false,
+});
 
 // Normalize text to Unicode NFC and remove problematic characters
 const normalizeText = (text) => {
+  if (!text || typeof text !== "string") return "";
   return text
     .normalize("NFC")
     .replace(/[\u200B-\u200F\uFEFF]/g, "") // Remove zero-width spaces and control chars
@@ -43,78 +49,104 @@ const simplifyFraction = (numerator, denominator) => {
 
 // Process text for LaTeX conversion with Bangla/number separation
 const processTextForLatex = (text) => {
-  text = normalizeText(text);
+  if (!text || typeof text !== "string") return "";
 
-  // Protect LaTeX and markdown syntax
-  const placeholders = [];
-  let placeholderIndex = 0;
+  try {
+    text = normalizeText(text);
 
-  // Store markdown and LaTeX patterns
-  text = text.replace(/(\*\*.*?\*\*|\*.*?\*|__.*?__|\$.*?\$)/g, (match) => {
-    placeholders.push(match);
-    return `__PLACEHOLDER_${placeholderIndex++}__`;
-  });
+    // Protect LaTeX and markdown syntax
+    const placeholders = [];
+    let placeholderIndex = 0;
 
-  // Convert fractions (e.g., 1/2 -> \frac{1}{2})
-  text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
-    const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
-    return `\\frac{${numerator}}{${denominator}}`;
-  });
+    // Store markdown and LaTeX patterns
+    text = text.replace(/(\*\*.*?\*\*|\*.*?\*|__.*?__|\$.*?\$)/g, (match) => {
+      placeholders.push(match);
+      return `__PLACEHOLDER_${placeholderIndex++}__`;
+    });
 
-  // Convert exponents and mathematical symbols
-  text = text.replace(/\[(.*?)\]\^(\d+|\w+)/g, "[$1]^{$2}");
-  text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
-  text = text.replace(/(\w+)\^(\d+|\w+)/g, "$1^{$2}");
-  text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
-  text = text.replace(/≥/g, "\\geq");
-  text = text.replace(/≤/g, "\\leq");
-  text = text.replace(/≠/g, "\\neq");
-  text = text.replace(/½/g, "\\frac{1}{2}");
-  text = text.replace(/²/g, "^{2}");
-  text = text.replace(/³/g, "^{3}");
+    // Convert fractions (e.g., 1/2 -> \frac{1}{2})
+    text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
+      if (denom === "0") return match;
+      const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
+      return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
+    });
+    text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
+      if (denom === "0") return match;
+      const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
+      return `\\frac{${numerator}}{${denominator}}`;
+    });
 
-  // Handle Bangla text with numbers
-  text = text.replace(
-    /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
-    (match) => {
-      const content = match.trim();
-      const trailing = match.slice(content.length);
-      if (!/^\d+$/.test(content) && !content.includes("/")) {
-        return `\\text{${content}}${trailing}`;
+    // Convert exponents and mathematical symbols
+    text = text.replace(/\[(.*?)\]\^(\d+|\w+)/g, "[$1]^{$2}");
+    text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
+    text = text.replace(/(\w+)\^(\d+|\w+)/g, "$1^{$2}");
+    text = text.replace(/sqrt\((.*?)\)/g, "\\sqrt{$1}");
+    text = text.replace(/≥/g, "\\geq");
+    text = text.replace(/≤/g, "\\leq");
+    text = text.replace(/≠/g, "\\neq");
+    text = text.replace(/½/g, "\\frac{1}{2}");
+    text = text.replace(/²/g, "^{2}");
+    text = text.replace(/³/g, "^{3}");
+
+    // Handle Bangla text with numbers
+    text = text.replace(
+      /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
+      (match) => {
+        const content = match.trim();
+        const trailing = match.slice(content.length);
+        if (!/^\d+$/.test(content) && !content.includes("/")) {
+          return `\\text{${content}}${trailing}`;
+        }
+        return match;
       }
-      return match;
-    }
-  );
+    );
 
-  // Ensure numbers are separated from Bangla text
-  text = text.replace(/([০-৯]+)([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ]+)/g, "$1 $2");
-  text = text.replace(/([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ]+)([০-৯]+)/g, "$1 $2");
+    // Ensure numbers are separated from Bangla text
+    text = text.replace(/([০-৯]+)([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ]+)/g, "$1 $2");
+    text = text.replace(/([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ]+)([০-৯]+)/g, "$1 $2");
 
-  // Restore placeholders
-  text = text.replace(/__PLACEHOLDER_(\d+)__/g, (_, i) => placeholders[i]);
+    // Restore placeholders
+    text = text.replace(/__PLACEHOLDER_(\d+)__/g, (_, i) => placeholders[i]);
 
-  return text;
+    return text;
+  } catch (error) {
+    console.error("LaTeX processing error:", error, "Input:", text);
+    return text;
+  }
 };
 
 // Render markdown and LaTeX in preview
 const renderLines = (text) => {
-  if (!text) return "প্রশ্ন বা উত্তর লিখুন...";
-  return text.split("\n").map((line, index) => {
-    // Process markdown
-    let processedLine = normalizeText(line);
-    const html = marked(processedLine, { breaks: true });
-    const sanitizedHtml = DOMPurify.sanitize(html);
+  if (!text || typeof text !== "string") {
+    return <div className="bangla-text">প্রশ্ন বা উত্তর লিখুন...</div>;
+  }
 
-    // Check for LaTeX
-    const hasLatex = processedLine.match(/[\\{}^_]|\\frac|\\sqrt|\\geq|\\leq|\\neq/);
-    const content = <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
+  try {
+    return text.split("\n").map((line, index) => {
+      // Process markdown
+      let processedLine = normalizeText(line);
+      const html = marked(processedLine, { breaks: true });
+      const sanitizedHtml = DOMPurify.sanitize(html);
 
+      // Check for LaTeX
+      const hasLatex = processedLine.match(/[\\{}^_]|\\frac|\\sqrt|\\geq|\\leq|\\neq/);
+      const content = <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
+
+      return (
+        <div key={index} className="bangla-text">
+          {hasLatex ? <MathJax dynamic>{content}</MathJax> : content}
+        </div>
+      );
+    });
+  } catch (error) {
+    console.error("LaTeX rendering error:", error, "Input:", text);
     return (
-      <div key={index}>
-        {hasLatex ? <MathJax>{content}</MathJax> : content}
+      <div className="text-red-500 bangla-text">
+        LaTeX ত্রুটি: অসম্পূর্ণ বা ভুল ফরম্যাট। অনুগ্রহ করে সঠিকভাবে লিখুন।
+        <div className="text-gray-700 mt-2">{text}</div>
       </div>
     );
-  });
+  }
 };
 
 export default function CreateSQAdmin() {
@@ -149,10 +181,12 @@ export default function CreateSQAdmin() {
   useEffect(() => {
     async function fetchClasses() {
       try {
-        const res = await fetch("/api/sq");
+        const res = await fetch("/api/sq", { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
         setClasses(data);
       } catch (error) {
+        console.error("Error fetching classes:", error);
         toast.error("❌ ক্লাস লোড করতে সমস্যা হয়েছে!");
       }
     }
@@ -176,7 +210,8 @@ export default function CreateSQAdmin() {
       }
 
       try {
-        const res = await fetch(`/api/sq?classNumber=${selectedClass}`);
+        const res = await fetch(`/api/sq?classNumber=${selectedClass}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
         if (data.length > 0) {
           const subjects = [...new Set(data.map((item) => item.subject))];
@@ -201,6 +236,7 @@ export default function CreateSQAdmin() {
           toast.info("⚠️ এই ক্লাসের জন্য কোনো ডেটা নেই।");
         }
       } catch (error) {
+        console.error("Error fetching class data:", error);
         toast.error("❌ ডেটা লোড করতে সমস্যা হয়েছে!");
       }
     }
@@ -271,15 +307,19 @@ export default function CreateSQAdmin() {
 
   const handleSelection = (index, fieldType, e) => {
     const textarea = textareaRefs.current[`${fieldType}-${index}`];
+    if (!textarea) return;
+
     const selection = window.getSelection();
     if (!selection.rangeCount) {
       setToolbarPosition(null);
       setActiveField(null);
       return;
     }
+
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
     const toolbarHeight = 40; // Approximate toolbar height
+
     if (selection.toString().length > 0) {
       setToolbarPosition({
         x: rect.left + window.scrollX,
@@ -298,6 +338,8 @@ export default function CreateSQAdmin() {
     const { index, fieldType } = activeField;
     const newSQs = [...sqs];
     const textarea = textareaRefs.current[`${fieldType}-${index}`];
+    if (!textarea) return;
+
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const currentText = fieldType === "question" ? newSQs[index].question : newSQs[index].answer;
@@ -408,8 +450,8 @@ export default function CreateSQAdmin() {
         if (data.length > 0) {
           const extractedQuestions = data.map((row) => ({
             type: row.Type || "জ্ঞানমূলক",
-            question: normalizeText(row.Question || ""),
-            answer: normalizeText(row.Answer || ""),
+            question: processTextForLatex(normalizeText(row.Question || "")),
+            answer: processTextForLatex(normalizeText(row.Answer || "")),
             classLevel: row.Class || selectedClass,
             subjectName: row.Subject || selectedSubject,
             subjectPaper: row["Subject Paper"] || selectedSubjectPaper,
@@ -428,12 +470,15 @@ export default function CreateSQAdmin() {
           if (response.ok) {
             toast.success("✅ প্রশ্ন সফলভাবে ডাটাবেজে সংরক্ষিত হয়েছে!");
           } else {
-            toast.error("❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ হয়েছে!");
+            const errorData = await response.json();
+            console.error("Import error:", errorData);
+            toast.error(`❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ: ${errorData.error || "Unknown error"}`);
           }
         } else {
           toast.error("❌ এক্সেল ফাইল খালি বা ভুল ফরম্যাটে আছে!");
         }
       } catch (error) {
+        console.error("File processing error:", error);
         toast.error("❌ ফাইল প্রসেসিংয়ে ত্রুটি!");
       }
     };
@@ -467,6 +512,10 @@ export default function CreateSQAdmin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedClass || !selectedSubject || !selectedChapterNumber || !selectedContentType) {
+      toast.error("❌ অনুগ্রহ করে সকল প্রয়োজনীয় ফিল্ড পূরণ করুন!");
+      return;
+    }
     const formData = new FormData();
     formData.append("classLevel", selectedClass);
     formData.append("subjectName", selectedSubject);
@@ -494,9 +543,11 @@ export default function CreateSQAdmin() {
         toast.success(`✅ ${sqs.length}টি সংক্ষিপ্ত প্রশ্ন সফলভাবে যোগ করা হয়েছে!`);
         resetForm();
       } else {
+        console.error("Submit error:", responseData);
         toast.error(`❌ ${responseData.error || "কিছু সমস্যা হয়েছে!"}`);
       }
     } catch (error) {
+      console.error("Server connection error:", error);
       toast.error("❌ সার্ভারের সাথে সংযোগে সমস্যা!");
     }
   };
@@ -504,22 +555,38 @@ export default function CreateSQAdmin() {
   return (
     <>
       <Head>
+        <meta
+          http-equiv="Content-Security-Policy"
+          content="script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net;"
+        />
         <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap" rel="stylesheet" />
         <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet" />
-        <script>
-          {`
-            MathJax = {
-              tex: {
-                inlineMath: [['$', '$'], ['\\(', '\\)']],
-                tags: 'ams',
-              },
-              chtml: {
-                scale: 1.1,
-                mtextInheritFont: true,
-              }
-            };
-          `}
-        </script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              MathJax = {
+                tex: {
+                  inlineMath: [['$', '$'], ['\\(', '\\)']],
+                  displayMath: [['$$', '$$'], ['\\[', '\\]']],
+                  tags: 'ams',
+                  processEscapes: true,
+                },
+                chtml: {
+                  scale: 1.1,
+                  mtextInheritFont: true,
+                },
+                startup: {
+                  ready: () => {
+                    MathJax.startup.defaultReady();
+                    MathJax.startup.promise.then(() => {
+                      window.dispatchEvent(new Event('mathjax-ready'));
+                    });
+                  }
+                }
+              };
+            `,
+          }}
+        />
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
       </Head>
       <style jsx global>{`
@@ -558,10 +625,12 @@ export default function CreateSQAdmin() {
           padding-left: 1rem;
           margin-bottom: 2rem;
         }
-        select, input[type="file"] {
+        select,
+        input[type="file"] {
           transition: border-color 0.2s, box-shadow 0.2s;
         }
-        select:focus, input[type="file"]:focus {
+        select:focus,
+        input[type="file"]:focus {
           border-color: #3b82f6 !important;
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
         }
@@ -707,11 +776,17 @@ export default function CreateSQAdmin() {
                       <option value="">কন্টেন্ট টাইপ নির্বাচন করুন</option>
                       {contentTypes.map((type) => (
                         <option key={type} value={type}>
-                          {type === "Examples" ? "উদাহরণ" :
-                           type === "Model Tests" ? "মডেল টেস্ট" :
-                           type === "Admission Questions" ? "ভর্তি প্রশ্ন" :
-                           type === "Practice Problems" ? "অভ্যাস সমস্যা" :
-                           type === "Theory" ? "তত্ত্ব" : "অন্যান্য"}
+                          {type === "Examples"
+                            ? "উদাহরণ"
+                            : type === "Model Tests"
+                            ? "মডেল টেস্ট"
+                            : type === "Admission Questions"
+                            ? "ভর্তি প্রশ্ন"
+                            : type === "Practice Problems"
+                            ? "অভ্যাস সমস্যা"
+                            : type === "Theory"
+                            ? "তত্ত্ব"
+                            : "অন্যান্য"}
                         </option>
                       ))}
                     </select>
@@ -791,7 +866,9 @@ export default function CreateSQAdmin() {
                       />
                       <FormatToolbar
                         position={
-                          toolbarPosition && activeField?.index === index && activeField?.fieldType === "question"
+                          toolbarPosition &&
+                          activeField?.index === index &&
+                          activeField?.fieldType === "question"
                             ? toolbarPosition
                             : null
                         }
@@ -817,7 +894,9 @@ export default function CreateSQAdmin() {
                       />
                       <FormatToolbar
                         position={
-                          toolbarPosition && activeField?.index === index && activeField?.fieldType === "answer"
+                          toolbarPosition &&
+                          activeField?.index === index &&
+                          activeField?.fieldType === "answer"
                             ? toolbarPosition
                             : null
                         }
