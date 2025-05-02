@@ -1,4 +1,5 @@
 import React from 'react';
+import { FaBold, FaItalic, FaUnderline, FaPlus } from 'react-icons/fa';
 
 const FormatToolbar = ({ position, onFormat }) => {
   if (!position) return null;
@@ -6,44 +7,69 @@ const FormatToolbar = ({ position, onFormat }) => {
   const toolbarStyle = {
     position: 'absolute',
     left: position.x,
-    top: position.y - 5, // Position above the selection
+    top: position.y - 35, // Adjust position for icon size
     backgroundColor: 'white',
-    border: '1px solid #ccc',
-    borderRadius: '4px',
-    padding: '5px',
-    boxShadow: '0 2px 5px rgba(0,0,0,0.2)',
+    border: '1px solid #e0e0e0',
+    borderRadius: '6px',
+    padding: '8px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
     zIndex: 1000,
+    display: 'flex',
+    gap: '8px',
+  };
+
+  const buttonStyle = {
+    background: 'none',
+    border: 'none',
+    padding: '6px',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '1rem',
+    color: '#555',
+    outline: 'none',
+  };
+
+  const hoverStyle = {
+    backgroundColor: '#f0f0f0',
+  };
+
+  const handleClick = (format, event) => {
+    onFormat(format, event);
   };
 
   return (
     <div style={toolbarStyle}>
       <button
         type="button"
-        onClick={(e) => onFormat('bold', e)}
-        className="px-2 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded mr-1"
+        onClick={(e) => handleClick('bold', e)}
+        style={{ ...buttonStyle, ':hover': hoverStyle }}
+        title="Bold"
       >
-        Bold
+        <FaBold />
       </button>
       <button
         type="button"
-        onClick={(e) => onFormat('italic', e)}
-        className="px-2 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded mr-1"
+        onClick={(e) => handleClick('italic', e)}
+        style={{ ...buttonStyle, ':hover': hoverStyle }}
+        title="Italic"
       >
-        Italic
+        <FaItalic />
       </button>
       <button
         type="button"
-        onClick={(e) => onFormat('underline', e)}
-        className="px-2 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded mr-1"
+        onClick={(e) => handleClick('underline', e)}
+        style={{ ...buttonStyle, ':hover': hoverStyle }}
+        title="Underline"
       >
-        Underline
+        <FaUnderline />
       </button>
       <button
         type="button"
-        onClick={(e) => onFormat('math', e)}
-        className="px-2 py-1 text-sm bg-gray-200 hover:bg-gray-300 rounded"
+        onClick={(e) => handleClick('math', e)}
+        style={{ ...buttonStyle, ':hover': hoverStyle }}
+        title="Math"
       >
-        Math
+        <FaPlus />
       </button>
     </div>
   );
