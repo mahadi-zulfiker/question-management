@@ -9,14 +9,22 @@ import * as XLSX from "xlsx";
 import Head from "next/head";
 import { Loader2 } from "lucide-react";
 import FormatToolbar from "../../../FormatToolbar/index";
+import { marked } from "marked";
+import DOMPurify from "dompurify";
 
 // Dynamically import MathJax to avoid SSR issues
 const MathJax = dynamic(() => import("better-react-mathjax").then((mod) => mod.MathJax), {
   ssr: false,
 });
 
-// Normalize text to Unicode NFC
-const normalizeText = (text) => text.normalize("NFC");
+// Normalize text to Unicode NFC and remove problematic characters
+const normalizeText = (text) => {
+  return text
+    .normalize("NFC")
+    .replace(/[\u200B-\u200F\uFEFF]/g, "") // Remove zero-width spaces and control chars
+    .replace(/\s+/g, " ") // Normalize spaces
+    .trim();
+};
 
 // Compute GCD for fraction simplification
 const gcd = (a, b) => {
@@ -39,12 +47,24 @@ const simplifyFraction = (numerator, denominator) => {
   };
 };
 
-// Process text for LaTeX conversion
+// Process text for LaTeX conversion with Bangla/number separation
 const processTextForLatex = (text) => {
   if (!text || typeof text !== "string") return "";
 
   try {
-    text = normalizeText(text).replace(/[\u200B-\u200F\uFEFF]/g, "");
+    text = normalizeText(text);
+
+    // Protect LaTeX and markdown syntax
+    const placeholders = [];
+    let placeholderIndex = 0;
+
+    // Store markdown and LaTeX patterns
+    text = text.replace(/(\*\*.*?\*\*|\*.*?\*|__.*?__|\$.*?\$)/g, (match) => {
+      placeholders.push(match);
+      return `__PLACEHOLDER_${placeholderIndex++}__`;
+    });
+
+    // Convert fractions (e.g., 1/2 -> \frac{1}{2})
     text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
       if (denom === "0") return match;
       const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
@@ -55,6 +75,8 @@ const processTextForLatex = (text) => {
       const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
       return `\\frac{${numerator}}{${denominator}}`;
     });
+
+    // Convert exponents and mathematical symbols
     text = text.replace(/\[(.*?)\]\^(\d+|\w+)/g, "[$1]^{$2}");
     text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
     text = text.replace(/(\w+)\^(\d+|\w+)/g, "$1^{$2}");
@@ -65,9 +87,8 @@ const processTextForLatex = (text) => {
     text = text.replace(/½/g, "\\frac{1}{2}");
     text = text.replace(/²/g, "^{2}");
     text = text.replace(/³/g, "^{3}");
-    text = text.replace(/\*\*(.*?)\*\*/g, "**$1**");
-    text = text.replace(/\*(.*?)\*/g, "*$1*");
-    text = text.replace(/__(.*?)__/g, "__$1__");
+
+    // Handle Bangla text with numbers
     text = text.replace(
       /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
       (match) => {
@@ -79,10 +100,14 @@ const processTextForLatex = (text) => {
         return match;
       }
     );
-    text = text.replace(/(\$.*?\$)/g, (match) => match);
-    if (text.match(/[\\{}^_]/) && !text.startsWith("$") && !text.endsWith("$")) {
-      text = `$${text}$`;
-    }
+
+    // Ensure numbers are separated from Bangla text
+    text = text.replace(/([০-৯]+)([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ]+)/g, "$1 $2");
+    text = text.replace(/([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ]+)([০-৯]+)/g, "$1 $2");
+
+    // Restore placeholders
+    text = text.replace(/__PLACEHOLDER_(\d+)__/g, (_, i) => placeholders[i]);
+
     return text;
   } catch (error) {
     console.error("LaTeX processing error:", error, "Input:", text);
@@ -97,18 +122,19 @@ const renderLines = (text) => {
   }
 
   try {
-    let processedText = text
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/__(.*?)__/g, '<u>$1</u>');
-    return processedText.split('\n').map((line, index) => {
-      const needsMathMode = line.match(/[\\{}^_]/) && !line.startsWith('$') && !line.endsWith('$');
-      const displayLine = needsMathMode ? `$${line}$` : line;
+    return text.split("\n").map((line, index) => {
+      // Process markdown
+      let processedLine = normalizeText(line);
+      const html = marked(processedLine, { breaks: true });
+      const sanitizedHtml = DOMPurify.sanitize(html);
+
+      // Check for LaTeX
+      const hasLatex = processedLine.match(/[\\{}^_]|\\frac|\\sqrt|\\geq|\\leq|\\neq/);
+      const content = <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
+
       return (
         <div key={index} className="bangla-text">
-          <MathJax dynamic>
-            <div dangerouslySetInnerHTML={{ __html: displayLine }} />
-          </MathJax>
+          {hasLatex ? <MathJax dynamic>{content}</MathJax> : content}
         </div>
       );
     });

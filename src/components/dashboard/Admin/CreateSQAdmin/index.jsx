@@ -7,10 +7,18 @@ import "react-toastify/dist/ReactToastify.css";
 import * as XLSX from "xlsx";
 import Head from "next/head";
 import { MathJax } from "better-react-mathjax";
+import { marked } from "marked";
+import DOMPurify from "dompurify";
 import FormatToolbar from "../../../FormatToolbar/index";
 
-// Normalize text to Unicode NFC
-const normalizeText = (text) => text.normalize("NFC");
+// Normalize text to Unicode NFC and remove problematic characters
+const normalizeText = (text) => {
+  return text
+    .normalize("NFC")
+    .replace(/[\u200B-\u200F\uFEFF]/g, "") // Remove zero-width spaces and control chars
+    .replace(/\s+/g, " ") // Normalize spaces
+    .trim();
+};
 
 // Compute GCD for fraction simplification
 const gcd = (a, b) => {
@@ -33,13 +41,27 @@ const simplifyFraction = (numerator, denominator) => {
   };
 };
 
-// Process text for LaTeX conversion
+// Process text for LaTeX conversion with Bangla/number separation
 const processTextForLatex = (text) => {
-  text = normalizeText(text).replace(/[\u200B-\u200F\uFEFF]/g, "");
+  text = normalizeText(text);
+
+  // Protect LaTeX and markdown syntax
+  const placeholders = [];
+  let placeholderIndex = 0;
+
+  // Store markdown and LaTeX patterns
+  text = text.replace(/(\*\*.*?\*\*|\*.*?\*|__.*?__|\$.*?\$)/g, (match) => {
+    placeholders.push(match);
+    return `__PLACEHOLDER_${placeholderIndex++}__`;
+  });
+
+  // Convert fractions (e.g., 1/2 -> \frac{1}{2})
   text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
     const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
     return `\\frac{${numerator}}{${denominator}}`;
   });
+
+  // Convert exponents and mathematical symbols
   text = text.replace(/\[(.*?)\]\^(\d+|\w+)/g, "[$1]^{$2}");
   text = text.replace(/\((.*?)\)\^(\d+|\w+)/g, "($1)^{$2}");
   text = text.replace(/(\w+)\^(\d+|\w+)/g, "$1^{$2}");
@@ -50,9 +72,8 @@ const processTextForLatex = (text) => {
   text = text.replace(/½/g, "\\frac{1}{2}");
   text = text.replace(/²/g, "^{2}");
   text = text.replace(/³/g, "^{3}");
-  text = text.replace(/\*\*(.*?)\*\*/g, "**$1**");
-  text = text.replace(/\*(.*?)\*/g, "*$1*");
-  text = text.replace(/__(.*?)__/g, "__$1__");
+
+  // Handle Bangla text with numbers
   text = text.replace(
     /([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+(?:\s+[ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ০-৯]+)*(?:[।,:;]|\s|$))/g,
     (match) => {
@@ -64,6 +85,14 @@ const processTextForLatex = (text) => {
       return match;
     }
   );
+
+  // Ensure numbers are separated from Bangla text
+  text = text.replace(/([০-৯]+)([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ]+)/g, "$1 $2");
+  text = text.replace(/([ক-ঢ়ঁ-ঃা-ৄে-ৈো-ৌ]+)([০-৯]+)/g, "$1 $2");
+
+  // Restore placeholders
+  text = text.replace(/__PLACEHOLDER_(\d+)__/g, (_, i) => placeholders[i]);
+
   return text;
 };
 
@@ -71,18 +100,18 @@ const processTextForLatex = (text) => {
 const renderLines = (text) => {
   if (!text) return "প্রশ্ন বা উত্তর লিখুন...";
   return text.split("\n").map((line, index) => {
-    let processedLine = line
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*(.*?)\*/g, "<em>$1</em>")
-      .replace(/__(.*?)__/g, "<u>$1</u>");
-    if (processedLine.match(/[\\{}^_]/) && !processedLine.startsWith("$") && !processedLine.endsWith("$")) {
-      processedLine = `$${processedLine}$`;
-    }
+    // Process markdown
+    let processedLine = normalizeText(line);
+    const html = marked(processedLine, { breaks: true });
+    const sanitizedHtml = DOMPurify.sanitize(html);
+
+    // Check for LaTeX
+    const hasLatex = processedLine.match(/[\\{}^_]|\\frac|\\sqrt|\\geq|\\leq|\\neq/);
+    const content = <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
+
     return (
       <div key={index}>
-        <MathJax>
-          <div dangerouslySetInnerHTML={{ __html: processedLine }} />
-        </MathJax>
+        {hasLatex ? <MathJax>{content}</MathJax> : content}
       </div>
     );
   });
@@ -243,11 +272,19 @@ export default function CreateSQAdmin() {
   const handleSelection = (index, fieldType, e) => {
     const textarea = textareaRefs.current[`${fieldType}-${index}`];
     const selection = window.getSelection();
-    if (!selection.rangeCount) return;
+    if (!selection.rangeCount) {
+      setToolbarPosition(null);
+      setActiveField(null);
+      return;
+    }
     const range = selection.getRangeAt(0);
     const rect = range.getBoundingClientRect();
+    const toolbarHeight = 40; // Approximate toolbar height
     if (selection.toString().length > 0) {
-      setToolbarPosition({ x: rect.left + window.scrollX, y: rect.top + window.scrollY });
+      setToolbarPosition({
+        x: rect.left + window.scrollX,
+        y: rect.top + window.scrollY - toolbarHeight,
+      });
       setActiveField({ index, fieldType });
     } else {
       setToolbarPosition(null);
@@ -266,21 +303,28 @@ export default function CreateSQAdmin() {
     const currentText = fieldType === "question" ? newSQs[index].question : newSQs[index].answer;
     const selectedText = currentText.substring(start, end);
     if (!selectedText) return;
+
     let formattedText = selectedText;
+    let offset = 0;
     switch (format) {
       case "bold":
         formattedText = `**${selectedText}**`;
+        offset = 2;
         break;
       case "italic":
         formattedText = `*${selectedText}*`;
+        offset = 1;
         break;
       case "underline":
         formattedText = `__${selectedText}__`;
+        offset = 2;
         break;
       case "math":
         formattedText = `$${selectedText}$`;
+        offset = 1;
         break;
     }
+
     const updatedText = currentText.substring(0, start) + formattedText + currentText.substring(end);
     if (fieldType === "question") {
       newSQs[index].question = updatedText;
@@ -290,10 +334,12 @@ export default function CreateSQAdmin() {
     setSQs(newSQs);
     setToolbarPosition(null);
     setActiveField(null);
+
+    // Restore cursor position
     setTimeout(() => {
       textarea.focus();
-      const newCursorPos = start + formattedText.length;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      textarea.selectionStart = start + offset;
+      textarea.selectionEnd = start + formattedText.length - offset;
     }, 0);
   };
 
@@ -728,7 +774,7 @@ export default function CreateSQAdmin() {
                         <option value="উচ্চতর দক্ষতা">উচ্চতর দক্ষতা</option>
                       </select>
                     </div>
-                    <div className="mt-4">
+                    <div className="mt-4 relative">
                       <label className="block text-gray-700 font-semibold mb-1 bangla-text">
                         প্রশ্ন লিখুন <span className="text-red-500">*</span>
                       </label>
@@ -741,6 +787,7 @@ export default function CreateSQAdmin() {
                         rows={4}
                         ref={(el) => (textareaRefs.current[`question-${index}`] = el)}
                         required
+                        aria-label={`প্রশ্ন ${index + 1}`}
                       />
                       <FormatToolbar
                         position={
@@ -754,7 +801,7 @@ export default function CreateSQAdmin() {
                         * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
                       </p>
                     </div>
-                    <div className="mt-4">
+                    <div className="mt-4 relative">
                       <label className="block text-gray-700 font-semibold mb-1 bangla-text">
                         উত্তর লিখুন (ঐচ্ছিক)
                       </label>
@@ -766,6 +813,7 @@ export default function CreateSQAdmin() {
                         onKeyUp={(e) => handleSelection(index, "answer", e)}
                         rows={4}
                         ref={(el) => (textareaRefs.current[`answer-${index}`] = el)}
+                        aria-label={`উত্তর ${index + 1}`}
                       />
                       <FormatToolbar
                         position={
