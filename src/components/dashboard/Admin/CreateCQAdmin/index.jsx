@@ -19,6 +19,7 @@ const MathJax = dynamic(() => import("better-react-mathjax").then((mod) => mod.M
 
 // Normalize text to Unicode NFC and remove problematic characters
 const normalizeText = (text) => {
+  if (!text || typeof text !== "string") return "";
   return text
     .normalize("NFC")
     .replace(/[\u200B-\u200F\uFEFF]/g, "") // Remove zero-width spaces and control chars
@@ -123,12 +124,10 @@ const renderLines = (text) => {
 
   try {
     return text.split("\n").map((line, index) => {
-      // Process markdown
       let processedLine = normalizeText(line);
       const html = marked(processedLine, { breaks: true });
       const sanitizedHtml = DOMPurify.sanitize(html);
 
-      // Check for LaTeX
       const hasLatex = processedLine.match(/[\\{}^_]|\\frac|\\sqrt|\\geq|\\leq|\\neq/);
       const content = <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
 
@@ -178,7 +177,6 @@ export default function CreateCQAdmin() {
       videoLink: "",
     },
   ]);
-  const [toolbarPosition, setToolbarPosition] = useState(null);
   const [activeField, setActiveField] = useState(null);
   const textareaRefs = useRef({});
 
@@ -238,6 +236,7 @@ export default function CreateCQAdmin() {
           setChapters([]);
           toast.info("⚠️ এই ক্লাসের জন্য কোনো ডেটা নেই।");
         }
+        setActiveField(null);
       } catch (error) {
         console.error("Error fetching class data:", error);
         toast.error("❌ ক্লাস ডেটা লোড করতে ব্যর্থ");
@@ -319,27 +318,10 @@ export default function CreateCQAdmin() {
   };
 
   const handleSelection = (cqIndex, fieldType, index, e) => {
-    const textarea = textareaRefs.current[`${fieldType}-${cqIndex}-${index ?? ''}`];
-    if (!textarea) return;
-
     const selection = window.getSelection();
-    if (!selection.rangeCount) {
-      setToolbarPosition(null);
-      setActiveField(null);
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-
     if (selection.toString().length > 0) {
-      setToolbarPosition({
-        x: rect.left + window.scrollX,
-        y: rect.top + window.scrollY - 40,
-      });
       setActiveField({ cqIndex, fieldType, index });
     } else {
-      setToolbarPosition(null);
       setActiveField(null);
     }
   };
@@ -373,18 +355,23 @@ export default function CreateCQAdmin() {
     if (!selectedText) return;
 
     let formattedText = selectedText;
+    let offset = 0;
     switch (format) {
       case "bold":
         formattedText = `**${selectedText}**`;
+        offset = 2;
         break;
       case "italic":
         formattedText = `*${selectedText}*`;
+        offset = 1;
         break;
       case "underline":
         formattedText = `__${selectedText}__`;
+        offset = 2;
         break;
       case "math":
         formattedText = `$${selectedText}$`;
+        offset = 1;
         break;
     }
 
@@ -406,13 +393,12 @@ export default function CreateCQAdmin() {
     }
 
     setCQs(newCQs);
-    setToolbarPosition(null);
     setActiveField(null);
 
     setTimeout(() => {
       textarea.focus();
-      const newCursorPos = start + formattedText.length;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      textarea.selectionStart = start + offset;
+      textarea.selectionEnd = start + formattedText.length - offset;
     }, 0);
   };
 
@@ -593,6 +579,7 @@ export default function CreateCQAdmin() {
         videoLink: "",
       },
     ]);
+    setActiveField(null);
   };
 
   const handleSubmit = async (e) => {
@@ -770,7 +757,7 @@ export default function CreateCQAdmin() {
                     className="absolute inset-0 opacity-0 cursor-pointer"
                   />
                   <p className="text-center text-gray-500 text-lg bangla-text">
-                    এক্সেল ফাইল টেনে আনুন বা ক্লিক করুন
+                    এক্সেল ফাইল টেনে আনুন বা ক্� RAI করুন
                   </p>
                 </div>
                 <motion.button
@@ -963,14 +950,12 @@ export default function CreateCQAdmin() {
                       ref={(el) => (textareaRefs.current[`passage-${cqIndex}-`] = el)}
                       required
                     />
-                    <FormatToolbar
-                      position={
-                        toolbarPosition && activeField?.cqIndex === cqIndex && activeField?.fieldType === "passage"
-                          ? toolbarPosition
-                          : null
-                      }
-                      onFormat={handleFormat}
-                    />
+                    <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
+                      <FormatToolbar
+                        onFormat={handleFormat}
+                        isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "passage"}
+                      />
+                    </div>
                     <p className="text-sm text-gray-500 mt-1 bangla-text">
                       * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
                     </p>
@@ -1042,17 +1027,12 @@ export default function CreateCQAdmin() {
                             }
                             ref={(el) => (textareaRefs.current[`question-${cqIndex}-${i}`] = el)}
                           />
-                          <FormatToolbar
-                            position={
-                              toolbarPosition &&
-                              activeField?.cqIndex === cqIndex &&
-                              activeField?.fieldType === "question" &&
-                              activeField?.index === i
-                                ? toolbarPosition
-                                : null
-                            }
-                            onFormat={handleFormat}
-                          />
+                          <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
+                            <FormatToolbar
+                              onFormat={handleFormat}
+                              isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "question" && activeField?.index === i}
+                            />
+                          </div>
                         </div>
                         <p className="text-sm text-gray-500 mt-1 bangla-text">
                           * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
@@ -1071,17 +1051,12 @@ export default function CreateCQAdmin() {
                             placeholder="উত্তর লিখুন"
                             ref={(el) => (textareaRefs.current[`answer-${cqIndex}-${i}`] = el)}
                           />
-                          <FormatToolbar
-                            position={
-                              toolbarPosition &&
-                              activeField?.cqIndex === cqIndex &&
-                              activeField?.fieldType === "answer" &&
-                              activeField?.index === i
-                                ? toolbarPosition
-                                : null
-                            }
-                            onFormat={handleFormat}
-                          />
+                          <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
+                            <FormatToolbar
+                              onFormat={handleFormat}
+                              isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "answer" && activeField?.index === i}
+                            />
+                          </div>
                         </div>
                         <p className="text-sm text-gray-500 mt-1 bangla-text">
                           * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
@@ -1108,17 +1083,12 @@ export default function CreateCQAdmin() {
                             }
                             ref={(el) => (textareaRefs.current[`question-${cqIndex}-${i}`] = el)}
                           />
-                          <FormatToolbar
-                            position={
-                              toolbarPosition &&
-                              activeField?.cqIndex === cqIndex &&
-                              activeField?.fieldType === "question" &&
-                              activeField?.index === i
-                                ? toolbarPosition
-                                : null
-                            }
-                            onFormat={handleFormat}
-                          />
+                          <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
+                            <FormatToolbar
+                              onFormat={handleFormat}
+                              isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "question" && activeField?.index === i}
+                            />
+                          </div>
                         </div>
                         <p className="text-sm text-gray-500 mt-1 bangla-text">
                           * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
@@ -1137,17 +1107,12 @@ export default function CreateCQAdmin() {
                             placeholder="উত্তর লিখুন"
                             ref={(el) => (textareaRefs.current[`answer-${cqIndex}-${i}`] = el)}
                           />
-                          <FormatToolbar
-                            position={
-                              toolbarPosition &&
-                              activeField?.cqIndex === cqIndex &&
-                              activeField?.fieldType === "answer" &&
-                              activeField?.index === i
-                                ? toolbarPosition
-                                : null
-                            }
-                            onFormat={handleFormat}
-                          />
+                          <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
+                            <FormatToolbar
+                              onFormat={handleFormat}
+                              isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "answer" && activeField?.index === i}
+                            />
+                          </div>
                         </div>
                         <p className="text-sm text-gray-500 mt-1 bangla-text">
                           * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})

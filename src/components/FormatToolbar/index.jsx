@@ -1,20 +1,15 @@
 import React from 'react';
 import { FaBold, FaItalic, FaUnderline, FaPlus } from 'react-icons/fa';
 
-const FormatToolbar = ({ position, onFormat }) => {
-  if (!position) return null;
-
+const FormatToolbar = ({ onFormat, isVisible }) => {
   const toolbarStyle = {
-    position: 'absolute',
-    left: position.x,
-    top: position.y - 35, // Adjust position for icon size
     backgroundColor: 'white',
     border: '1px solid #e0e0e0',
     borderRadius: '6px',
     padding: '8px',
     boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
     zIndex: 1000,
-    display: 'flex',
+    display: isVisible ? 'flex' : 'none',
     gap: '8px',
   };
 

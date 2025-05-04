@@ -12,9 +12,12 @@ import { marked } from "marked";
 import DOMPurify from "dompurify";
 
 // Dynamically import MathJax to avoid SSR issues
-const MathJax = dynamic(() => import("better-react-mathjax").then((mod) => mod.MathJax), {
-  ssr: false,
-});
+const MathJax = dynamic(
+  () => import("better-react-mathjax").then((mod) => mod.MathJax),
+  {
+    ssr: false,
+  }
+);
 
 // Normalize text to Unicode NFC and remove problematic characters
 const normalizeText = (text) => {
@@ -67,12 +70,18 @@ const processTextForLatex = (text) => {
     // Convert fractions (e.g., 1/2 -> \frac{1}{2})
     text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
       if (denom === "0") return match;
-      const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
+      const { numerator, denominator } = simplifyFraction(
+        parseInt(num),
+        parseInt(denom)
+      );
       return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
     });
     text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
       if (denom === "0") return match;
-      const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
+      const { numerator, denominator } = simplifyFraction(
+        parseInt(num),
+        parseInt(denom)
+      );
       return `\\frac{${numerator}}{${denominator}}`;
     });
 
@@ -129,8 +138,12 @@ const renderLines = (text) => {
       const sanitizedHtml = DOMPurify.sanitize(html);
 
       // Check for LaTeX
-      const hasLatex = processedLine.match(/[\\{}^_]|\\frac|\\sqrt|\\geq|\\leq|\\neq/);
-      const content = <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
+      const hasLatex = processedLine.match(
+        /[\\{}^_]|\\frac|\\sqrt|\\geq|\\leq|\\neq/
+      );
+      const content = (
+        <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
+      );
 
       return (
         <div key={index} className="bangla-text">
@@ -159,7 +172,14 @@ export default function CreateSQAdmin() {
   const [chapters, setChapters] = useState([]);
   const [selectedChapterNumber, setSelectedChapterNumber] = useState("");
   const [selectedChapterName, setSelectedChapterName] = useState("");
-  const contentTypes = ["Examples", "Model Tests", "Admission Questions", "Practice Problems", "Theory", "Others"];
+  const contentTypes = [
+    "Examples",
+    "Model Tests",
+    "Admission Questions",
+    "Practice Problems",
+    "Theory",
+    "Others",
+  ];
   const [selectedContentType, setSelectedContentType] = useState("");
   const [subChapters, setSubChapters] = useState([]);
   const [selectedSubChapter, setSelectedSubChapter] = useState("");
@@ -210,12 +230,16 @@ export default function CreateSQAdmin() {
       }
 
       try {
-        const res = await fetch(`/api/sq?classNumber=${selectedClass}`, { cache: "no-store" });
+        const res = await fetch(`/api/sq?classNumber=${selectedClass}`, {
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
         if (data.length > 0) {
           const subjects = [...new Set(data.map((item) => item.subject))];
-          const subjectPapers = [...new Set(data.map((item) => item.subjectPart).filter(Boolean))];
+          const subjectPapers = [
+            ...new Set(data.map((item) => item.subjectPart).filter(Boolean)),
+          ];
           const chapters = [
             ...new Set(
               data.map((item) => ({
@@ -245,7 +269,9 @@ export default function CreateSQAdmin() {
 
   useEffect(() => {
     if (selectedChapterNumber) {
-      const selected = chapters.find((chap) => chap.chapterNumber === parseInt(selectedChapterNumber));
+      const selected = chapters.find(
+        (chap) => chap.chapterNumber === parseInt(selectedChapterNumber)
+      );
       if (selected) {
         setSelectedChapterName(selected.chapterName || "");
         setSelectedContentType(selected.contentType || "");
@@ -306,28 +332,10 @@ export default function CreateSQAdmin() {
   };
 
   const handleSelection = (index, fieldType, e) => {
-    const textarea = textareaRefs.current[`${fieldType}-${index}`];
-    if (!textarea) return;
-
     const selection = window.getSelection();
-    if (!selection.rangeCount) {
-      setToolbarPosition(null);
-      setActiveField(null);
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-    const toolbarHeight = 40; // Approximate toolbar height
-
     if (selection.toString().length > 0) {
-      setToolbarPosition({
-        x: rect.left + window.scrollX,
-        y: rect.top + window.scrollY - toolbarHeight,
-      });
       setActiveField({ index, fieldType });
     } else {
-      setToolbarPosition(null);
       setActiveField(null);
     }
   };
@@ -342,7 +350,8 @@ export default function CreateSQAdmin() {
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const currentText = fieldType === "question" ? newSQs[index].question : newSQs[index].answer;
+    const currentText =
+      fieldType === "question" ? newSQs[index].question : newSQs[index].answer;
     const selectedText = currentText.substring(start, end);
     if (!selectedText) return;
 
@@ -367,7 +376,10 @@ export default function CreateSQAdmin() {
         break;
     }
 
-    const updatedText = currentText.substring(0, start) + formattedText + currentText.substring(end);
+    const updatedText =
+      currentText.substring(0, start) +
+      formattedText +
+      currentText.substring(end);
     if (fieldType === "question") {
       newSQs[index].question = updatedText;
     } else {
@@ -472,7 +484,11 @@ export default function CreateSQAdmin() {
           } else {
             const errorData = await response.json();
             console.error("Import error:", errorData);
-            toast.error(`❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ: ${errorData.error || "Unknown error"}`);
+            toast.error(
+              `❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ: ${
+                errorData.error || "Unknown error"
+              }`
+            );
           }
         } else {
           toast.error("❌ এক্সেল ফাইল খালি বা ভুল ফরম্যাটে আছে!");
@@ -512,7 +528,12 @@ export default function CreateSQAdmin() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!selectedClass || !selectedSubject || !selectedChapterNumber || !selectedContentType) {
+    if (
+      !selectedClass ||
+      !selectedSubject ||
+      !selectedChapterNumber ||
+      !selectedContentType
+    ) {
       toast.error("❌ অনুগ্রহ করে সকল প্রয়োজনীয় ফিল্ড পূরণ করুন!");
       return;
     }
@@ -523,7 +544,10 @@ export default function CreateSQAdmin() {
     formData.append("chapterNumber", selectedChapterNumber);
     formData.append("chapterName", selectedChapterName);
     formData.append("contentType", selectedContentType);
-    formData.append("subChapters", JSON.stringify(selectedSubChapter ? [selectedSubChapter] : []));
+    formData.append(
+      "subChapters",
+      JSON.stringify(selectedSubChapter ? [selectedSubChapter] : [])
+    );
     formData.append("teacherEmail", "admin");
     sqs.forEach((sq, index) => {
       formData.append(`sqs[${index}][type]`, sq.type);
@@ -540,7 +564,9 @@ export default function CreateSQAdmin() {
       });
       const responseData = await response.json();
       if (response.ok) {
-        toast.success(`✅ ${sqs.length}টি সংক্ষিপ্ত প্রশ্ন সফলভাবে যোগ করা হয়েছে!`);
+        toast.success(
+          `✅ ${sqs.length}টি সংক্ষিপ্ত প্রশ্ন সফলভাবে যোগ করা হয়েছে!`
+        );
         resetForm();
       } else {
         console.error("Submit error:", responseData);
@@ -559,8 +585,14 @@ export default function CreateSQAdmin() {
           http-equiv="Content-Security-Policy"
           content="script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net;"
         />
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap"
+          rel="stylesheet"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -587,7 +619,10 @@ export default function CreateSQAdmin() {
             `,
           }}
         />
-        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+        <script
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+          async
+        ></script>
       </Head>
       <style jsx global>{`
         .bangla-text {
@@ -712,7 +747,9 @@ export default function CreateSQAdmin() {
                       >
                         <option value="">বিষয় নির্বাচন করুন</option>
                         {subjects.map((subject) => (
-                          <option key={subject} value={subject}>{subject}</option>
+                          <option key={subject} value={subject}>
+                            {subject}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -730,7 +767,9 @@ export default function CreateSQAdmin() {
                     >
                       <option value="">পেপার নির্বাচন করুন (যদি থাকে)</option>
                       {subjectPapers.map((paper) => (
-                        <option key={paper} value={paper}>{paper}</option>
+                        <option key={paper} value={paper}>
+                          {paper}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -744,7 +783,10 @@ export default function CreateSQAdmin() {
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={selectedChapterNumber}
                       onChange={(e) => {
-                        const selected = chapters.find((chap) => chap.chapterNumber === parseInt(e.target.value));
+                        const selected = chapters.find(
+                          (chap) =>
+                            chap.chapterNumber === parseInt(e.target.value)
+                        );
                         setSelectedChapterNumber(e.target.value);
                         setSelectedChapterName(selected?.chapterName || "");
                         setSelectedContentType(selected?.contentType || "");
@@ -755,8 +797,12 @@ export default function CreateSQAdmin() {
                     >
                       <option value="">অধ্যায় নির্বাচন করুন</option>
                       {chapters.map((chapter) => (
-                        <option key={chapter.chapterNumber} value={chapter.chapterNumber}>
-                          অধ্যায় {chapter.chapterNumber} - {chapter.chapterName}
+                        <option
+                          key={chapter.chapterNumber}
+                          value={chapter.chapterNumber}
+                        >
+                          অধ্যায় {chapter.chapterNumber} -{" "}
+                          {chapter.chapterName}
                         </option>
                       ))}
                     </select>
@@ -804,7 +850,9 @@ export default function CreateSQAdmin() {
                     >
                       <option value="">উপ-অধ্যায় নির্বাচন করুন</option>
                       {subChapters.map((sub) => (
-                        <option key={sub} value={sub}>{sub}</option>
+                        <option key={sub} value={sub}>
+                          {sub}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -840,7 +888,9 @@ export default function CreateSQAdmin() {
                       <select
                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                         value={sq.type}
-                        onChange={(e) => handleTypeChange(index, e.target.value)}
+                        onChange={(e) =>
+                          handleTypeChange(index, e.target.value)
+                        }
                         required
                       >
                         <option value="জ্ঞানমূলক">জ্ঞানমূলক</option>
@@ -856,28 +906,38 @@ export default function CreateSQAdmin() {
                       <textarea
                         className="w-full p-4 border rounded-lg bangla-text"
                         value={sq.question}
-                        onChange={(e) => handleQuestionChange(index, e.target.value)}
+                        onChange={(e) =>
+                          handleQuestionChange(index, e.target.value)
+                        }
                         onMouseUp={(e) => handleSelection(index, "question", e)}
                         onKeyUp={(e) => handleSelection(index, "question", e)}
                         rows={4}
-                        ref={(el) => (textareaRefs.current[`question-${index}`] = el)}
+                        ref={(el) =>
+                          (textareaRefs.current[`question-${index}`] = el)
+                        }
                         required
                         aria-label={`প্রশ্ন ${index + 1}`}
                       />
-                      <FormatToolbar
-                        position={
-                          toolbarPosition &&
-                          activeField?.index === index &&
-                          activeField?.fieldType === "question"
-                            ? toolbarPosition
-                            : null
-                        }
-                        onFormat={handleFormat}
-                      />
+                      <div
+                        className="absolute bottom-full left-0"
+                        style={{ zIndex: 100 }}
+                      >
+                        {" "}
+                        {/* Adjusted positioning */}
+                        <FormatToolbar
+                          onFormat={handleFormat}
+                          isVisible={
+                            activeField?.index === index &&
+                            activeField?.fieldType === "question"
+                          }
+                        />
+                      </div>
                       <p className="text-sm text-gray-500 mt-1 bangla-text">
-                        * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                        * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}
+                        {2})
                       </p>
                     </div>
+
                     <div className="mt-4 relative">
                       <label className="block text-gray-700 font-semibold mb-1 bangla-text">
                         উত্তর লিখুন (ঐচ্ছিক)
@@ -885,25 +945,34 @@ export default function CreateSQAdmin() {
                       <textarea
                         className="w-full p-4 border rounded-lg bangla-text"
                         value={sq.answer}
-                        onChange={(e) => handleAnswerChange(index, e.target.value)}
+                        onChange={(e) =>
+                          handleAnswerChange(index, e.target.value)
+                        }
                         onMouseUp={(e) => handleSelection(index, "answer", e)}
                         onKeyUp={(e) => handleSelection(index, "answer", e)}
                         rows={4}
-                        ref={(el) => (textareaRefs.current[`answer-${index}`] = el)}
+                        ref={(el) =>
+                          (textareaRefs.current[`answer-${index}`] = el)
+                        }
                         aria-label={`উত্তর ${index + 1}`}
                       />
-                      <FormatToolbar
-                        position={
-                          toolbarPosition &&
-                          activeField?.index === index &&
-                          activeField?.fieldType === "answer"
-                            ? toolbarPosition
-                            : null
-                        }
-                        onFormat={handleFormat}
-                      />
+                      <div
+                        className="absolute bottom-full left-0"
+                        style={{ zIndex: 100 }}
+                      >
+                        {" "}
+                        {/* Adjusted positioning */}
+                        <FormatToolbar
+                          onFormat={handleFormat}
+                          isVisible={
+                            activeField?.index === index &&
+                            activeField?.fieldType === "answer"
+                          }
+                        />
+                      </div>
                       <p className="text-sm text-gray-500 mt-1 bangla-text">
-                        * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                        * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}
+                        {2})
                       </p>
                     </div>
                     <div className="mt-4">
@@ -915,7 +984,9 @@ export default function CreateSQAdmin() {
                         placeholder="https://drive.google.com/file/d/..."
                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                         value={sq.videoLink}
-                        onChange={(e) => handleVideoLinkChange(index, e.target.value)}
+                        onChange={(e) =>
+                          handleVideoLinkChange(index, e.target.value)
+                        }
                       />
                     </div>
                     <div className="mt-4">
@@ -930,7 +1001,9 @@ export default function CreateSQAdmin() {
                           className="absolute inset-0 opacity-0 cursor-pointer"
                         />
                         <p className="text-center text-gray-500 bangla-text">
-                          {sq.image ? sq.image.name : "ছবি টেনে আনুন বা ক্লিক করুন"}
+                          {sq.image
+                            ? sq.image.name
+                            : "ছবি টেনে আনুন বা ক্লিক করুন"}
                         </p>
                       </div>
                     </div>
@@ -941,7 +1014,9 @@ export default function CreateSQAdmin() {
                         </label>
                         <select
                           value={sq.imageAlignment}
-                          onChange={(e) => handleImageAlignmentChange(index, e.target.value)}
+                          onChange={(e) =>
+                            handleImageAlignmentChange(index, e.target.value)
+                          }
                           className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                         >
                           <option value="left">বামে</option>
@@ -980,7 +1055,9 @@ export default function CreateSQAdmin() {
             transition={{ duration: 0.5 }}
             className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
           >
-            <h2 className="text-2xl font-bold text-blue-700 mb-6 bangla-text">প্রিভিউ</h2>
+            <h2 className="text-2xl font-bold text-blue-700 mb-6 bangla-text">
+              প্রিভিউ
+            </h2>
             {sqs.map((sq, index) => (
               <motion.div
                 key={index}
@@ -995,7 +1072,9 @@ export default function CreateSQAdmin() {
                 <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">
                   ধরণ: {sq.type}
                 </p>
-                <div className="text-gray-700 mb-4 bangla-text">{renderLines(sq.question)}</div>
+                <div className="text-gray-700 mb-4 bangla-text">
+                  {renderLines(sq.question)}
+                </div>
                 {sq.videoLink && (
                   <div className="mb-4">
                     <a
@@ -1010,7 +1089,13 @@ export default function CreateSQAdmin() {
                 )}
                 {sq.image && (
                   <div
-                    className={`mb-4 ${sq.imageAlignment === "left" ? "text-left" : sq.imageAlignment === "right" ? "text-right" : "text-center"}`}
+                    className={`mb-4 ${
+                      sq.imageAlignment === "left"
+                        ? "text-left"
+                        : sq.imageAlignment === "right"
+                        ? "text-right"
+                        : "text-center"
+                    }`}
                   >
                     <img
                       src={URL.createObjectURL(sq.image)}
@@ -1026,12 +1111,19 @@ export default function CreateSQAdmin() {
                   </div>
                 )}
                 <p className="text-sm text-gray-500 mt-4 bangla-text">
-                  ক্লাস: {selectedClass || "N/A"} | বিষয়: {selectedSubject || "N/A"} | পেপার: {selectedSubjectPaper || "N/A"} | অধ্যায়: {selectedChapterName || "N/A"} | কন্টেন্ট: {selectedContentType || "N/A"} | উপ-অধ্যায়: {selectedSubChapter || "N/A"}
+                  ক্লাস: {selectedClass || "N/A"} | বিষয়:{" "}
+                  {selectedSubject || "N/A"} | পেপার:{" "}
+                  {selectedSubjectPaper || "N/A"} | অধ্যায়:{" "}
+                  {selectedChapterName || "N/A"} | কন্টেন্ট:{" "}
+                  {selectedContentType || "N/A"} | উপ-অধ্যায়:{" "}
+                  {selectedSubChapter || "N/A"}
                 </p>
               </motion.div>
             ))}
             {sqs.length === 0 && (
-              <p className="text-gray-500 text-center text-lg bangla-text">প্রিভিউ দেখতে প্রশ্ন যোগ করুন</p>
+              <p className="text-gray-500 text-center text-lg bangla-text">
+                প্রিভিউ দেখতে প্রশ্ন যোগ করুন
+              </p>
             )}
           </motion.div>
         </div>
