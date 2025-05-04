@@ -178,7 +178,6 @@ export default function CreateMCQAdmin() {
       videoLink: "",
     },
   ]);
-  const [toolbarPosition, setToolbarPosition] = useState(null);
   const [activeField, setActiveField] = useState(null);
   const textareaRefs = useRef({});
 
@@ -319,27 +318,10 @@ export default function CreateMCQAdmin() {
   };
 
   const handleSelection = (qIndex, fieldType, oIndex, e) => {
-    const textarea = textareaRefs.current[`${fieldType}-${qIndex}-${oIndex ?? ''}`];
-    if (!textarea) return;
-
     const selection = window.getSelection();
-    if (!selection.rangeCount) {
-      setToolbarPosition(null);
-      setActiveField(null);
-      return;
-    }
-
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
-
     if (selection.toString().length > 0) {
-      setToolbarPosition({
-        x: rect.left + window.scrollX,
-        y: rect.top + window.scrollY - 40,
-      });
       setActiveField({ qIndex, fieldType, oIndex });
     } else {
-      setToolbarPosition(null);
       setActiveField(null);
     }
   };
@@ -369,18 +351,23 @@ export default function CreateMCQAdmin() {
     if (!selectedText) return;
 
     let formattedText = selectedText;
+    let offset = 0;
     switch (format) {
       case "bold":
         formattedText = `**${selectedText}**`;
+        offset = 2;
         break;
       case "italic":
         formattedText = `*${selectedText}*`;
+        offset = 1;
         break;
       case "underline":
         formattedText = `__${selectedText}__`;
+        offset = 2;
         break;
       case "math":
         formattedText = `$${selectedText}$`;
+        offset = 1;
         break;
     }
 
@@ -396,13 +383,12 @@ export default function CreateMCQAdmin() {
     }
 
     setQuestions(newQuestions);
-    setToolbarPosition(null);
     setActiveField(null);
 
     setTimeout(() => {
       textarea.focus();
-      const newCursorPos = start + formattedText.length;
-      textarea.setSelectionRange(newCursorPos, newCursorPos);
+      textarea.selectionStart = start + offset;
+      textarea.selectionEnd = start + formattedText.length - offset;
     }, 0);
   };
 
@@ -574,6 +560,7 @@ export default function CreateMCQAdmin() {
         videoLink: "",
       },
     ]);
+    setActiveField(null);
   };
 
   const handleSubmit = async (e) => {
@@ -775,7 +762,7 @@ export default function CreateMCQAdmin() {
                       ক্লাস <span className="text-red-500">*</span>
                     </label>
                     <select
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg                bg-white shadow-sm text-lg bangla-text"
                       value={selectedClass}
                       onChange={(e) => setSelectedClass(Number(e.target.value))}
                       required
@@ -945,14 +932,12 @@ export default function CreateMCQAdmin() {
                       ref={(el) => (textareaRefs.current[`question-${qIndex}-`] = el)}
                       required
                     />
-                    <FormatToolbar
-                      position={
-                        toolbarPosition && activeField?.qIndex === qIndex && activeField?.fieldType === "question"
-                          ? toolbarPosition
-                          : null
-                      }
-                      onFormat={handleFormat}
-                    />
+                    <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
+                      <FormatToolbar
+                        onFormat={handleFormat}
+                        isVisible={activeField?.qIndex === qIndex && activeField?.fieldType === "question"}
+                      />
+                    </div>
                     <p className="text-sm text-gray-500 mt-1 bangla-text">
                       * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
                     </p>
@@ -1021,17 +1006,12 @@ export default function CreateMCQAdmin() {
                               ref={(el) => (textareaRefs.current[`option-${qIndex}-${i}`] = el)}
                               required
                             />
-                            <FormatToolbar
-                              position={
-                                toolbarPosition &&
-                                activeField?.qIndex === qIndex &&
-                                activeField?.fieldType === "option" &&
-                                activeField?.oIndex === i
-                                  ? toolbarPosition
-                                  : null
-                              }
-                              onFormat={handleFormat}
-                            />
+                            <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
+                              <FormatToolbar
+                                onFormat={handleFormat}
+                                isVisible={activeField?.qIndex === qIndex && activeField?.fieldType === "option" && activeField?.oIndex === i}
+                              />
+                            </div>
                           </div>
                           <input
                             type="radio"
@@ -1064,17 +1044,12 @@ export default function CreateMCQAdmin() {
                             ref={(el) => (textareaRefs.current[`option-${qIndex}-${i}`] = el)}
                             required
                           />
-                          <FormatToolbar
-                            position={
-                              toolbarPosition &&
-                              activeField?.qIndex === qIndex &&
-                              activeField?.fieldType === "option" &&
-                              activeField?.oIndex === i
-                                ? toolbarPosition
-                                : null
-                            }
-                            onFormat={handleFormat}
-                          />
+                          <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
+                            <FormatToolbar
+                              onFormat={handleFormat}
+                              isVisible={activeField?.qIndex === qIndex && activeField?.fieldType === "option" && activeField?.oIndex === i}
+                            />
+                          </div>
                         </div>
                       ))}
                       <h3 className="mt-4 mb-3 text-lg font-semibold text-gray-700 bangla-text">
@@ -1094,17 +1069,12 @@ export default function CreateMCQAdmin() {
                               ref={(el) => (textareaRefs.current[`option-${qIndex}-${i + 3}`] = el)}
                               required
                             />
-                            <FormatToolbar
-                              position={
-                                toolbarPosition &&
-                                activeField?.qIndex === qIndex &&
-                                activeField?.fieldType === "option" &&
-                                activeField?.oIndex === i + 3
-                                  ? toolbarPosition
-                                  : null
-                              }
-                              onFormat={handleFormat}
-                            />
+                            <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
+                              <FormatToolbar
+                                onFormat={handleFormat}
+                                isVisible={activeField?.qIndex === qIndex && activeField?.fieldType === "option" && activeField?.oIndex === i + 3}
+                              />
+                            </div>
                           </div>
                           <input
                             type="radio"
