@@ -315,7 +315,7 @@ export default function CreateSQAdmin() {
 
   const handleImageChange = (index, e) => {
     const newSQs = [...sqs];
-    newSQs[index].image = e.target.files[0];
+    newSQs[index].image = e.target.files[0] || null;
     setSQs(newSQs);
   };
 
@@ -629,6 +629,9 @@ export default function CreateSQAdmin() {
           font-family: "Kalpurush", "Noto Sans Bengali", sans-serif !important;
           direction: ltr;
           unicode-bidi: embed;
+          white-space: pre-wrap;
+          overflow-wrap: anywhere;
+          word-break: break-all;
         }
         textarea.bangla-text {
           min-height: 80px !important;
@@ -636,7 +639,8 @@ export default function CreateSQAdmin() {
           overflow-y: auto !important;
           max-height: 250px !important;
           white-space: pre-wrap !important;
-          word-wrap: break-word !important;
+          overflow-wrap: anywhere !important;
+          word-break: break-all !important;
           padding: 12px !important;
           box-sizing: border-box !important;
           font-size: 16px !important;
@@ -652,6 +656,8 @@ export default function CreateSQAdmin() {
         .MathJax .mtext {
           font-family: "Kalpurush", "Noto Sans Bengali", sans-serif !important;
           white-space: pre-wrap !important;
+          overflow-wrap: anywhere !important;
+          word-break: break-all !important;
           margin-right: 0.25em !important;
           margin-left: 0.25em !important;
         }
@@ -669,6 +675,51 @@ export default function CreateSQAdmin() {
           border-color: #3b82f6 !important;
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
         }
+        .sq-container {
+          display: flex;
+          flex-direction: row;
+          gap: 1.5rem;
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+        .sq-input {
+          flex: 1;
+          min-width: 300px;
+        }
+        .sq-preview {
+          flex: 1;
+          min-width: 300px;
+          max-width: 100%;
+          background: #f9fafb;
+          padding: 1.5rem;
+          border-radius: 0.5rem;
+          border: 1px solid #e5e7eb;
+          overflow-x: hidden;
+          overflow-y: auto;
+          max-height: 500px;
+          overflow-wrap: anywhere;
+          word-break: break-all;
+        }
+        .sq-preview::-webkit-scrollbar {
+          width: 8px;
+        }
+        .sq-preview::-webkit-scrollbar-thumb {
+          background: #cbd5e0;
+          border-radius: 4px;
+        }
+        .sq-preview::-webkit-scrollbar-track {
+          background: #f7fafc;
+        }
+        @media (max-width: 768px) {
+          .sq-container {
+            flex-direction: column;
+          }
+          .sq-input,
+          .sq-preview {
+            width: 100%;
+            max-width: 100%;
+          }
+        }
       `}</style>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-100 p-6">
         <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
@@ -680,7 +731,7 @@ export default function CreateSQAdmin() {
         >
           📝 সংক্ষিপ্ত প্রশ্ন তৈরি
         </motion.h1>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -877,154 +928,225 @@ export default function CreateSQAdmin() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
                     className="mt-6 p-5 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
+                    id={`sq-${index}`}
                   >
                     <h3 className="text-lg font-semibold text-gray-800 mb-3 bangla-text">
                       সংক্ষিপ্ত প্রশ্ন {index + 1}
                     </h3>
-                    <div>
-                      <label className="block text-gray-700 font-semibold mb-1 bangla-text">
-                        প্রশ্নের ধরণ <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                        value={sq.type}
-                        onChange={(e) =>
-                          handleTypeChange(index, e.target.value)
-                        }
-                        required
-                      >
-                        <option value="জ্ঞানমূলক">জ্ঞানমূলক</option>
-                        <option value="অনুধাবনমূলক">অনুধাবনমূলক</option>
-                        <option value="প্রয়োগমূলক">প্রয়োগমূলক</option>
-                        <option value="উচ্চতর দক্ষতা">উচ্চতর দক্ষতা</option>
-                      </select>
-                    </div>
-                    <div className="mt-4 relative">
-                      <label className="block text-gray-700 font-semibold mb-1 bangla-text">
-                        প্রশ্ন লিখুন <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        className="w-full p-4 border rounded-lg bangla-text"
-                        value={sq.question}
-                        onChange={(e) =>
-                          handleQuestionChange(index, e.target.value)
-                        }
-                        onMouseUp={(e) => handleSelection(index, "question", e)}
-                        onKeyUp={(e) => handleSelection(index, "question", e)}
-                        rows={4}
-                        ref={(el) =>
-                          (textareaRefs.current[`question-${index}`] = el)
-                        }
-                        required
-                        aria-label={`প্রশ্ন ${index + 1}`}
-                      />
-                      <div
-                        className="absolute bottom-full left-0"
-                        style={{ zIndex: 100 }}
-                      >
-                        {" "}
-                        {/* Adjusted positioning */}
-                        <FormatToolbar
-                          onFormat={handleFormat}
-                          isVisible={
-                            activeField?.index === index &&
-                            activeField?.fieldType === "question"
-                          }
-                        />
+                    <div className="sq-container">
+                      <div className="sq-input">
+                        <div>
+                          <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                            প্রশ্নের ধরণ <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                            value={sq.type}
+                            onChange={(e) =>
+                              handleTypeChange(index, e.target.value)
+                            }
+                            required
+                          >
+                            <option value="জ্ঞানমূলক">জ্ঞানমূলক</option>
+                            <option value="অনুধাবনমূলক">অনুধাবনমূলক</option>
+                            <option value="প্রয়োগমূলক">প্রয়োগমূলক</option>
+                            <option value="উচ্চতর দক্ষতা">
+                              উচ্চতর দক্ষতা
+                            </option>
+                          </select>
+                        </div>
+                        <div className="mt-4 relative">
+                          <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                            প্রশ্ন লিখুন <span className="text-red-500">*</span>
+                          </label>
+                          <textarea
+                            className="w-full p-4 border rounded-lg bangla-text"
+                            value={sq.question}
+                            onChange={(e) =>
+                              handleQuestionChange(index, e.target.value)
+                            }
+                            onMouseUp={(e) =>
+                              handleSelection(index, "question", e)
+                            }
+                            onKeyUp={(e) =>
+                              handleSelection(index, "question", e)
+                            }
+                            rows={4}
+                            ref={(el) =>
+                              (textareaRefs.current[`question-${index}`] = el)
+                            }
+                            required
+                            aria-label={`প্রশ্ন ${index + 1}`}
+                          />
+                          <div
+                            className="absolute bottom-full left-0"
+                            style={{ zIndex: 100 }}
+                          >
+                            <FormatToolbar
+                              onFormat={handleFormat}
+                              isVisible={
+                                activeField?.index === index &&
+                                activeField?.fieldType === "question"
+                              }
+                            />
+                          </div>
+                          <p className="text-sm text-gray-500 mt-1 bangla-text">
+                            * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                          </p>
+                        </div>
+                        <div className="mt-4 relative">
+                          <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                            উত্তর লিখুন (ঐচ্ছিক)
+                          </label>
+                          <textarea
+                            className="w-full p-4 border rounded-lg bangla-text"
+                            value={sq.answer}
+                            onChange={(e) =>
+                              handleAnswerChange(index, e.target.value)
+                            }
+                            onMouseUp={(e) =>
+                              handleSelection(index, "answer", e)
+                            }
+                            onKeyUp={(e) =>
+                              handleSelection(index, "answer", e)
+                            }
+                            rows={4}
+                            ref={(el) =>
+                              (textareaRefs.current[`answer-${index}`] = el)
+                            }
+                            aria-label={`উত্তর ${index + 1}`}
+                          />
+                          <div
+                            className="absolute bottom-full left-0"
+                            style={{ zIndex: 100 }}
+                          >
+                            <FormatToolbar
+                              onFormat={handleFormat}
+                              isVisible={
+                                activeField?.index === index &&
+                                activeField?.fieldType === "answer"
+                              }
+                            />
+                          </div>
+                          <p className="text-sm text-gray-500 mt-1 bangla-text">
+                            * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                          </p>
+                        </div>
+                        <div className="mt-4">
+                          <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+                            ভিডিও লিঙ্ক (ঐচ্ছিক)
+                          </label>
+                          <input
+                            type="url"
+                            placeholder="https://drive.google.com/file/d/..."
+                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                            value={sq.videoLink}
+                            onChange={(e) =>
+                              handleVideoLinkChange(index, e.target.value)
+                            }
+                          />
+                        </div>
+                        <div className="mt-4">
+                          <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+                            ছবি যুক্ত করুন (ঐচ্ছিক)
+                          </label>
+                          <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleImageChange(index, e)}
+                              className="absolute inset-0 opacity-0 cursor-pointer"
+                            />
+                            <p className="text-center text-gray-500 bangla-text">
+                              {sq.image
+                                ? sq.image.name
+                                : "ছবি টেনে আনুন বা ক্লিক করুন"}
+                            </p>
+                          </div>
+                        </div>
+                        {sq.image && (
+                          <div className="mt-4">
+                            <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+                              ছবির অ্যালাইনমেন্ট
+                            </label>
+                            <select
+                              value={sq.imageAlignment}
+                              onChange={(e) =>
+                                handleImageAlignmentChange(index, e.target.value)
+                              }
+                              className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                            >
+                              <option value="left">বামে</option>
+                              <option value="center">মাঝে</option>
+                              <option value="right">ডানে</option>
+                            </select>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-sm text-gray-500 mt-1 bangla-text">
-                        * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}
-                        {2})
-                      </p>
-                    </div>
-
-                    <div className="mt-4 relative">
-                      <label className="block text-gray-700 font-semibold mb-1 bangla-text">
-                        উত্তর লিখুন (ঐচ্ছিক)
-                      </label>
-                      <textarea
-                        className="w-full p-4 border rounded-lg bangla-text"
-                        value={sq.answer}
-                        onChange={(e) =>
-                          handleAnswerChange(index, e.target.value)
-                        }
-                        onMouseUp={(e) => handleSelection(index, "answer", e)}
-                        onKeyUp={(e) => handleSelection(index, "answer", e)}
-                        rows={4}
-                        ref={(el) =>
-                          (textareaRefs.current[`answer-${index}`] = el)
-                        }
-                        aria-label={`উত্তর ${index + 1}`}
-                      />
-                      <div
-                        className="absolute bottom-full left-0"
-                        style={{ zIndex: 100 }}
-                      >
-                        {" "}
-                        {/* Adjusted positioning */}
-                        <FormatToolbar
-                          onFormat={handleFormat}
-                          isVisible={
-                            activeField?.index === index &&
-                            activeField?.fieldType === "answer"
-                          }
-                        />
-                      </div>
-                      <p className="text-sm text-gray-500 mt-1 bangla-text">
-                        * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}
-                        {2})
-                      </p>
-                    </div>
-                    <div className="mt-4">
-                      <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                        ভিডিও লিঙ্ক (ঐচ্ছিক)
-                      </label>
-                      <input
-                        type="url"
-                        placeholder="https://drive.google.com/file/d/..."
-                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                        value={sq.videoLink}
-                        onChange={(e) =>
-                          handleVideoLinkChange(index, e.target.value)
-                        }
-                      />
-                    </div>
-                    <div className="mt-4">
-                      <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                        ছবি যুক্ত করুন (ঐচ্ছিক)
-                      </label>
-                      <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={(e) => handleImageChange(index, e)}
-                          className="absolute inset-0 opacity-0 cursor-pointer"
-                        />
-                        <p className="text-center text-gray-500 bangla-text">
-                          {sq.image
-                            ? sq.image.name
-                            : "ছবি টেনে আনুন বা ক্লিক করুন"}
-                        </p>
+                      <div className="sq-preview">
+                        <h4 className="text-lg font-bold text-blue-700 mb-4 bangla-text">
+                          প্রিভিউ
+                        </h4>
+                        <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+                          <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-3 bangla-text">
+                            প্রশ্ন {index + 1}
+                          </p>
+                          <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">
+                            ধরণ: {sq.type}
+                          </p>
+                          <div className="text-gray-700 mb-4 bangla-text">
+                            {renderLines(sq.question)}
+                          </div>
+                          {sq.videoLink && (
+                            <div className="mb-4">
+                              <a
+                                href={sq.videoLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 underline hover:text-blue-800 bangla-text"
+                              >
+                                📹 ভিডিও দেখুন
+                              </a>
+                            </div>
+                          )}
+                          {sq.image && (
+                            <div
+                              className={`mb-4 ${
+                                sq.imageAlignment === "left"
+                                  ? "text-left"
+                                  : sq.imageAlignment === "right"
+                                  ? "text-right"
+                                  : "text-center"
+                              }`}
+                            >
+                              <img
+                                src={URL.createObjectURL(sq.image)}
+                                alt={`SQ preview ${index + 1}`}
+                                className="rounded-lg shadow-md max-h-64 inline-block max-w-full"
+                              />
+                            </div>
+                          )}
+                          {sq.answer && (
+                            <div className="text-gray-700 mb-4">
+                              <p className="font-semibold bangla-text">
+                                উত্তর:
+                              </p>
+                              <div className="bangla-text">
+                                {renderLines(sq.answer)}
+                              </div>
+                            </div>
+                          )}
+                          <p className="text-sm text-gray-500 mt-4 bangla-text">
+                            ক্লাস: {selectedClass || "N/A"} | বিষয়:{" "}
+                            {selectedSubject || "N/A"} | পেপার:{" "}
+                            {selectedSubjectPaper || "N/A"} | অধ্যায়:{" "}
+                            {selectedChapterName || "N/A"} | কন্টেন্ট:{" "}
+                            {selectedContentType || "N/A"} | উপ-অধ্যায়:{" "}
+                            {selectedSubChapter || "N/A"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    {sq.image && (
-                      <div className="mt-4">
-                        <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                          ছবির অ্যালাইনমেন্ট
-                        </label>
-                        <select
-                          value={sq.imageAlignment}
-                          onChange={(e) =>
-                            handleImageAlignmentChange(index, e.target.value)
-                          }
-                          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                        >
-                          <option value="left">বামে</option>
-                          <option value="center">মাঝে</option>
-                          <option value="right">ডানে</option>
-                        </select>
-                      </div>
-                    )}
                   </motion.div>
                 ))}
                 {isMultipleSQs && (
@@ -1048,83 +1170,6 @@ export default function CreateSQAdmin() {
                 ✅ সাবমিট করুন
               </motion.button>
             </form>
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
-          >
-            <h2 className="text-2xl font-bold text-blue-700 mb-6 bangla-text">
-              প্রিভিউ
-            </h2>
-            {sqs.map((sq, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mb-6 p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-100"
-              >
-                <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-3 bangla-text">
-                  প্রশ্ন {index + 1}
-                </p>
-                <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">
-                  ধরণ: {sq.type}
-                </p>
-                <div className="text-gray-700 mb-4 bangla-text">
-                  {renderLines(sq.question)}
-                </div>
-                {sq.videoLink && (
-                  <div className="mb-4">
-                    <a
-                      href={sq.videoLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 underline hover:text-blue-800 bangla-text"
-                    >
-                      📹 ভিডিও দেখুন
-                    </a>
-                  </div>
-                )}
-                {sq.image && (
-                  <div
-                    className={`mb-4 ${
-                      sq.imageAlignment === "left"
-                        ? "text-left"
-                        : sq.imageAlignment === "right"
-                        ? "text-right"
-                        : "text-center"
-                    }`}
-                  >
-                    <img
-                      src={URL.createObjectURL(sq.image)}
-                      alt={`SQ preview ${index + 1}`}
-                      className="rounded-lg shadow-md max-h-64 inline-block"
-                    />
-                  </div>
-                )}
-                {sq.answer && (
-                  <div className="text-gray-700 mb-4">
-                    <p className="font-semibold bangla-text">উত্তর:</p>
-                    <div className="bangla-text">{renderLines(sq.answer)}</div>
-                  </div>
-                )}
-                <p className="text-sm text-gray-500 mt-4 bangla-text">
-                  ক্লাস: {selectedClass || "N/A"} | বিষয়:{" "}
-                  {selectedSubject || "N/A"} | পেপার:{" "}
-                  {selectedSubjectPaper || "N/A"} | অধ্যায়:{" "}
-                  {selectedChapterName || "N/A"} | কন্টেন্ট:{" "}
-                  {selectedContentType || "N/A"} | উপ-অধ্যায়:{" "}
-                  {selectedSubChapter || "N/A"}
-                </p>
-              </motion.div>
-            ))}
-            {sqs.length === 0 && (
-              <p className="text-gray-500 text-center text-lg bangla-text">
-                প্রিভিউ দেখতে প্রশ্ন যোগ করুন
-              </p>
-            )}
           </motion.div>
         </div>
       </div>

@@ -119,7 +119,7 @@ const processTextForLatex = (text) => {
 // Render markdown and LaTeX in preview
 const renderLines = (text) => {
   if (!text || typeof text !== "string") {
-    return <div className="bangla-text">টেক্সট লিখুন</div>;
+    return <div className="bangla-text">প্রশ্ন বা উত্তর লিখুন...</div>;
   }
 
   try {
@@ -673,25 +673,9 @@ export default function CreateCQAdmin() {
           font-family: "Kalpurush", "Noto Sans Bengali", sans-serif !important;
           direction: ltr;
           unicode-bidi: embed;
-        }
-        .video-link {
-          color: #1a73e8;
-          text-decoration: underline;
-          cursor: pointer;
-          display: inline-flex;
-          align-items: center;
-          gap: 0.5rem;
-          padding: 0.5rem;
-          border-radius: 0.375rem;
-          transition: background-color 0.2s;
-        }
-        .video-link:hover {
-          background-color: #e8f0fe;
-        }
-        .form-section {
-          border-left: 4px solid #3b82f6;
-          padding-left: 1rem;
-          margin-bottom: 2rem;
+          white-space: pre-wrap;
+          overflow-wrap: anywhere;
+          word-break: break-all;
         }
         textarea.bangla-text {
           min-height: 80px !important;
@@ -699,7 +683,8 @@ export default function CreateCQAdmin() {
           overflow-y: auto !important;
           max-height: 250px !important;
           white-space: pre-wrap !important;
-          word-wrap: break-word !important;
+          overflow-wrap: anywhere !important;
+          word-break: break-all !important;
           padding: 12px !important;
           box-sizing: border-box !important;
           font-size: 16px !important;
@@ -712,52 +697,95 @@ export default function CreateCQAdmin() {
           border-color: #3b82f6 !important;
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
         }
-        select, input[type="file"] {
-          transition: border-color 0.2s, box-shadow 0.2s;
-        }
-        select:focus, input[type="file"]:focus {
-          border-color: #3b82f6 !important;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
-        }
         .MathJax .mtext {
           font-family: "Kalpurush", "Noto Sans Bengali", sans-serif !important;
           white-space: pre-wrap !important;
+          overflow-wrap: anywhere !important;
+          word-break: break-all !important;
           margin-right: 0.25em !important;
           margin-left: 0.25em !important;
         }
+        .form-section {
+          border-left: 4px solid #3b82f6;
+          padding-left: 1rem;
+          margin-bottom: 2rem;
+        }
+        select,
+        input[type="file"] {
+          transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        select:focus,
+        input[type="file"]:focus {
+          border-color: #3b82f6 !important;
+          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+        }
+        .cq-container {
+          display: flex;
+          flex-direction: row;
+          gap: 1.5rem;
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+        .cq-input {
+          flex: 1;
+          min-width: 300px;
+        }
+        .cq-preview {
+          flex: 1;
+          min-width: 300px;
+          max-width: 100%;
+          background: #f9fafb;
+          padding: 1.5rem;
+          border-radius: 0.5rem;
+          border: 1px solid #e5e7eb;
+          overflow-x: hidden;
+          overflow-y: visible; /* Allow the preview to expand vertically */
+          overflow-wrap: anywhere;
+          word-break: break-all;
+        }
+        /* Remove scrollbar styles since we don't need them anymore */
+        @media (max-width: 768px) {
+          .cq-container {
+            flex-direction: column;
+          }
+          .cq-input,
+          .cq-preview {
+            width: 100%;
+            max-width: 100%;
+          }
+        }
       `}</style>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-100 p-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-100 p-6">
         <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
         <motion.h1
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="text-4xl font-extrabold text-center text-blue-700 mb-10 bangla-text"
+          className="text-4xl font-extrabold text-center text-blue-700 mb-8 bangla-text"
         >
-          📝 সৃজনশীল প্রশ্ন তৈরি করুন
+          📝 সৃজনশীল প্রশ্ন তৈরি
         </motion.h1>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 max-w-7xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-lg p-8 border border-gray-200"
+            className="bg-white rounded-xl shadow-lg p-6 border border-gray-200"
           >
             <form onSubmit={handleSubmit}>
               <div className="form-section">
                 <label className="block text-gray-700 font-semibold mb-2 bangla-text">
                   এক্সেল ফাইল থেকে আমদানি
                 </label>
-                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
+                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
                   <input
                     type="file"
                     accept=".xlsx, .xls"
                     onChange={handleFileUpload}
                     className="absolute inset-0 opacity-0 cursor-pointer"
                   />
-                  <p className="text-center text-gray-500 text-lg bangla-text">
-                    এক্সেল ফাইল টেনে আনুন বা ক্� RAI করুন
+                  <p className="text-center text-gray-500 bangla-text">
+                    এক্সেল ফাইল টেনে আনুন বা ক্লিক করুন
                   </p>
                 </div>
                 <motion.button
@@ -765,13 +793,12 @@ export default function CreateCQAdmin() {
                   onClick={downloadExcelTemplate}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="mt-4 w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition shadow-md text-lg bangla-text"
+                  className="mt-2 w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition shadow-md bangla-text"
                 >
-                  📥 এক্সেল টেমপ্লেট ডাউনলোড করুন
+                  📥 এক্সেল টেমপ্লেট ডাউনলোড
                 </motion.button>
               </div>
-              <p className="text-center text-gray-500 mb-6 text-lg bangla-text">অথবা</p>
-
+              <p className="text-center text-gray-500 mb-4 bangla-text">অথবা</p>
               <div className="form-section">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -779,7 +806,7 @@ export default function CreateCQAdmin() {
                       ক্লাস <span className="text-red-500">*</span>
                     </label>
                     <select
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={selectedClass}
                       onChange={(e) => setSelectedClass(Number(e.target.value))}
                       required
@@ -798,7 +825,7 @@ export default function CreateCQAdmin() {
                         বিষয় <span className="text-red-500">*</span>
                       </label>
                       <select
-                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                         value={selectedSubject}
                         onChange={(e) => setSelectedSubject(e.target.value)}
                         required
@@ -817,7 +844,7 @@ export default function CreateCQAdmin() {
                       বিষয়ের পেপার
                     </label>
                     <select
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={selectedSubjectPaper}
                       onChange={(e) => setSelectedSubjectPaper(e.target.value)}
                     >
@@ -834,7 +861,7 @@ export default function CreateCQAdmin() {
                       অধ্যায় <span className="text-red-500">*</span>
                     </label>
                     <select
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={selectedChapter}
                       onChange={(e) => {
                         const selected = chapters.find((chap) => chap.number === parseInt(e.target.value));
@@ -861,7 +888,7 @@ export default function CreateCQAdmin() {
                       কন্টেন্ট টাইপ <span className="text-red-500">*</span>
                     </label>
                     <select
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={selectedContentType}
                       onChange={(e) => setSelectedContentType(e.target.value)}
                       required
@@ -885,7 +912,7 @@ export default function CreateCQAdmin() {
                       উপ-অধ্যায় / অনুশীলন (ঐচ্ছিক)
                     </label>
                     <select
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                       value={selectedSubChapter}
                       onChange={(e) => setSelectedSubChapter(e.target.value)}
                     >
@@ -901,7 +928,7 @@ export default function CreateCQAdmin() {
                     প্রশ্নের ধরণ <span className="text-red-500">*</span>
                   </label>
                   <select
-                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
+                    className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                     value={cqType}
                     onChange={(e) => setCQType(e.target.value)}
                     required
@@ -916,232 +943,301 @@ export default function CreateCQAdmin() {
                     type="checkbox"
                     checked={isMultipleCQs}
                     onChange={(e) => setIsMultipleCQs(e.target.checked)}
-                    className="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <label className="ml-3 text-gray-700 font-semibold text-lg bangla-text">
+                  <label className="ml-2 text-gray-700 font-medium bangla-text">
                     একাধিক সৃজনশীল প্রশ্ন যোগ করুন
                   </label>
                 </div>
               </div>
-
               {cqs.map((cq, cqIndex) => (
                 <motion.div
                   key={cqIndex}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="mt-6 p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
+                  className="mt-6 p-5 bg-gray-50 rounded-lg shadow-sm border border-gray-200"
+                  id={`cq-${cqIndex}`}
                 >
-                  <h3 className="text-xl font-semibold text-gray-800 mb-4 bangla-text">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3 bangla-text">
                     সৃজনশীল প্রশ্ন {cqIndex + 1}
                   </h3>
-                  <div className="mb-4 relative">
-                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                      উদ্দীপক <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      className="w-full p-4 border rounded-lg bangla-text"
-                      value={cq.passage}
-                      onChange={(e) => handlePassageChange(cqIndex, e.target.value)}
-                      onMouseUp={(e) => handleSelection(cqIndex, "passage", null, e)}
-                      onKeyUp={(e) => handleSelection(cqIndex, "passage", null, e)}
-                      rows={4}
-                      placeholder="🔹 উদ্দীপক লিখুন"
-                      ref={(el) => (textareaRefs.current[`passage-${cqIndex}-`] = el)}
-                      required
-                    />
-                    <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
-                      <FormatToolbar
-                        onFormat={handleFormat}
-                        isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "passage"}
-                      />
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1 bangla-text">
-                      * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                    </p>
-                  </div>
-
-                  <div className="mb-6">
-                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                      ভিডিও লিঙ্ক যুক্ত করুন (ঐচ্ছিক)
-                    </label>
-                    <input
-                      type="url"
-                      placeholder="উদাহরণ: https://drive.google.com/file/d/..."
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
-                      value={cq.videoLink}
-                      onChange={(e) => handleVideoLinkChange(cqIndex, e.target.value)}
-                    />
-                  </div>
-
-                  <div className="mb-6">
-                    <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                      ছবি যুক্ত করুন (ঐচ্ছিক)
-                    </label>
-                    <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-blue-400 transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(e) => handleImageChange(cqIndex, e)}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      <p className="text-center text-gray-500 text-lg bangla-text">
-                        {cq.image ? cq.image.name : "ছবি টেনে আনুন বা ক্লিক করুন"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {cq.image && (
-                    <div className="mb-6">
-                      <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                        ছবির অ্যালাইনমেন্ট
-                      </label>
-                      <select
-                        value={cq.imageAlignment}
-                        onChange={(e) => handleImageAlignmentChange(cqIndex, e.target.value)}
-                        className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
-                      >
-                        <option value="left">বামে</option>
-                        <option value="center">মাঝে</option>
-                        <option value="right">ডানে</option>
-                      </select>
-                    </div>
-                  )}
-
-                  {cqType === "generalCQ" &&
-                    cq.questions.map((question, i) => (
-                      <div key={i} className="mb-4">
-                        <div className="relative">
-                          <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                            {i === 0 ? "জ্ঞানমূলক প্রশ্ন" : i === 1 ? "অনুধাবনমূলক প্রশ্ন" : i === 2 ? "প্রয়োগ প্রশ্ন" : "উচ্চতর দক্ষতা"}
-                          </label>
-                          <textarea
-                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                            value={question}
-                            onChange={(e) => handleQuestionChange(cqIndex, i, e.target.value)}
-                            onMouseUp={(e) => handleSelection(cqIndex, "question", i, e)}
-                            onKeyUp={(e) => handleSelection(cqIndex, "question", i, e)}
-                            rows={2}
-                            placeholder={
-                              i === 0 ? "জ্ঞানমূলক প্রশ্ন লিখুন" : i === 1 ? "অনুধাবনমূলক প্রশ্ন লিখুন" : i === 2 ? "প্রয়োগ প্রশ্ন লিখুন" : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
-                            }
-                            ref={(el) => (textareaRefs.current[`question-${cqIndex}-${i}`] = el)}
+                  <div className="cq-container">
+                    <div className="cq-input">
+                      <div className="relative">
+                        <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                          উদ্দীপক <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          className="w-full p-4 border rounded-lg bangla-text"
+                          value={cq.passage}
+                          onChange={(e) => handlePassageChange(cqIndex, e.target.value)}
+                          onMouseUp={(e) => handleSelection(cqIndex, "passage", null, e)}
+                          onKeyUp={(e) => handleSelection(cqIndex, "passage", null, e)}
+                          rows={4}
+                          ref={(el) => (textareaRefs.current[`passage-${cqIndex}-`] = el)}
+                          required
+                          aria-label={`উদ্দীপক ${cqIndex + 1}`}
+                        />
+                        <div
+                          className="absolute bottom-full left-0"
+                          style={{ zIndex: 100 }}
+                        >
+                          <FormatToolbar
+                            onFormat={handleFormat}
+                            isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "passage"}
                           />
-                          <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
-                            <FormatToolbar
-                              onFormat={handleFormat}
-                              isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "question" && activeField?.index === i}
-                            />
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1 bangla-text">
-                          * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
-                        </p>
-                        <div className="relative mt-3">
-                          <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                            উত্তর (ঐচ্ছিক)
-                          </label>
-                          <textarea
-                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                            value={cq.answers[i]}
-                            onChange={(e) => handleAnswerChange(cqIndex, i, e.target.value)}
-                            onMouseUp={(e) => handleSelection(cqIndex, "answer", i, e)}
-                            onKeyUp={(e) => handleSelection(cqIndex, "answer", i, e)}
-                            rows={2}
-                            placeholder="উত্তর লিখুন"
-                            ref={(el) => (textareaRefs.current[`answer-${cqIndex}-${i}`] = el)}
-                          />
-                          <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
-                            <FormatToolbar
-                              onFormat={handleFormat}
-                              isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "answer" && activeField?.index === i}
-                            />
-                          </div>
                         </div>
                         <p className="text-sm text-gray-500 mt-1 bangla-text">
                           * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
                         </p>
                       </div>
-                    ))}
-
-                  {cqType === "mathCQ" &&
-                    cq.latexQuestions.map((question, i) => (
-                      <div key={i} className="mb-4">
-                        <div className="relative">
-                          <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                            {i === 0 ? "জ্ঞানমূলক প্রশ্ন" : i === 1 ? "প্রয়োগ প্রশ্ন" : "উচ্চতর দক্ষতা"}
-                          </label>
-                          <textarea
-                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                            value={question}
-                            onChange={(e) => handleQuestionChange(cqIndex, i, e.target.value, "mathCQ")}
-                            onMouseUp={(e) => handleSelection(cqIndex, "question", i, e)}
-                            onKeyUp={(e) => handleSelection(cqIndex, "question", i, e)}
-                            rows={2}
-                            placeholder={
-                              i === 0 ? "জ্ঞানমূলক প্রশ্ন লিখুন" : i === 1 ? "প্রয়োগ প্রশ্ন লিখুন" : "উচ্চতর দক্ষতা প্রশ্ন লিখুন"
-                            }
-                            ref={(el) => (textareaRefs.current[`question-${cqIndex}-${i}`] = el)}
+                      <div className="mt-4">
+                        <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+                          ভিডিও লিঙ্ক (ঐচ্ছিক)
+                        </label>
+                        <input
+                          type="url"
+                          placeholder="https://drive.google.com/file/d/..."
+                          className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                          value={cq.videoLink}
+                          onChange={(e) => handleVideoLinkChange(cqIndex, e.target.value)}
+                        />
+                      </div>
+                      <div className="mt-4">
+                        <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+                          ছবি যুক্ত করুন (ঐচ্ছিক)
+                        </label>
+                        <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageChange(cqIndex, e)}
+                            className="absolute inset-0 opacity-0 cursor-pointer"
                           />
-                          <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
-                            <FormatToolbar
-                              onFormat={handleFormat}
-                              isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "question" && activeField?.index === i}
-                            />
-                          </div>
+                          <p className="text-center text-gray-500 bangla-text">
+                            {cq.image ? cq.image.name : "ছবি টেনে আনুন বা ক্লিক করুন"}
+                          </p>
                         </div>
-                        <p className="text-sm text-gray-500 mt-1 bangla-text">
-                          * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                      </div>
+                      {cq.image && (
+                        <div className="mt-4">
+                          <label className="block text-gray-700 font-semibold mb-2 bangla-text">
+                            ছবির অ্যালাইনমেন্ট
+                          </label>
+                          <select
+                            value={cq.imageAlignment}
+                            onChange={(e) => handleImageAlignmentChange(cqIndex, e.target.value)}
+                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
+                          >
+                            <option value="left">বামে</option>
+                            <option value="center">মাঝে</option>
+                            <option value="right">ডানে</option>
+                          </select>
+                        </div>
+                      )}
+                      {cqType === "generalCQ" &&
+                        cq.questions.map((question, i) => (
+                          <div key={i} className="mt-4">
+                            <div className="relative">
+                              <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                                {i === 0 ? "জ্ঞানমূলক প্রশ্ন" : i === 1 ? "অনুধাবনমূলক প্রশ্ন" : i === 2 ? "প্রয়োগ প্রশ্ন" : "উচ্চতর দক্ষতা"}
+                              </label>
+                              <textarea
+                                className="w-full p-4 border rounded-lg bangla-text"
+                                value={question}
+                                onChange={(e) => handleQuestionChange(cqIndex, i, e.target.value)}
+                                onMouseUp={(e) => handleSelection(cqIndex, "question", i, e)}
+                                onKeyUp={(e) => handleSelection(cqIndex, "question", i, e)}
+                                rows={2}
+                                ref={(el) => (textareaRefs.current[`question-${cqIndex}-${i}`] = el)}
+                                aria-label={`প্রশ্ন ${i + 1}`}
+                              />
+                              <div
+                                className="absolute bottom-full left-0"
+                                style={{ zIndex: 100 }}
+                              >
+                                <FormatToolbar
+                                  onFormat={handleFormat}
+                                  isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "question" && activeField?.index === i}
+                                />
+                              </div>
+                              <p className="text-sm text-gray-500 mt-1 bangla-text">
+                                * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                              </p>
+                            </div>
+                            <div className="mt-4 relative">
+                              <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                                উত্তর (ঐচ্ছিক)
+                              </label>
+                              <textarea
+                                className="w-full p-4 border rounded-lg bangla-text"
+                                value={cq.answers[i]}
+                                onChange={(e) => handleAnswerChange(cqIndex, i, e.target.value)}
+                                onMouseUp={(e) => handleSelection(cqIndex, "answer", i, e)}
+                                onKeyUp={(e) => handleSelection(cqIndex, "answer", i, e)}
+                                rows={2}
+                                ref={(el) => (textareaRefs.current[`answer-${cqIndex}-${i}`] = el)}
+                                aria-label={`উত্তর ${i + 1}`}
+                              />
+                              <div
+                                className="absolute bottom-full left-0"
+                                style={{ zIndex: 100 }}
+                              >
+                                <FormatToolbar
+                                  onFormat={handleFormat}
+                                  isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "answer" && activeField?.index === i}
+                                />
+                              </div>
+                              <p className="text-sm text-gray-500 mt-1 bangla-text">
+                                * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      {cqType === "mathCQ" &&
+                        cq.latexQuestions.map((question, i) => (
+                          <div key={i} className="mt-4">
+                            <div className="relative">
+                              <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                                {i === 0 ? "জ্ঞানমূলক প্রশ্ন" : i === 1 ? "প্রয়োগ প্রশ্ন" : "উচ্চতর দক্ষতা"}
+                              </label>
+                              <textarea
+                                className="w-full p-4 border rounded-lg bangla-text"
+                                value={question}
+                                onChange={(e) => handleQuestionChange(cqIndex, i, e.target.value, "mathCQ")}
+                                onMouseUp={(e) => handleSelection(cqIndex, "question", i, e)}
+                                onKeyUp={(e) => handleSelection(cqIndex, "question", i, e)}
+                                rows={2}
+                                ref={(el) => (textareaRefs.current[`question-${cqIndex}-${i}`] = el)}
+                                aria-label={`প্রশ্ন ${i + 1}`}
+                              />
+                              <div
+                                className="absolute bottom-full left-0"
+                                style={{ zIndex: 100 }}
+                              >
+                                <FormatToolbar
+                                  onFormat={handleFormat}
+                                  isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "question" && activeField?.index === i}
+                                />
+                              </div>
+                              <p className="text-sm text-gray-500 mt-1 bangla-text">
+                                * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                              </p>
+                            </div>
+                            <div className="mt-4 relative">
+                              <label className="block text-gray-700 font-semibold mb-1 bangla-text">
+                                উত্তর (ঐচ্ছিক)
+                              </label>
+                              <textarea
+                                className="w-full p-4 border rounded-lg bangla-text"
+                                value={cq.latexAnswers[i]}
+                                onChange={(e) => handleAnswerChange(cqIndex, i, e.target.value, "mathCQ")}
+                                onMouseUp={(e) => handleSelection(cqIndex, "answer", i, e)}
+                                onKeyUp={(e) => handleSelection(cqIndex, "answer", i, e)}
+                                rows={2}
+                                ref={(el) => (textareaRefs.current[`answer-${cqIndex}-${i}`] = el)}
+                                aria-label={`উত্তর ${i + 1}`}
+                              />
+                              <div
+                                className="absolute bottom-full left-0"
+                                style={{ zIndex: 100 }}
+                              >
+                                <FormatToolbar
+                                  onFormat={handleFormat}
+                                  isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "answer" && activeField?.index === i}
+                                />
+                              </div>
+                              <p className="text-sm text-gray-500 mt-1 bangla-text">
+                                * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                    <div className="cq-preview">
+                      <h4 className="text-lg font-bold text-blue-700 mb-4 bangla-text">
+                        প্রিভিউ
+                      </h4>
+                      <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+                        <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-3 bangla-text">
+                          প্রশ্ন {cqIndex + 1}
                         </p>
-                        <div className="relative mt-3">
-                          <label className="block text-gray-700 font-semibold mb-2 bangla-text">
-                            উত্তর (ঐচ্ছিক)
-                          </label>
-                          <textarea
-                            className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
-                            value={cq.latexAnswers[i]}
-                            onChange={(e) => handleAnswerChange(cqIndex, i, e.target.value, "mathCQ")}
-                            onMouseUp={(e) => handleSelection(cqIndex, "answer", i, e)}
-                            onKeyUp={(e) => handleSelection(cqIndex, "answer", i, e)}
-                            rows={2}
-                            placeholder="উত্তর লিখুন"
-                            ref={(el) => (textareaRefs.current[`answer-${cqIndex}-${i}`] = el)}
-                          />
-                          <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
-                            <FormatToolbar
-                              onFormat={handleFormat}
-                              isVisible={activeField?.cqIndex === cqIndex && activeField?.fieldType === "answer" && activeField?.index === i}
+                        <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">
+                          উদ্দীপক:
+                        </p>
+                        <div className="text-gray-700 mb-4 bangla-text">
+                          {renderLines(cq.passage)}
+                        </div>
+                        {cq.videoLink && (
+                          <div className="mb-4">
+                            <a
+                              href={cq.videoLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-600 underline hover:text-blue-800 bangla-text"
+                            >
+                              📹 ভিডিও দেখুন
+                            </a>
+                          </div>
+                        )}
+                        {cq.image && (
+                          <div
+                            className={`mb-4 ${
+                              cq.imageAlignment === "left"
+                                ? "text-left"
+                                : cq.imageAlignment === "right"
+                                ? "text-right"
+                                : "text-center"
+                            }`}
+                          >
+                            <img
+                              src={URL.createObjectURL(cq.image)}
+                              alt={`CQ preview ${cqIndex + 1}`}
+                              className="rounded-lg shadow-md max-h-64 inline-block max-w-full"
                             />
                           </div>
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1 bangla-text">
-                          * LaTeX ফরম্যাটে লিখুন (যেমন: \frac{1}{2})
+                        )}
+                        {(cqType === "generalCQ" ? cq.questions : cq.latexQuestions).map((ques, i) => (
+                          <div key={i} className="mb-3">
+                            <p className="bangla-text">
+                              {String.fromCharCode(2453 + i)}) {renderLines(ques || "প্রশ্ন লিখুন")} {cqType === "generalCQ" ? `(${[1, 2, 3, 4][i]} নম্বর)` : `(${[3, 3, 4][i]} নম্বর)`}
+                            </p>
+                            {(cqType === "generalCQ" ? cq.answers[i] : cq.latexAnswers[i]) && (
+                              <div className="text-gray-700 ml-6">
+                                <p className="font-semibold bangla-text">উত্তর:</p>
+                                <div className="bangla-text">
+                                  {renderLines(cqType === "generalCQ" ? cq.answers[i] : cq.latexAnswers[i])}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        <p className="text-sm text-gray-500 mt-4 bangla-text">
+                          ক্লাস: {selectedClass || "N/A"} | বিষয়: {selectedSubject || "N/A"} | পেপার: {selectedSubjectPaper || "N/A"} | অধ্যায়: {selectedChapterName || "N/A"} | কন্টেন্ট: {selectedContentType || "N/A"} | উপ-অধ্যায়: {selectedSubChapter || "N/A"} | ধরণ: {cqType || "N/A"}
                         </p>
                       </div>
-                    ))}
+                    </div>
+                  </div>
                 </motion.div>
               ))}
-
               {isMultipleCQs && (
                 <motion.button
                   type="button"
                   onClick={addNewCQ}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-green-600 text-white py-3 mt-6 rounded-lg hover:bg-green-700 transition shadow-md text-lg bangla-text flex items-center justify-center"
+                  className="w-full bg-green-600 text-white py-3 mt-4 rounded-lg hover:bg-green-700 transition flex items-center justify-center shadow-md bangla-text"
                 >
-                  <span className="text-xl mr-2">+</span> নতুন সৃজনশীল প্রশ্ন যোগ করুন
+                  <span className="text-xl mr-2">+</span> নতুন প্রশ্ন যোগ করুন
                 </motion.button>
               )}
-
               <motion.button
                 type="submit"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 disabled={isSubmitting}
-                className={`w-full bg-blue-600 text-white py-3 mt-8 rounded-lg hover:bg-blue-700 transition shadow-md text-lg bangla-text flex items-center justify-center ${
-                  isSubmitting ? "opacity-75 cursor-not-allowed" : ""
-                }`}
+                className={`w-full bg-blue-600 text-white py-3 mt-4 rounded-lg hover:bg-blue-700 transition shadow-md bangla-text flex items-center justify-center ${isSubmitting ? "opacity-75 cursor-not-allowed" : ""}`}
               >
                 {isSubmitting ? (
                   <>
@@ -1153,81 +1249,6 @@ export default function CreateCQAdmin() {
                 )}
               </motion.button>
             </form>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-lg p-8 border border-gray-200"
-          >
-            <h2 className="text-2xl font-bold text-blue-700 mb-6 bangla-text">প্রিভিউ</h2>
-            {cqs.map((cq, cqIndex) => (
-              <motion.div
-                key={cqIndex}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3 }}
-                className="mb-6 p-6 bg-gray-50 rounded-lg shadow-sm border border-gray-100"
-              >
-                <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-3 bangla-text">
-                  CQ {cqIndex + 1}
-                </p>
-                <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">উদ্দীপক:</p>
-                <div className="text-gray-700 mb-4 bangla-text">
-                  {renderLines(cq.passage || "উদ্দীপক লিখুন")}
-                </div>
-
-                {cq.videoLink && (
-                  <div className="mb-4">
-                    <a
-                      href={cq.videoLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="video-link bangla-text"
-                    >
-                      📹 ভিডিও দেখুন
-                    </a>
-                  </div>
-                )}
-
-                {cq.image && (
-                  <div
-                    className={`mb-4 ${cq.imageAlignment === "left" ? "text-left" : cq.imageAlignment === "right" ? "text-right" : "text-center"}`}
-                  >
-                    <img
-                      src={URL.createObjectURL(cq.image)}
-                      alt={`CQ preview ${cqIndex + 1}`}
-                      className="rounded-lg shadow-md max-h-64 inline-block"
-                    />
-                  </div>
-                )}
-
-                <div className="text-gray-700">
-                  {(cqType === "generalCQ" ? cq.questions : cq.latexQuestions).map((ques, i) => (
-                    <div key={i} className="mb-3">
-                      <p className="bangla-text">
-                        {String.fromCharCode(2453 + i)}) {renderLines(ques || "প্রশ্ন লিখুন")}{" "}
-                        {cqType === "generalCQ" ? `(${[1, 2, 3, 4][i]} নম্বর)` : `(${[3, 3, 4][i]} নম্বর)`}
-                      </p>
-                      {(cqType === "generalCQ" ? cq.answers[i] : cq.latexAnswers[i]) && (
-                        <p className="text-gray-600 ml-6 bangla-text">
-                          <span className="font-semibold">উত্তর:</span>{" "}
-                          {renderLines(cqType === "generalCQ" ? cq.answers[i] : cq.latexAnswers[i])}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                <p className="text-sm text-gray-500 mt-4 bangla-text">
-                  ক্লাস: {selectedClass || "N/A"} | বিষয়: {selectedSubject || "N/A"} | পেপার: {selectedSubjectPaper || "N/A"} | অধ্যায়: {selectedChapterName || "N/A"} | কন্টেন্ট: {selectedContentType || "N/A"} | উপ-অধ্যায়: {selectedSubChapter || "N/A"} | ধরণ: {cqType || "N/A"}
-                </p>
-              </motion.div>
-            ))}
-            {cqs.length === 0 && (
-              <p className="text-gray-500 text-center text-lg bangla-text">প্রিভিউ দেখতে প্রশ্ন যোগ করুন</p>
-            )}
           </motion.div>
         </div>
       </div>
