@@ -13,12 +13,16 @@ import { marked } from "marked";
 import DOMPurify from "dompurify";
 
 // Dynamically import MathJax to avoid SSR issues
-const MathJax = dynamic(() => import("better-react-mathjax").then((mod) => mod.MathJax), {
-  ssr: false,
-});
+const MathJax = dynamic(
+  () => import("better-react-mathjax").then((mod) => mod.MathJax),
+  {
+    ssr: false,
+  }
+);
 
 // Normalize text to Unicode NFC and remove problematic characters
 const normalizeText = (text) => {
+  if (!text || typeof text !== "string") return "";
   return text
     .normalize("NFC")
     .replace(/[\u200B-\u200F\uFEFF]/g, "") // Remove zero-width spaces and control chars
@@ -67,12 +71,18 @@ const processTextForLatex = (text) => {
     // Convert fractions (e.g., 1/2 -> \frac{1}{2})
     text = text.replace(/(\d+)\s+(\d+)\/(\d+)/g, (match, whole, num, denom) => {
       if (denom === "0") return match;
-      const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
+      const { numerator, denominator } = simplifyFraction(
+        parseInt(num),
+        parseInt(denom)
+      );
       return `${whole}\\ \\frac{${numerator}}{${denominator}}`;
     });
     text = text.replace(/(\d+)\/(\d+)/g, (match, num, denom) => {
       if (denom === "0") return match;
-      const { numerator, denominator } = simplifyFraction(parseInt(num), parseInt(denom));
+      const { numerator, denominator } = simplifyFraction(
+        parseInt(num),
+        parseInt(denom)
+      );
       return `\\frac{${numerator}}{${denominator}}`;
     });
 
@@ -129,8 +139,12 @@ const renderLines = (text) => {
       const sanitizedHtml = DOMPurify.sanitize(html);
 
       // Check for LaTeX
-      const hasLatex = processedLine.match(/[\\{}^_]|\\frac|\\sqrt|\\geq|\\leq|\\neq/);
-      const content = <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
+      const hasLatex = processedLine.match(
+        /[\\{}^_]|\\frac|\\sqrt|\\geq|\\leq|\\neq/
+      );
+      const content = (
+        <div dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />
+      );
 
       return (
         <div key={index} className="bangla-text">
@@ -159,7 +173,14 @@ export default function CreateMCQAdmin() {
   const [chapters, setChapters] = useState([]);
   const [selectedChapter, setSelectedChapter] = useState("");
   const [selectedChapterName, setSelectedChapterName] = useState("");
-  const contentTypes = ["Examples", "Model Tests", "Admission Questions", "Practice Problems", "Theory", "Others"];
+  const contentTypes = [
+    "Examples",
+    "Model Tests",
+    "Admission Questions",
+    "Practice Problems",
+    "Theory",
+    "Others",
+  ];
   const [selectedContentType, setSelectedContentType] = useState("");
   const [subChapters, setSubChapters] = useState([]);
   const [selectedSubChapter, setSelectedSubChapter] = useState("");
@@ -213,12 +234,16 @@ export default function CreateMCQAdmin() {
       }
 
       try {
-        const res = await fetch(`/api/mcq?classNumber=${selectedClass}`, { cache: "no-store" });
+        const res = await fetch(`/api/mcq?classNumber=${selectedClass}`, {
+          cache: "no-store",
+        });
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         const data = await res.json();
         if (data.length > 0) {
           setSubjects([...new Set(data.map((item) => item.subject))]);
-          setSubjectPapers([...new Set(data.map((item) => item.subjectPart).filter((part) => part))]);
+          setSubjectPapers([
+            ...new Set(data.map((item) => item.subjectPart).filter((part) => part)),
+          ]);
           const chapterMap = new Map();
           data.forEach((item) => {
             const key = `${item.chapterNumber}-${item.chapterName}`;
@@ -247,7 +272,9 @@ export default function CreateMCQAdmin() {
 
   useEffect(() => {
     if (selectedChapter) {
-      const selected = chapters.find((chap) => chap.number === parseInt(selectedChapter));
+      const selected = chapters.find(
+        (chap) => chap.number === parseInt(selectedChapter)
+      );
       if (selected) {
         setSelectedChapterName(selected.name || "");
         setSelectedContentType(selected.contentType || "");
@@ -301,7 +328,7 @@ export default function CreateMCQAdmin() {
 
   const handleImageChange = (index, e) => {
     const newQuestions = [...questions];
-    newQuestions[index].image = e.target.files[0];
+    newQuestions[index].image = e.target.files[0] || null;
     setQuestions(newQuestions);
   };
 
@@ -332,7 +359,11 @@ export default function CreateMCQAdmin() {
 
     const { qIndex, fieldType, oIndex } = activeField;
     const newQuestions = [...questions];
-    const textarea = textareaRefs.current[`${fieldType}-${qIndex}-${oIndex ?? ''}`];
+    const refKey =
+      fieldType === "question"
+        ? `question-${qIndex}`
+        : `option-${qIndex}-${oIndex}`;
+    const textarea = textareaRefs.current[refKey];
     if (!textarea) return;
 
     const start = textarea.selectionStart;
@@ -342,9 +373,10 @@ export default function CreateMCQAdmin() {
     if (fieldType === "question") {
       currentText = newQuestions[qIndex].question;
     } else if (fieldType === "option") {
-      currentText = questionType === "general"
-        ? newQuestions[qIndex].options[oIndex]
-        : newQuestions[qIndex].higherOptions[oIndex];
+      currentText =
+        questionType === "general"
+          ? newQuestions[qIndex].options[oIndex]
+          : newQuestions[qIndex].higherOptions[oIndex];
     }
 
     const selectedText = currentText.substring(start, end);
@@ -371,7 +403,10 @@ export default function CreateMCQAdmin() {
         break;
     }
 
-    const updatedText = currentText.substring(0, start) + formattedText + currentText.substring(end);
+    const updatedText =
+      currentText.substring(0, start) +
+      formattedText +
+      currentText.substring(end);
     if (fieldType === "question") {
       newQuestions[qIndex].question = updatedText;
     } else if (fieldType === "option") {
@@ -417,18 +452,18 @@ export default function CreateMCQAdmin() {
       },
       {
         Class: 9,
-        Subject: "General Math",
+        Subject: "সাধারণ গণিত",
         "Subject Paper": "",
         "Chapter Number": 1,
-        "Chapter Name": "Chapter 1",
-        "Content Type": "Theory",
-        "Sub Chapter": "Exercise 1.1",
+        "Chapter Name": "অধ্যায় ১",
+        "Content Type": "তত্ত্ব",
+        "Sub Chapter": "অনুশীলন ১.১",
         "MCQ Type": "general",
-        Question: "What is voltage?",
-        "Option 1": "How affect current?",
-        "Option 2": "Calculate current",
-        "Option 3": "Design a simple",
-        "Option 4": "Circuit",
+        Question: "ভোল্টেজ কী?",
+        "Option 1": "বিদ্যুৎ প্রবাহকে কীভাবে প্রভাবিত করে?",
+        "Option 2": "বিদ্যুৎ প্রবাহ গণনা করুন",
+        "Option 3": "একটি সাধারণ সার্কিট ডিজাইন করুন",
+        "Option 4": "সার্কিট",
         "Option 5": "",
         "Option 6": "",
         "Option 7": "",
@@ -438,10 +473,10 @@ export default function CreateMCQAdmin() {
       },
       {
         Class: 9,
-        Subject: "General Math",
+        Subject: "সাধারণ গণিত",
         "Chapter Number": 1,
-        "Chapter Name": "Chapter 1",
-        "Content Type": "Practice Problems",
+        "Chapter Name": "অধ্যায় ১",
+        "Content Type": "অভ্যাস সমস্যা",
         "Sub Chapter": "",
         "MCQ Type": "higher",
         Question: "1 1/2 + 1/3 = ?",
@@ -521,7 +556,11 @@ export default function CreateMCQAdmin() {
           } else {
             const errorData = await response.json();
             console.error("Import error:", errorData);
-            toast.error(`❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ: ${errorData.error || "Unknown error"}`);
+            toast.error(
+              `❌ ডাটাবেজে প্রশ্ন সংরক্ষণ ব্যর্থ: ${
+                errorData.error || "Unknown error"
+              }`
+            );
           }
         } else {
           toast.error("❌ এক্সেল ফাইল খালি বা ভুল ফরম্যাটে আছে!");
@@ -566,7 +605,13 @@ export default function CreateMCQAdmin() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!selectedClass || !selectedSubject || !selectedChapter || !questionType || !selectedContentType) {
+    if (
+      !selectedClass ||
+      !selectedSubject ||
+      !selectedChapter ||
+      !questionType ||
+      !selectedContentType
+    ) {
       toast.error("❌ অনুগ্রহ করে সকল প্রয়োজনীয় ফিল্ড পূরণ করুন!");
       return;
     }
@@ -580,7 +625,10 @@ export default function CreateMCQAdmin() {
     formData.append("chapterNumber", selectedChapter);
     formData.append("chapterName", selectedChapterName);
     formData.append("contentType", selectedContentType);
-    formData.append("subChapters", JSON.stringify(selectedSubChapter ? [selectedSubChapter] : []));
+    formData.append(
+      "subChapters",
+      JSON.stringify(selectedSubChapter ? [selectedSubChapter] : [])
+    );
     formData.append("questionType", questionType);
     formData.append("teacherEmail", "admin");
 
@@ -600,7 +648,10 @@ export default function CreateMCQAdmin() {
     });
 
     try {
-      const response = await fetch("/api/mcq/import", { method: "POST", body: formData });
+      const response = await fetch("/api/mcq/import", {
+        method: "POST",
+        body: formData,
+      });
       const responseData = await response.json();
       if (response.ok) {
         toast.success(`✅ ${questions.length}টি এমসিকিউ সফলভাবে যোগ করা হয়েছে!`);
@@ -620,9 +671,18 @@ export default function CreateMCQAdmin() {
   return (
     <>
       <Head>
-        <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net;" />
-        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap" rel="stylesheet" />
+        <meta
+          http-equiv="Content-Security-Policy"
+          content="script-src 'self' https://cdn.jsdelivr.net; connect-src 'self' https://cdn.jsdelivr.net;"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali&display=swap"
+          rel="stylesheet"
+        />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Kalpurush&display=swap"
+          rel="stylesheet"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -649,13 +709,19 @@ export default function CreateMCQAdmin() {
             `,
           }}
         />
-        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+        <script
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+          async
+        ></script>
       </Head>
       <style jsx global>{`
         .bangla-text {
           font-family: "Kalpurush", "Noto Sans Bengali", sans-serif !important;
           direction: ltr;
           unicode-bidi: embed;
+          white-space: pre-wrap;
+          overflow-wrap: anywhere;
+          word-break: break-all;
         }
         .video-link {
           color: #1a73e8;
@@ -666,10 +732,11 @@ export default function CreateMCQAdmin() {
           gap: 0.5rem;
           padding: 0.5rem;
           border-radius: 0.375rem;
-          transition: background-color 0.2s;
+          transition: background-color 0.2s, color 0.2s;
         }
         .video-link:hover {
           background-color: #e8f0fe;
+          color: #1557b0;
         }
         .form-section {
           border-left: 4px solid #3b82f6;
@@ -682,7 +749,8 @@ export default function CreateMCQAdmin() {
           overflow-y: auto !important;
           max-height: 250px !important;
           white-space: pre-wrap !important;
-          word-wrap: break-word !important;
+          overflow-wrap: anywhere !important;
+          word-break: break-all !important;
           padding: 12px !important;
           box-sizing: border-box !important;
           font-size: 16px !important;
@@ -695,18 +763,50 @@ export default function CreateMCQAdmin() {
           border-color: #3b82f6 !important;
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
         }
-        select, input[type="file"] {
+        select,
+        input[type="file"] {
           transition: border-color 0.2s, box-shadow 0.2s;
         }
-        select:focus, input[type="file"]:focus {
+        select:focus,
+        input[type="file"]:focus {
           border-color: #3b82f6 !important;
           box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
         }
         .MathJax .mtext {
           font-family: "Kalpurush", "Noto Sans Bengali", sans-serif !important;
           white-space: pre-wrap !important;
+          overflow-wrap: anywhere !important;
+          word-break: break-all !important;
           margin-right: 0.25em !important;
           margin-left: 0.25em !important;
+        }
+        .mcq-preview {
+          position: sticky;
+          top: 2rem;
+          max-height: calc(100vh - 4rem);
+          overflow-y: auto;
+          max-width: 100%;
+          overflow-x: hidden;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 0.75rem;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+            0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          padding: 2rem;
+        }
+        .mcq-preview::-webkit-scrollbar {
+          width: 8px;
+        }
+        .mcq-preview::-webkit-scrollbar-thumb {
+          background: #cbd5e0;
+          border-radius: 4px;
+        }
+        .mcq-preview::-webkit-scrollbar-track {
+          background: #f7fafc;
+        }
+        .mcq-preview img {
+          max-width: 100%;
+          height: auto;
         }
       `}</style>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-100 p-8">
@@ -753,7 +853,9 @@ export default function CreateMCQAdmin() {
                   📥 এক্সেল টেমপ্লেট ডাউনলোড করুন
                 </motion.button>
               </div>
-              <p className="text-center text-gray-500 mb-6 text-lg bangla-text">অথবা</p>
+              <p className="text-center text-gray-500 mb-6 text-lg bangla-text">
+                অথবা
+              </p>
 
               <div className="form-section">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -762,7 +864,7 @@ export default function CreateMCQAdmin() {
                       ক্লাস <span className="text-red-500">*</span>
                     </label>
                     <select
-                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg                bg-white shadow-sm text-lg bangla-text"
+                      className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
                       value={selectedClass}
                       onChange={(e) => setSelectedClass(Number(e.target.value))}
                       required
@@ -788,7 +890,9 @@ export default function CreateMCQAdmin() {
                       >
                         <option value="">বিষয় নির্বাচন করুন</option>
                         {subjects.map((subject) => (
-                          <option key={subject} value={subject}>{subject}</option>
+                          <option key={subject} value={subject}>
+                            {subject}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -806,7 +910,9 @@ export default function CreateMCQAdmin() {
                     >
                       <option value="">পেপার নির্বাচন করুন (যদি থাকে)</option>
                       {subjectPapers.map((paper) => (
-                        <option key={paper} value={paper}>{paper}</option>
+                        <option key={paper} value={paper}>
+                          {paper}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -820,7 +926,9 @@ export default function CreateMCQAdmin() {
                       className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
                       value={selectedChapter}
                       onChange={(e) => {
-                        const selected = chapters.find((chap) => chap.number === parseInt(e.target.value));
+                        const selected = chapters.find(
+                          (chap) => chap.number === parseInt(e.target.value)
+                        );
                         setSelectedChapter(e.target.value);
                         setSelectedChapterName(selected?.name || "");
                         setSelectedContentType(selected?.contentType || "");
@@ -831,7 +939,10 @@ export default function CreateMCQAdmin() {
                     >
                       <option value="">অধ্যায় নির্বাচন করুন</option>
                       {chapters.map((chapter) => (
-                        <option key={`${chapter.number}-${chapter.name}`} value={chapter.number}>
+                        <option
+                          key={`${chapter.number}-${chapter.name}`}
+                          value={chapter.number}
+                        >
                           অধ্যায় {chapter.number} - {chapter.name}
                         </option>
                       ))}
@@ -852,11 +963,17 @@ export default function CreateMCQAdmin() {
                       <option value="">কন্টেন্ট টাইপ নির্বাচন করুন</option>
                       {contentTypes.map((type) => (
                         <option key={type} value={type}>
-                          {type === "Examples" ? "উদাহরণ" :
-                           type === "Model Tests" ? "মডেল টেস্ট" :
-                           type === "Admission Questions" ? "ভর্তি প্রশ্ন" :
-                           type === "Practice Problems" ? "অভ্যাস সমস্যা" :
-                           type === "Theory" ? "তত্ত্ব" : "অন্যান্য"}
+                          {type === "Examples"
+                            ? "উদাহরণ"
+                            : type === "Model Tests"
+                            ? "মডেল টেস্ট"
+                            : type === "Admission Questions"
+                            ? "ভর্তি প্রশ্ন"
+                            : type === "Practice Problems"
+                            ? "অভ্যাস সমস্যা"
+                            : type === "Theory"
+                            ? "তত্ত্ব"
+                            : "অন্যান্য"}
                         </option>
                       ))}
                     </select>
@@ -874,7 +991,9 @@ export default function CreateMCQAdmin() {
                     >
                       <option value="">উপ-অধ্যায় নির্বাচন করুন</option>
                       {subChapters.map((sub) => (
-                        <option key={sub} value={sub}>{sub}</option>
+                        <option key={sub} value={sub}>
+                          {sub}
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -929,13 +1048,17 @@ export default function CreateMCQAdmin() {
                       onKeyUp={(e) => handleSelection(qIndex, "question", null, e)}
                       rows={4}
                       placeholder="🔹 প্রশ্ন লিখুন"
-                      ref={(el) => (textareaRefs.current[`question-${qIndex}-`] = el)}
+                      ref={(el) => (textareaRefs.current[`question-${qIndex}`] = el)}
                       required
+                      aria-label={`প্রশ্ন ${qIndex + 1}`}
                     />
                     <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
                       <FormatToolbar
                         onFormat={handleFormat}
-                        isVisible={activeField?.qIndex === qIndex && activeField?.fieldType === "question"}
+                        isVisible={
+                          activeField?.qIndex === qIndex &&
+                          activeField?.fieldType === "question"
+                        }
                       />
                     </div>
                     <p className="text-sm text-gray-500 mt-1 bangla-text">
@@ -980,7 +1103,9 @@ export default function CreateMCQAdmin() {
                       </label>
                       <select
                         value={q.imageAlignment}
-                        onChange={(e) => handleImageAlignmentChange(qIndex, e.target.value)}
+                        onChange={(e) =>
+                          handleImageAlignmentChange(qIndex, e.target.value)
+                        }
                         className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-lg bangla-text"
                       >
                         <option value="left">বামে</option>
@@ -998,18 +1123,34 @@ export default function CreateMCQAdmin() {
                             <textarea
                               className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                               value={option}
-                              onChange={(e) => handleOptionChange(qIndex, i, e.target.value)}
-                              onMouseUp={(e) => handleSelection(qIndex, "option", i, e)}
-                              onKeyUp={(e) => handleSelection(qIndex, "option", i, e)}
+                              onChange={(e) =>
+                                handleOptionChange(qIndex, i, e.target.value)
+                              }
+                              onMouseUp={(e) =>
+                                handleSelection(qIndex, "option", i, e)
+                              }
+                              onKeyUp={(e) =>
+                                handleSelection(qIndex, "option", i, e)
+                              }
                               rows={2}
                               placeholder={`বিকল্প ${i + 1} লিখুন`}
-                              ref={(el) => (textareaRefs.current[`option-${qIndex}-${i}`] = el)}
+                              ref={(el) =>
+                                (textareaRefs.current[`option-${qIndex}-${i}`] = el)
+                              }
                               required
+                              aria-label={`বিকল্প ${i + 1} প্রশ্ন ${qIndex + 1}`}
                             />
-                            <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
+                            <div
+                              className="absolute bottom-full left-0"
+                              style={{ zIndex: 100 }}
+                            >
                               <FormatToolbar
                                 onFormat={handleFormat}
-                                isVisible={activeField?.qIndex === qIndex && activeField?.fieldType === "option" && activeField?.oIndex === i}
+                                isVisible={
+                                  activeField?.qIndex === qIndex &&
+                                  activeField?.fieldType === "option" &&
+                                  activeField?.oIndex === i
+                                }
                               />
                             </div>
                           </div>
@@ -1036,18 +1177,32 @@ export default function CreateMCQAdmin() {
                           <textarea
                             className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                             value={option}
-                            onChange={(e) => handleOptionChange(qIndex, i, e.target.value, "higher")}
-                            onMouseUp={(e) => handleSelection(qIndex, "option", i, e)}
+                            onChange={(e) =>
+                              handleOptionChange(qIndex, i, e.target.value, "higher")
+                            }
+                            onMouseUp={(e) =>
+                              handleSelection(qIndex, "option", i, e)
+                            }
                             onKeyUp={(e) => handleSelection(qIndex, "option", i, e)}
                             rows={2}
                             placeholder={`বিকল্প ${i + 1} লিখুন`}
-                            ref={(el) => (textareaRefs.current[`option-${qIndex}-${i}`] = el)}
+                            ref={(el) =>
+                              (textareaRefs.current[`option-${qIndex}-${i}`] = el)
+                            }
                             required
+                            aria-label={`বিকল্প ${i + 1} প্রশ্ন ${qIndex + 1}`}
                           />
-                          <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
+                          <div
+                            className="absolute bottom-full left-0"
+                            style={{ zIndex: 100 }}
+                          >
                             <FormatToolbar
                               onFormat={handleFormat}
-                              isVisible={activeField?.qIndex === qIndex && activeField?.fieldType === "option" && activeField?.oIndex === i}
+                              isVisible={
+                                activeField?.qIndex === qIndex &&
+                                activeField?.fieldType === "option" &&
+                                activeField?.oIndex === i
+                              }
                             />
                           </div>
                         </div>
@@ -1061,18 +1216,40 @@ export default function CreateMCQAdmin() {
                             <textarea
                               className="w-full p-3 border rounded-lg focus:ring-2 focus:ring-blue-500 bg-white shadow-sm bangla-text"
                               value={option}
-                              onChange={(e) => handleOptionChange(qIndex, i + 3, e.target.value, "higher")}
-                              onMouseUp={(e) => handleSelection(qIndex, "option", i + 3, e)}
-                              onKeyUp={(e) => handleSelection(qIndex, "option", i + 3, e)}
+                              onChange={(e) =>
+                                handleOptionChange(
+                                  qIndex,
+                                  i + 3,
+                                  e.target.value,
+                                  "higher"
+                                )
+                              }
+                              onMouseUp={(e) =>
+                                handleSelection(qIndex, "option", i + 3, e)
+                              }
+                              onKeyUp={(e) =>
+                                handleSelection(qIndex, "option", i + 3, e)
+                              }
                               rows={2}
                               placeholder={`বিকল্প ${i + 4} লিখুন`}
-                              ref={(el) => (textareaRefs.current[`option-${qIndex}-${i + 3}`] = el)}
+                              ref={(el) =>
+                                (textareaRefs.current[`option-${qIndex}-${i + 3}`] =
+                                  el)
+                              }
                               required
+                              aria-label={`বিকল্প ${i + 4} প্রশ্ন ${qIndex + 1}`}
                             />
-                            <div className="absolute bottom-full left-0" style={{ zIndex: 100 }}>
+                            <div
+                              className="absolute bottom-full left-0"
+                              style={{ zIndex: 100 }}
+                            >
                               <FormatToolbar
                                 onFormat={handleFormat}
-                                isVisible={activeField?.qIndex === qIndex && activeField?.fieldType === "option" && activeField?.oIndex === i + 3}
+                                isVisible={
+                                  activeField?.qIndex === qIndex &&
+                                  activeField?.fieldType === "option" &&
+                                  activeField?.oIndex === i + 3
+                                }
                               />
                             </div>
                           </div>
@@ -1080,7 +1257,9 @@ export default function CreateMCQAdmin() {
                             type="radio"
                             name={`higherCorrect-${qIndex}`}
                             className="ml-4 h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500"
-                            onChange={() => handleCorrectAnswerChange(qIndex, i + 3, "higher")}
+                            onChange={() =>
+                              handleCorrectAnswerChange(qIndex, i + 3, "higher")
+                            }
                             checked={q.higherCorrectAnswer === i + 3}
                             required
                           />
@@ -1131,9 +1310,11 @@ export default function CreateMCQAdmin() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-xl shadow-lg p-8 border border-gray-200"
+            className="mcq-preview"
           >
-            <h2 className="text-2xl font-bold text-blue-700 mb-6 bangla-text">প্রিভিউ</h2>
+            <h2 className="text-2xl font-bold text-blue-700 mb-6 bangla-text">
+              প্রিভিউ
+            </h2>
             {questions.map((q, qIndex) => (
               <motion.div
                 key={qIndex}
@@ -1145,7 +1326,9 @@ export default function CreateMCQAdmin() {
                 <p className="text-sm font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded inline-block mb-3 bangla-text">
                   MCQ {qIndex + 1}
                 </p>
-                <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">প্রশ্ন:</p>
+                <p className="text-lg font-semibold text-gray-900 mb-2 bangla-text">
+                  প্রশ্ন:
+                </p>
                 <div className="text-gray-700 mb-4 bangla-text">
                   {renderLines(q.question || "প্রশ্ন লিখুন")}
                 </div>
@@ -1165,7 +1348,13 @@ export default function CreateMCQAdmin() {
 
                 {q.image && (
                   <div
-                    className={`mb-4 ${q.imageAlignment === "left" ? "text-left" : q.imageAlignment === "right" ? "text-right" : "text-center"}`}
+                    className={`mb-4 ${
+                      q.imageAlignment === "left"
+                        ? "text-left"
+                        : q.imageAlignment === "right"
+                        ? "text-right"
+                        : "text-center"
+                    }`}
                   >
                     <img
                       src={URL.createObjectURL(q.image)}
@@ -1176,13 +1365,18 @@ export default function CreateMCQAdmin() {
                 )}
 
                 {questionType === "general" ? (
-                  <div className="grid grid-cols-2 gap-4 text-gray-700">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
                     {q.options.map((opt, i) => (
                       <p
                         key={i}
-                        className={`p-2 rounded-lg ${q.correctAnswer === i ? "bg-green-100 font-bold text-green-800" : "text-gray-700"} bangla-text`}
+                        className={`p-2 rounded-lg ${
+                          q.correctAnswer === i
+                            ? "bg-green-100 font-bold text-green-800"
+                            : "text-gray-700"
+                        } bangla-text`}
                       >
-                        {String.fromCharCode(2453 + i)}. {renderLines(opt || "বিকল্প লিখুন...")}
+                        {String.fromCharCode(2453 + i)}.{" "}
+                        {renderLines(opt || "বিকল্প লিখুন...")}
                       </p>
                     ))}
                   </div>
@@ -1191,18 +1385,26 @@ export default function CreateMCQAdmin() {
                     <div className="mb-3 text-gray-700">
                       {q.higherOptions.slice(0, 3).map((opt, i) => (
                         <p key={i} className="bangla-text">
-                          {String.fromCharCode(2453 + i)}. {renderLines(opt || "বিকল্প লিখুন...")}
+                          {String.fromCharCode(2453 + i)}.{" "}
+                          {renderLines(opt || "বিকল্প লিখুন...")}
                         </p>
                       ))}
                     </div>
-                    <p className="font-bold mb-2 text-gray-800 bangla-text">নিচের কোনটি সঠিক?</p>
-                    <div className="grid grid-cols-2 gap-4 text-gray-700">
+                    <p className="font-bold mb-2 text-gray-800 bangla-text">
+                      নিচের কোনটি সঠিক?
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
                       {q.higherOptions.slice(3, 7).map((opt, i) => (
                         <p
                           key={i + 3}
-                          className={`p-2 rounded-lg ${q.higherCorrectAnswer === i + 3 ? "bg-green-100 font-bold text-green-800" : "text-gray-700"} bangla-text`}
+                          className={`p-2 rounded-lg ${
+                            q.higherCorrectAnswer === i + 3
+                              ? "bg-green-100 font-bold text-green-800"
+                              : "text-gray-700"
+                          } bangla-text`}
                         >
-                          {String.fromCharCode(2453 + i)}. {renderLines(opt || "বিকল্প লিখুন...")}
+                          {String.fromCharCode(2453 + i)}.{" "}
+                          {renderLines(opt || "বিকল্প লিখুন...")}
                         </p>
                       ))}
                     </div>
@@ -1210,12 +1412,17 @@ export default function CreateMCQAdmin() {
                 )}
 
                 <p className="text-sm text-gray-500 mt-4 bangla-text">
-                  ক্লাস: {selectedClass || "N/A"} | বিষয়: {selectedSubject || "N/A"} | পেপার: {selectedSubjectPaper || "N/A"} | অধ্যায়: {selectedChapterName || "N/A"} | কন্টেন্ট: {selectedContentType || "N/A"} | উপ-অধ্যায়: {selectedSubChapter || "N/A"} | ধরণ: {questionType}
+                  ক্লাস: {selectedClass || "N/A"} | বিষয়: {selectedSubject || "N/A"} |
+                  পেপার: {selectedSubjectPaper || "N/A"} | অধ্যায়:{" "}
+                  {selectedChapterName || "N/A"} | কন্টেন্ট: {selectedContentType || "N/A"} |
+                  উপ-অধ্যায়: {selectedSubChapter || "N/A"} | ধরণ: {questionType}
                 </p>
               </motion.div>
             ))}
             {questions.length === 0 && (
-              <p className="text-gray-500 text-center text-lg bangla-text">প্রিভিউ দেখতে প্রশ্ন যোগ করুন</p>
+              <p className="text-gray-500 text-center text-lg bangla-text">
+                প্রিভিউ দেখতে প্রশ্ন যোগ করুন
+              </p>
             )}
           </motion.div>
         </div>
