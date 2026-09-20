@@ -9,7 +9,7 @@ const SELF = fileURLToPath(import.meta.url);
 const SKIP = new Set(['node_modules', '.next', '.git', '.vercel', 'out', 'build', 'coverage']);
 const SRC = /\.(mjs|cjs|jsx?|tsx?)$/;
 const SIGNATURES = [
-  /\S[ \t]{40,}\S.{59,}/,                   // payload hidden mid-line behind whitespace padding
+  /\S[ \t]{100,}\S/,                        // payload hidden mid-line behind whitespace padding
   /_0x[0-9a-f]{4,6}\(0x[0-9a-f]+\)/,        // obfuscator string-table calls
   /global\s*\[\s*['"][a-z]['"]\s*\]\s*=\s*require/, // loader stashing require() on global
   /eth_getBlockByNumber|eth_getTransactionCount/,   // blockchain-resolved C2
